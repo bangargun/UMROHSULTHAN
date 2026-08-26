@@ -1,0 +1,2169 @@
+"use client";
+
+import React, { useState } from "react";
+import {
+  UserCheck,
+  Plus,
+  Search,
+  Filter,
+  Eye,
+  CreditCard,
+  FileCheck,
+  FileText,
+  Boxes,
+  Phone,
+  Mail,
+  MapPin,
+  Calendar,
+  Shield,
+  Plane,
+  X,
+  Sparkles,
+  Download,
+  AlertCircle,
+  Pencil,
+  Trash2,
+  Camera,
+  Scan,
+  UploadCloud,
+  CheckCircle2,
+  Image as ImageIcon,
+  Loader2,
+} from "lucide-react";
+import { formatCurrency, formatDate, getStatusBadge } from "@/lib/utils";
+
+interface PilgrimsViewProps {
+  pilgrims: any[];
+  packages: any[];
+  onRefresh: () => void;
+  onOpenLetterGenerator?: (pilgrim: any) => void;
+  onNavigateTab?: (tab: string, searchFilter?: string) => void;
+}
+
+export default function PilgrimsView({
+  pilgrims,
+  packages,
+  onRefresh,
+  onOpenLetterGenerator,
+  onNavigateTab,
+}: PilgrimsViewProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPackageId, setSelectedPackageId] = useState<string>("ALL");
+  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
+  const [selectedPilgrim, setSelectedPilgrim] = useState<any | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingPilgrimId, setEditingPilgrimId] = useState<string | null>(null);
+
+  // KTP OCR states
+  const [isScanningKtp, setIsScanningKtp] = useState(false);
+  const [ktpPreviewUrl, setKtpPreviewUrl] = useState<string | null>(null);
+  const [ocrSuccessMsg, setOcrSuccessMsg] = useState<string | null>(null);
+
+  const handleKtpFileChange = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const preview = URL.createObjectURL(file);
+    setKtpPreviewUrl(preview);
+    setIsScanningKtp(true);
+    setOcrSuccessMsg(null);
+
+    try {
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+
+      const res = await fetch("/api/ocr/ktp", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          const d = json.data;
+          if (isEdit) {
+            setEditFormData((prev) => ({
+              ...prev,
+              nik: d.nik || prev.nik,
+              name: d.name || prev.name,
+              placeOfBirth: d.birthPlace || prev.placeOfBirth,
+              dateOfBirth: d.birthDate || prev.dateOfBirth,
+              gender: d.gender || prev.gender,
+              address: d.address || prev.address,
+              bloodType: d.bloodType || prev.bloodType,
+            }));
+          } else {
+            setFormData((prev) => ({
+              ...prev,
+              nik: d.nik || prev.nik,
+              name: d.name || prev.name,
+              placeOfBirth: d.birthPlace || prev.placeOfBirth,
+              dateOfBirth: d.birthDate || prev.dateOfBirth,
+              gender: d.gender || prev.gender,
+              address: d.address || prev.address,
+              bloodType: d.bloodType || prev.bloodType,
+            }));
+          }
+          setOcrSuccessMsg(`✨ e-KTP Berhasil Terbaca! NIK: ${d.nik || "-"}, Nama: ${d.name || "-"}. Semua kolom di bawah dapat Anda edit.`);
+        }
+      } else {
+        alert("Peringatan: Pastikan foto KTP tajam, terbaca jelas, dan tidak terpotong.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Gagal membaca foto KTP. Anda tetap dapat menginput form secara manual.");
+    } finally {
+      setIsScanningKtp(false);
+    }
+  };
+
+  // Form input data jamaah baru
+  const [formData, setFormData] = useState({
+    packageId: packages[0]?.id || "",
+    name: "",
+    nik: "",
+    hasPassport: false,
+    passportNumber: "",
+    passportExpiry: "",
+    hasVisa: false,
+    visaNumber: "",
+    visaIssueDate: "",
+    visaExpiryDate: "",
+    mofaNumber: "",
+    muassasahName: "",
+    insuranceNumber: "",
+    placeOfBirth: "",
+    dateOfBirth: "",
+    gender: "MALE",
+    phone: "",
+    email: "",
+    address: "",
+    city: "",
+    province: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    mahramName: "",
+    mahramRelation: "",
+    roomType: "QUAD",
+    uniformSize: "L",
+    bloodType: "O",
+    healthNotes: "",
+    initialDpAmount: "10000000",
+  });
+
+  // Edit form data
+  const [editFormData, setEditFormData] = useState({
+    packageId: "",
+    name: "",
+    nik: "",
+    hasPassport: false,
+    passportNumber: "",
+    passportExpiry: "",
+    hasVisa: false,
+    visaNumber: "",
+    visaIssueDate: "",
+    visaExpiryDate: "",
+    mofaNumber: "",
+    muassasahName: "",
+    insuranceNumber: "",
+    placeOfBirth: "",
+    dateOfBirth: "",
+    gender: "MALE",
+    phone: "",
+    email: "",
+    address: "",
+    city: "",
+    province: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    mahramName: "",
+    mahramRelation: "",
+    roomType: "QUAD",
+    uniformSize: "L",
+    bloodType: "O",
+    healthNotes: "",
+    status: "REGISTERED",
+  });
+
+  const handleOpenEdit = (p: any) => {
+    setEditingPilgrimId(p.id);
+    const hasPass = Boolean(p.passportNumber && p.passportNumber.trim() !== "");
+    const hasVis = Boolean(p.visaNumber && p.visaNumber.trim() !== "");
+    setEditFormData({
+      packageId: p.packageId || "",
+      name: p.name || "",
+      nik: p.nik || "",
+      hasPassport: hasPass,
+      passportNumber: p.passportNumber || "",
+      passportExpiry: p.passportExpiry ? p.passportExpiry.split("T")[0] : "",
+      hasVisa: hasVis,
+      visaNumber: p.visaNumber || "",
+      visaIssueDate: p.visaIssueDate ? p.visaIssueDate.split("T")[0] : "",
+      visaExpiryDate: p.visaExpiryDate ? p.visaExpiryDate.split("T")[0] : "",
+      mofaNumber: p.mofaNumber || "",
+      muassasahName: p.muassasahName || "",
+      insuranceNumber: p.insuranceNumber || "",
+      placeOfBirth: p.placeOfBirth || "",
+      dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split("T")[0] : "",
+      gender: p.gender || "MALE",
+      phone: p.phone || "",
+      email: p.email || "",
+      address: p.address || "",
+      city: p.city || "",
+      province: p.province || "",
+      emergencyContactName: p.emergencyContactName || "",
+      emergencyContactPhone: p.emergencyContactPhone || "",
+      mahramName: p.mahramName || "",
+      mahramRelation: p.mahramRelation || "",
+      roomType: p.roomType || "QUAD",
+      uniformSize: p.uniformSize || "L",
+      bloodType: p.bloodType || "O",
+      healthNotes: p.healthNotes || "",
+      status: p.status || "REGISTERED",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPilgrimId) return;
+    setLoading(true);
+    try {
+      const payload = {
+        ...editFormData,
+        passportNumber: editFormData.hasPassport ? editFormData.passportNumber : null,
+        passportExpiry: editFormData.hasPassport && editFormData.passportExpiry ? editFormData.passportExpiry : null,
+        visaNumber: editFormData.hasVisa ? editFormData.visaNumber : null,
+        visaIssueDate: editFormData.hasVisa && editFormData.visaIssueDate ? editFormData.visaIssueDate : null,
+        visaExpiryDate: editFormData.hasVisa && editFormData.visaExpiryDate ? editFormData.visaExpiryDate : null,
+        mofaNumber: editFormData.hasVisa ? editFormData.mofaNumber : null,
+        muassasahName: editFormData.hasVisa ? editFormData.muassasahName : null,
+        insuranceNumber: editFormData.hasVisa ? editFormData.insuranceNumber : null,
+      };
+      const res = await fetch(`/api/pilgrims/${editingPilgrimId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        setIsEditModalOpen(false);
+        setEditingPilgrimId(null);
+        alert("Data jamaah berhasil diperbarui!");
+        onRefresh();
+        if (selectedPilgrim && selectedPilgrim.id === editingPilgrimId) {
+          setSelectedPilgrim(null);
+        }
+      } else {
+        const err = await res.json();
+        alert(`Gagal memperbarui: ${err.error || "Terjadi kesalahan"}`);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePilgrim = async (id: string, name: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus data jamaah "${name}"?\nSemua data tagihan, berkas, dan logistik terkait akan dihapus secara permanen.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/pilgrims/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        alert(`Data jamaah "${name}" berhasil dihapus.`);
+        if (selectedPilgrim && selectedPilgrim.id === id) {
+          setSelectedPilgrim(null);
+        }
+        onRefresh();
+      } else {
+        alert("Gagal menghapus jamaah.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleQuickDepart = async (pilgrimId: string, pilgrimName: string) => {
+    if (
+      !confirm(
+        `Berangkatkan jamaah "${pilgrimName}" ke Tanah Suci (Arab Saudi)?\n\nStatus jamaah akan diubah menjadi "Di Tanah Suci (DEPARTED)" dan otomatis tercatat di menu "Jamaah Berangkat / Alumni".`
+      )
+    )
+      return;
+    try {
+      const res = await fetch(`/api/pilgrims/${pilgrimId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "DEPARTED" }),
+      });
+      if (res.ok) {
+        alert(`Alhamdulillah, jamaah "${pilgrimName}" berhasil ditandai telah berangkat dan masuk ke arsip alumni!`);
+        onRefresh();
+      } else {
+        alert("Gagal memperbarui status jamaah.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleInlineStatusChange = async (pilgrimId: string, newStatus: string, pilgrimName: string) => {
+    try {
+      const res = await fetch(`/api/pilgrims/${pilgrimId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        onRefresh();
+        if (newStatus === "DEPARTED" || newStatus === "RETURNED") {
+          alert(
+            `Status "${pilgrimName}" berhasil diubah menjadi "${
+              newStatus === "DEPARTED" ? "Di Tanah Suci (Berangkat)" : "Selesai / Pulang (Alumni)"
+            }".\n\nData jamaah ini sekarang otomatis tercatat juga di menu "Jamaah Berangkat / Alumni".`
+          );
+        }
+      } else {
+        alert("Gagal memperbarui status jamaah");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan koneksi");
+    }
+  };
+
+  const [loading, setLoading] = useState(false);
+
+  // Filter
+  const filteredPilgrims = pilgrims.filter((p) => {
+    const matchSearch =
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.nik.includes(searchTerm) ||
+      (p.passportNumber && p.passportNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      p.phone.includes(searchTerm);
+    const matchPackage = selectedPackageId === "ALL" || p.packageId === selectedPackageId;
+    const matchStatus = selectedStatus === "ALL" || p.status === selectedStatus;
+    return matchSearch && matchPackage && matchStatus;
+  });
+
+  const handleAddPilgrim = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const payload = {
+        ...formData,
+        passportNumber: formData.hasPassport ? formData.passportNumber : null,
+        passportExpiry: formData.hasPassport && formData.passportExpiry ? formData.passportExpiry : null,
+        visaNumber: formData.hasVisa ? formData.visaNumber : null,
+        visaIssueDate: formData.hasVisa && formData.visaIssueDate ? formData.visaIssueDate : null,
+        visaExpiryDate: formData.hasVisa && formData.visaExpiryDate ? formData.visaExpiryDate : null,
+        mofaNumber: formData.hasVisa ? formData.mofaNumber : null,
+        muassasahName: formData.hasVisa ? formData.muassasahName : null,
+        insuranceNumber: formData.hasVisa ? formData.insuranceNumber : null,
+      };
+      const res = await fetch("/api/pilgrims", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        setIsAddModalOpen(false);
+        setFormData({
+          packageId: packages[0]?.id || "",
+          name: "",
+          nik: "",
+          hasPassport: false,
+          passportNumber: "",
+          passportExpiry: "",
+          hasVisa: false,
+          visaNumber: "",
+          visaIssueDate: "",
+          visaExpiryDate: "",
+          mofaNumber: "",
+          muassasahName: "",
+          insuranceNumber: "",
+          placeOfBirth: "",
+          dateOfBirth: "",
+          gender: "MALE",
+          phone: "",
+          email: "",
+          address: "",
+          city: "",
+          province: "",
+          emergencyContactName: "",
+          emergencyContactPhone: "",
+          mahramName: "",
+          mahramRelation: "",
+          roomType: "QUAD",
+          uniformSize: "L",
+          bloodType: "O",
+          healthNotes: "",
+          initialDpAmount: "10000000",
+        });
+        onRefresh();
+      } else {
+        const err = await res.json();
+        alert(`Gagal mendaftar: ${err.error || "Periksa data NIK"}`);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportCSV = () => {
+    const headers = "No,Nama Jamaah,NIK,No Paspor,Masa Berlaku,No HP,Paket,Kamar,Status\n";
+    const rows = filteredPilgrims
+      .map(
+        (p, idx) =>
+          `"${idx + 1}","${p.name}","${p.nik}","${p.passportNumber || "-"}","${p.passportExpiry ? formatDate(p.passportExpiry, "yyyy-MM-dd") : "-"}","${p.phone}","${p.package?.name}","${p.roomType}","${p.status}"`
+      )
+      .join("\n");
+    const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Manifest_Jamaah_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <UserCheck className="h-6 w-6 text-emerald-600" />
+            Database Lengkap Jamaah Umroh & Manifest
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Master data identitas, paspor, mahram, kamar, berkas persyaratan, dan riwayat logistik jamaah.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
+          >
+            <Download className="h-4 w-4 text-slate-500" />
+            Export Manifest CSV
+          </button>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-all"
+          >
+            <Plus className="h-4 w-4" />
+            + Tambah Jamaah Baru
+          </button>
+        </div>
+      </div>
+
+      {/* 5-Tier Umroh Lifecycle Quick Navigation */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <button
+          onClick={() => {
+            if (onNavigateTab) onNavigateTab("leads");
+          }}
+          className="bg-amber-50/70 hover:bg-amber-100/70 border border-amber-200 p-3 rounded-2xl text-left transition-all group"
+        >
+          <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
+            Tier 1 & 2 • Prospek
+          </span>
+          <p className="text-xs font-black text-amber-950 mt-0.5 group-hover:text-amber-800">
+            Pipeline Leads & Penawaran &rarr;
+          </p>
+          <span className="text-[10px] text-amber-700">Follow-up calon jamaah</span>
+        </button>
+
+        <button
+          onClick={() => setSelectedStatus("DP_PAID")}
+          className={`p-3 rounded-2xl text-left transition-all border ${
+            selectedStatus === "DP_PAID"
+              ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+              : "bg-white hover:bg-slate-50 border-slate-200 text-slate-900"
+          }`}
+        >
+          <span className={`text-[10px] font-bold uppercase tracking-wider block ${selectedStatus === "DP_PAID" ? "text-emerald-100" : "text-emerald-700"}`}>
+            Tier 3 • Telah Bayar DP
+          </span>
+          <p className="text-xs font-black mt-0.5">Booking Seat Locked</p>
+          <span className={`text-[10px] ${selectedStatus === "DP_PAID" ? "text-emerald-100" : "text-slate-500"}`}>
+            {pilgrims.filter((p) => p.status === "DP_PAID" || p.status === "REGISTERED").length} Jamaah Terdata
+          </span>
+        </button>
+
+        <button
+          onClick={() => setSelectedStatus("DOCUMENTS_READY")}
+          className={`p-3 rounded-2xl text-left transition-all border ${
+            selectedStatus === "DOCUMENTS_READY"
+              ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+              : "bg-white hover:bg-slate-50 border-slate-200 text-slate-900"
+          }`}
+        >
+          <span className={`text-[10px] font-bold uppercase tracking-wider block ${selectedStatus === "DOCUMENTS_READY" ? "text-blue-100" : "text-blue-700"}`}>
+            Tier 4 • Siap Berangkat
+          </span>
+          <p className="text-xs font-black mt-0.5">Lunas & Berkas Lengkap</p>
+          <span className={`text-[10px] ${selectedStatus === "DOCUMENTS_READY" ? "text-blue-100" : "text-slate-500"}`}>
+            {pilgrims.filter((p) => p.status === "DOCUMENTS_READY" || p.status === "FULLY_PAID").length} Jamaah Siap Terbang
+          </span>
+        </button>
+
+        <button
+          onClick={() => setSelectedStatus("DEPARTED")}
+          className={`p-3 rounded-2xl text-left transition-all border ${
+            selectedStatus === "DEPARTED"
+              ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+              : "bg-white hover:bg-slate-50 border-slate-200 text-slate-900"
+          }`}
+        >
+          <span className={`text-[10px] font-bold uppercase tracking-wider block ${selectedStatus === "DEPARTED" ? "text-amber-300" : "text-purple-700"}`}>
+            Tier 5 • Di Tanah Suci
+          </span>
+          <p className="text-xs font-black mt-0.5">Makkah & Madinah</p>
+          <span className={`text-[10px] ${selectedStatus === "DEPARTED" ? "text-slate-300" : "text-slate-500"}`}>
+            {pilgrims.filter((p) => p.status === "DEPARTED").length} Sedang Beribadah
+          </span>
+        </button>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="relative md:col-span-2">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Cari nama, NIK, nomor paspor, atau no HP..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+          />
+        </div>
+
+        <div>
+          <select
+            value={selectedPackageId}
+            onChange={(e) => setSelectedPackageId(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+          >
+            <option value="ALL">Semua Jadwal Paket</option>
+            {packages.map((pkg) => (
+              <option key={pkg.id} value={pkg.id}>
+                {pkg.name} ({formatDate(pkg.departureDate, "dd MMM")})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+          >
+            <option value="ALL">Semua Status Perjalanan</option>
+            <option value="REGISTERED">Terdaftar</option>
+            <option value="DP_PAID">DP Terbayar</option>
+            <option value="FULLY_PAID">Lunas</option>
+            <option value="DOCUMENTS_READY">Berkas Lengkap</option>
+            <option value="VISA_ISSUED">Visa Terbit</option>
+            <option value="DEPARTED">Di Tanah Suci</option>
+            <option value="RETURNED">Selesai / Pulang</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Table Database Jamaah */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="py-3 px-4">Nama Jamaah & NIK</th>
+                <th className="py-3 px-4">No Paspor & Exp</th>
+                <th className="py-3 px-4">Paket & Keberangkatan</th>
+                <th className="py-3 px-4">Kamar & Seragam</th>
+                <th className="py-3 px-4">Kontak & Mahram</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              {filteredPilgrims.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-10 text-center text-slate-400">
+                    Tidak ada data jamaah ditemukan
+                  </td>
+                </tr>
+              ) : (
+                filteredPilgrims.map((p) => {
+                  const badge = getStatusBadge(p.status);
+                  const isPassportExpSoon =
+                    p.passportExpiry &&
+                    new Date(p.passportExpiry).getTime() - new Date().getTime() < 180 * 24 * 60 * 60 * 1000;
+
+                  return (
+                    <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                      {/* Name & NIK */}
+                      <td className="py-3.5 px-4">
+                        <p className="font-bold text-slate-900">{p.name}</p>
+                        <p className="font-mono text-[11px] text-slate-400">NIK: {p.nik}</p>
+                      </td>
+
+                      {/* Passport & Visa */}
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-1">
+                          {p.passportNumber ? (
+                            <div>
+                              <div className="flex items-center gap-1">
+                                <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1.5 py-0.2 rounded text-[11px]">
+                                  {p.passportNumber}
+                                </span>
+                                {isPassportExpSoon && (
+                                  <span className="inline-flex items-center text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.2 rounded border border-rose-200">
+                                    &lt; 6 Bln
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-0.5">
+                                Exp: {p.passportExpiry ? formatDate(p.passportExpiry, "dd/MM/yyyy") : "-"}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="inline-block text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                              Paspor Belum Ada
+                            </span>
+                          )}
+
+                          {/* Visa Info Badge */}
+                          {p.visaNumber ? (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                              <span>🎫 Visa:</span>
+                              <span className="font-mono">{p.visaNumber}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
+                              🎫 Visa: Belum Terbit
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Package */}
+                      <td className="py-3.5 px-4">
+                        <p className="font-semibold text-slate-800 line-clamp-1">{p.package?.name}</p>
+                        <p className="text-[11px] text-emerald-700 font-bold mt-0.5">
+                          🛫 {formatDate(p.package?.departureDate, "dd MMM yyyy")}
+                        </p>
+                      </td>
+
+                      {/* Room & Uniform */}
+                      <td className="py-3.5 px-4">
+                        <span className="inline-block text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                          {p.roomType} Room
+                        </span>
+                        <span className="inline-block ml-1 text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                          Size: {p.uniformSize}
+                        </span>
+                      </td>
+
+                      {/* Contact & Mahram */}
+                      <td className="py-3.5 px-4">
+                        <p className="text-slate-800 font-semibold">{p.phone}</p>
+                        {p.mahramName && (
+                          <p className="text-[10px] text-slate-500">
+                            Mahram: {p.mahramName} ({p.mahramRelation || "Keluarga"})
+                          </p>
+                        )}
+                      </td>
+
+                      {/* Status (Interactive Inline Selector) */}
+                      <td className="py-3.5 px-4">
+                        <select
+                          value={p.status || "REGISTERED"}
+                          onChange={(e) => handleInlineStatusChange(p.id, e.target.value, p.name)}
+                          className={`text-[10px] font-bold rounded-xl px-2.5 py-1 border cursor-pointer focus:outline-none transition-all ${badge.bg} ${badge.text} ${badge.border}`}
+                          title="Klik untuk langsung mengubah status jamaah di tabel"
+                        >
+                          <option value="REGISTERED" className="bg-white text-slate-800">📋 Terdaftar Baru</option>
+                          <option value="DP_PAID" className="bg-white text-slate-800">💳 DP Terbayar (Locked)</option>
+                          <option value="FULLY_PAID" className="bg-white text-slate-800">💰 Lunas 100%</option>
+                          <option value="DOCUMENTS_READY" className="bg-white text-slate-800">📑 Berkas Lengkap</option>
+                          <option value="VISA_ISSUED" className="bg-white text-slate-800">🎫 Visa Terbit</option>
+                          <option value="DEPARTED" className="bg-white text-slate-800">✈️ Di Tanah Suci (Berangkat)</option>
+                          <option value="RETURNED" className="bg-white text-slate-800">🕋 Selesai / Pulang (Alumni)</option>
+                        </select>
+                      </td>
+
+                      {/* Action */}
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => setSelectedPilgrim(p)}
+                            className="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-colors"
+                            title="Lihat Detail Profil"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenEdit(p)}
+                            className="p-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors"
+                            title="Edit / Ubah Data Jamaah"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => handleDeletePilgrim(p.id, p.name)}
+                            className="p-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors"
+                            title="Hapus Data Jamaah"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+
+                          {onNavigateTab && (
+                            <>
+                              <button
+                                onClick={() => onNavigateTab("finance", p.name)}
+                                className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                                title="Buka Tagihan & Invoice"
+                              >
+                                <CreditCard className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                onClick={() => onNavigateTab("handovers", p.name)}
+                                className="p-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors"
+                                title="Ceklis Serah Terima Logistik"
+                              >
+                                <Boxes className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                onClick={() => onNavigateTab("requirements", p.name)}
+                                className="p-1.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition-colors"
+                                title="Ceklis Syarat & Dokumen"
+                              >
+                                <FileCheck className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+
+                          <button
+                            onClick={() => handleQuickDepart(p.id, p.name)}
+                            className="p-1.5 rounded-lg bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300 transition-colors"
+                            title="✈️ Berangkatkan Jamaah (Pindahkan ke Database Alumni)"
+                          >
+                            <Plane className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal Detail Jamaah Lengkap */}
+      {selectedPilgrim && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
+                  Detail Profil Jamaah
+                </span>
+                <h3 className="text-lg font-black text-slate-900">{selectedPilgrim.name}</h3>
+                <p className="text-xs text-slate-500">Paket: {selectedPilgrim.package?.name}</p>
+              </div>
+              <button
+                onClick={() => setSelectedPilgrim(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Grid 3 Columns Details */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Kolom 1: Identitas Pribadi */}
+              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200/80 space-y-2 text-xs">
+                <p className="font-bold text-slate-900 flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+                  <UserCheck className="w-4 h-4 text-emerald-600" /> Identitas Diri
+                </p>
+                <div>
+                  <span className="text-[10px] text-slate-400">NIK (KTP):</span>
+                  <p className="font-mono font-bold text-slate-800">{selectedPilgrim.nik}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Tempat, Tanggal Lahir:</span>
+                  <p className="text-slate-800">
+                    {selectedPilgrim.placeOfBirth || "-"},{" "}
+                    {selectedPilgrim.dateOfBirth ? formatDate(selectedPilgrim.dateOfBirth) : "-"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Jenis Kelamin / Gol. Darah:</span>
+                  <p className="text-slate-800">
+                    {selectedPilgrim.gender === "MALE" ? "Laki-laki" : "Perempuan"} • Gol: {selectedPilgrim.bloodType || "-"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Alamat Tempat Tinggal:</span>
+                  <p className="text-slate-800">{selectedPilgrim.address || "-"}</p>
+                </div>
+              </div>
+
+              {/* Kolom 2: Paspor & Mahram */}
+              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200/80 space-y-2 text-xs">
+                <p className="font-bold text-slate-900 flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+                  <Plane className="w-4 h-4 text-emerald-600" /> Paspor & Mahram
+                </p>
+                <div>
+                  <span className="text-[10px] text-slate-400">Nomor Paspor:</span>
+                  <p className="font-mono font-bold text-slate-800">{selectedPilgrim.passportNumber || "Belum Ada"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Masa Berlaku Paspor:</span>
+                  <p className="text-slate-800">
+                    {selectedPilgrim.passportExpiry ? formatDate(selectedPilgrim.passportExpiry) : "-"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Mahram / Pendamping:</span>
+                  <p className="text-slate-800 font-semibold">
+                    {selectedPilgrim.mahramName || "-"} {selectedPilgrim.mahramRelation ? `(${selectedPilgrim.mahramRelation})` : ""}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Kontak Darurat Keluarga:</span>
+                  <p className="text-slate-800">
+                    {selectedPilgrim.emergencyContactName || "-"} ({selectedPilgrim.emergencyContactPhone || "-"})
+                  </p>
+                </div>
+              </div>
+
+              {/* Kolom 3: Fasilitas & Kesehatan */}
+              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200/80 space-y-2 text-xs">
+                <p className="font-bold text-slate-900 flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+                  <Shield className="w-4 h-4 text-emerald-600" /> Fasilitas & Catatan
+                </p>
+                <div>
+                  <span className="text-[10px] text-slate-400">Tipe Kamar Hotel:</span>
+                  <p className="font-bold text-slate-800">{selectedPilgrim.roomType} Room</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Ukuran Seragam / Batik:</span>
+                  <p className="font-bold text-slate-800">Size {selectedPilgrim.uniformSize}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Catatan Khusus Kesehatan:</span>
+                  <p className="text-slate-800">{selectedPilgrim.healthNotes || "Tidak ada keluhan"}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Banner Khusus Visa Saudi MoFA */}
+            <div className="rounded-2xl bg-emerald-50/60 border border-emerald-200 p-4 space-y-2 text-xs">
+              <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
+                <p className="font-bold text-emerald-950 flex items-center gap-1.5">
+                  <Shield className="w-4 h-4 text-emerald-700" />
+                  Status Dokumen E-Visa Umroh & Syarikah Saudi
+                </p>
+                {selectedPilgrim.visaNumber ? (
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-bold">
+                    ✅ Visa Terbit
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold">
+                    ⏳ Menunggu Penerbitan Visa
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                <div>
+                  <span className="text-[10px] text-emerald-800">Nomor E-Visa (MoFA):</span>
+                  <p className="font-mono font-bold text-emerald-950">
+                    {selectedPilgrim.visaNumber || "-"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-emerald-800">Nomor MOFA:</span>
+                  <p className="font-mono font-bold text-emerald-950">
+                    {selectedPilgrim.mofaNumber || "-"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-emerald-800">Syarikah Penjamin:</span>
+                  <p className="font-bold text-emerald-950">
+                    {selectedPilgrim.muassasahName || "PT Sulthan Haramain Travel"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-emerald-800">Masa Berlaku Visa:</span>
+                  <p className="font-bold text-emerald-950">
+                    {selectedPilgrim.visaExpiryDate ? formatDate(selectedPilgrim.visaExpiryDate, "dd MMM yyyy") : "-"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Riwayat Dokumen & Keuangan Mini Preview */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-slate-900">Dokumen Ceklis Persyaratan Umroh</p>
+                <span className="text-[11px] text-emerald-700 font-semibold">
+                  {selectedPilgrim.requirements?.filter((r: any) => r.isVerified).length} / {selectedPilgrim.requirements?.length || 6} Terverifikasi
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {selectedPilgrim.requirements?.map((req: any) => (
+                  <div
+                    key={req.id}
+                    className={`p-2.5 rounded-xl border text-[11px] ${
+                      req.isVerified
+                        ? "bg-emerald-50/60 border-emerald-200 text-emerald-900"
+                        : req.isSubmitted
+                        ? "bg-amber-50/60 border-amber-200 text-amber-900"
+                        : "bg-slate-50 border-slate-200 text-slate-500"
+                    }`}
+                  >
+                    <p className="font-semibold line-clamp-1">{req.name}</p>
+                    <p className="text-[10px] mt-0.5">
+                      {req.isVerified ? "✅ Terverifikasi" : req.isSubmitted ? "⏳ Diserahkan" : "❌ Belum Lengkap"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-wrap gap-1.5">
+                {onNavigateTab && (
+                  <>
+                    <button
+                      onClick={() => {
+                        const name = selectedPilgrim.name;
+                        setSelectedPilgrim(null);
+                        onNavigateTab("finance", name);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold hover:bg-amber-100"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" /> Kelola Invoice
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const name = selectedPilgrim.name;
+                        setSelectedPilgrim(null);
+                        onNavigateTab("handovers", name);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold hover:bg-blue-100"
+                    >
+                      <Boxes className="w-3.5 h-3.5" /> Form Logistik (BAST)
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const name = selectedPilgrim.name;
+                        setSelectedPilgrim(null);
+                        onNavigateTab("requirements", name);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold hover:bg-teal-100"
+                    >
+                      <FileCheck className="w-3.5 h-3.5" /> Ceklis Berkas
+                    </button>
+                  </>
+                )}
+
+                {onOpenLetterGenerator && (
+                  <button
+                    onClick={() => {
+                      const p = selectedPilgrim;
+                      setSelectedPilgrim(null);
+                      onOpenLetterGenerator(p);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 text-purple-800 border border-purple-200 text-xs font-bold hover:bg-purple-100"
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Buat Surat Resmi
+                  </button>
+                )}
+              </div>
+
+                <button
+                  onClick={() => {
+                    const p = selectedPilgrim;
+                    handleOpenEdit(p);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400"
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Ubah Data Jamaah
+                </button>
+
+                <button
+                  onClick={() => {
+                    const p = selectedPilgrim;
+                    handleDeletePilgrim(p.id, p.name);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Hapus Jamaah
+                </button>
+
+                <button
+                  onClick={() => setSelectedPilgrim(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Tutup
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tambah Jamaah Baru */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-emerald-600" />
+                Tambah Jamaah Baru (Master Data)
+              </h3>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* KTP AI / OCR SCANNER DROPZONE */}
+            <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-dashed border-emerald-300 rounded-2xl p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                    <Scan className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      📷 Scan Foto e-KTP Otomatis
+                      <span className="text-[9px] font-extrabold bg-emerald-600 text-white px-1.5 py-0.2 rounded-md">
+                        AUTO-FILL
+                      </span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Unggah foto KTP jamaah, sistem akan otomatis membaca NIK, Nama, TTL, Jenis Kelamin & Alamat (tetap bisa diedit).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 shadow-xs transition-all">
+                    {isScanningKtp ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Membaca KTP...
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-3.5 h-3.5" /> Upload Foto KTP
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isScanningKtp}
+                      onChange={(e) => handleKtpFileChange(e, false)}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Status & Preview Banner */}
+              {isScanningKtp && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white border border-emerald-200 text-emerald-800 text-xs font-semibold animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                  <span>Sedang memproses OCR & mengekstrak data dari foto e-KTP...</span>
+                </div>
+              )}
+
+              {ocrSuccessMsg && (
+                <div className="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-100/70 border border-emerald-300 text-emerald-950 text-xs">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold">{ocrSuccessMsg}</p>
+                    <p className="text-[10px] text-emerald-800 mt-0.5">
+                      Periksa kembali data yang terisi di bawah dan ubah bila diperlukan sebelum menyimpan.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {ktpPreviewUrl && (
+                <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-emerald-200">
+                  <img
+                    src={ktpPreviewUrl}
+                    alt="Preview KTP"
+                    className="w-20 h-12 object-cover rounded-lg border border-slate-200 shadow-2xs"
+                  />
+                  <div className="text-[11px] text-slate-600 flex-1">
+                    <p className="font-bold text-slate-900">Foto KTP Terpilih</p>
+                    <p className="text-[10px] text-slate-400">Gambar berhasil dimuat untuk referensi pengisian data.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setKtpPreviewUrl(null);
+                      setOcrSuccessMsg(null);
+                    }}
+                    className="text-xs text-rose-600 font-bold hover:underline"
+                  >
+                    Ganti Foto
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleAddPilgrim} className="space-y-4 text-xs">
+              {/* SEKSI 1: NAMA JAMAAH & NIK (DATA IDENTITAS SESUAI KTP) */}
+              <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
+                  <UserCheck className="w-4 h-4 text-emerald-600" />
+                  <span>1. NAMA JAMAAH & NIK (DATA IDENTITAS KTP)</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700">Nama Lengkap Sesuai KTP/Paspor *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. H. Bambang Sulistyo"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Nomor Induk Kependudukan (NIK) *</label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={16}
+                      placeholder="16 Digit NIK KTP"
+                      value={formData.nik}
+                      onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-mono font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700">Jenis Kelamin</label>
+                    <select
+                      value={formData.gender}
+                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="MALE">Laki-laki</option>
+                      <option value="FEMALE">Perempuan</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Golongan Darah</label>
+                    <select
+                      value={formData.bloodType}
+                      onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="AB">AB</option>
+                      <option value="O">O</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="font-bold text-slate-700">Kota / Domisili</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Jakarta Selatan"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700">Alamat Lengkap KTP</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Jl. Melati No. 12 RT 04/RW 02, Kebayoran Baru"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* SEKSI 2: PROGRAM PAKET & TANGGAL */}
+              <div className="bg-emerald-50/60 p-3.5 rounded-2xl border border-emerald-200/80 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-900 border-b border-emerald-200 pb-2">
+                  <Plane className="w-4 h-4 text-emerald-700" />
+                  <span>2. PROGRAM PAKET & TANGGAL KEBERANGKATAN</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="md:col-span-2">
+                    <label className="font-bold text-slate-800">Pilih Paket Keberangkatan *</label>
+                    <select
+                      required
+                      value={formData.packageId}
+                      onChange={(e) => setFormData({ ...formData, packageId: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                    >
+                      {packages.map((pkg) => (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.name} - Berangkat {formatDate(pkg.departureDate, "dd MMM yyyy")} ({formatCurrency(pkg.priceQuad)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800">Nominal DP Awal (Rp)</label>
+                    <input
+                      type="number"
+                      value={formData.initialDpAmount}
+                      onChange={(e) => setFormData({ ...formData, initialDpAmount: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-emerald-800 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SEKSI 3: PASPOR, VISA SAUDI & TTL */}
+              <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3.5">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  <span>3. PASPOR, VISA SAUDI & TTL (DOKUMEN PERJALANAN)</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700">Tempat Lahir</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Surabaya"
+                      value={formData.placeOfBirth}
+                      onChange={(e) => setFormData({ ...formData, placeOfBirth: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Tanggal Lahir</label>
+                    <input
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    />
+                  </div>
+                </div>
+
+                {/* SUB-SECTION 1: STATUS PASPOR */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-3.5 space-y-3 shadow-2xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div>
+                      <label className="font-bold text-slate-900 flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        <span>Apakah Jamaah Sudah Memiliki Paspor?</span>
+                      </label>
+                      <p className="text-[10px] text-slate-500">Pilih "Sudah Ada" jika paspor fisik sudah tersedia.</p>
+                    </div>
+
+                    <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            hasPassport: false,
+                            passportNumber: "",
+                            passportExpiry: "",
+                          })
+                        }
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                          !formData.hasPassport
+                            ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        ❌ Belum Ada Paspor
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, hasPassport: true })}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                          formData.hasPassport
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        ✅ Sudah Ada Paspor
+                      </button>
+                    </div>
+                  </div>
+
+                  {formData.hasPassport ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="font-bold text-slate-700">Nomor Paspor RI *</label>
+                        <input
+                          type="text"
+                          required={formData.hasPassport}
+                          placeholder="e.g. C8921475"
+                          value={formData.passportNumber}
+                          onChange={(e) =>
+                            setFormData({ ...formData, passportNumber: e.target.value.toUpperCase() })
+                          }
+                          className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-mono font-bold text-slate-900 focus:bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-700">Masa Berlaku Paspor (Expiry) *</label>
+                        <input
+                          type="date"
+                          required={formData.hasPassport}
+                          value={formData.passportExpiry}
+                          onChange={(e) => setFormData({ ...formData, passportExpiry: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
+                      <span className="text-base">⏳</span>
+                      <span>Paspor belum ada / sedang proses di kantor Imigrasi. Kolom nomor paspor disembunyikan dan dapat dilengkapi menyusul saat edit data.</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* SUB-SECTION 2: STATUS E-VISA */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-3.5 space-y-3 shadow-2xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div>
+                      <label className="font-bold text-slate-900 flex items-center gap-1.5">
+                        <Shield className="w-4 h-4 text-emerald-600" />
+                        <span>Apakah E-Visa Umroh Sudah Diterbitkan?</span>
+                      </label>
+                      <p className="text-[10px] text-slate-500">Pilih "Sudah Terbit" jika visa dari MoFA Saudi sudah keluar.</p>
+                    </div>
+
+                    <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            hasVisa: false,
+                            visaNumber: "",
+                            visaIssueDate: "",
+                            visaExpiryDate: "",
+                            mofaNumber: "",
+                            muassasahName: "",
+                            insuranceNumber: "",
+                          })
+                        }
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                          !formData.hasVisa
+                            ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        ⏳ Belum Terbit Visa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, hasVisa: true })}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                          formData.hasVisa
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        ✅ Sudah Terbit Visa
+                      </button>
+                    </div>
+                  </div>
+
+                  {formData.hasVisa ? (
+                    <div className="space-y-3 pt-1">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="font-bold text-slate-700">Nomor E-Visa Saudi (MoFA) *</label>
+                          <input
+                            type="text"
+                            required={formData.hasVisa}
+                            placeholder="e.g. 6098234123"
+                            value={formData.visaNumber}
+                            onChange={(e) => setFormData({ ...formData, visaNumber: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-emerald-50/40 font-mono font-bold text-emerald-900 focus:bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700">Nomor MOFA Saudi</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. MOFA-881920"
+                            value={formData.mofaNumber}
+                            onChange={(e) => setFormData({ ...formData, mofaNumber: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="font-bold text-slate-700">Syarikah / Muassasah Penjamin</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Dallah / Al-Riyadah / Rawafina"
+                            value={formData.muassasahName}
+                            onChange={(e) => setFormData({ ...formData, muassasahName: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700">Masa Berlaku E-Visa</label>
+                          <input
+                            type="date"
+                            value={formData.visaExpiryDate}
+                            onChange={(e) => setFormData({ ...formData, visaExpiryDate: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-semibold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
+                      <span className="text-base">🕋</span>
+                      <span>E-Visa belum terbit dari Kementerian Haji & Umrah Saudi. Kolom data visa disembunyikan dan dapat diinput menyusul saat edit data.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SEKSI 4: KAMAR & SERAGAM */}
+              <div className="bg-amber-50/50 p-3.5 rounded-2xl border border-amber-200/80 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-amber-900 border-b border-amber-200 pb-2">
+                  <Boxes className="w-4 h-4 text-amber-700" />
+                  <span>4. KAMAR & SERAGAM</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-800">Tipe Kamar Hotel</label>
+                    <select
+                      value={formData.roomType}
+                      onChange={(e) => setFormData({ ...formData, roomType: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-amber-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="QUAD">Quad (Sekamar Ber-4)</option>
+                      <option value="TRIPLE">Triple (Sekamar Ber-3)</option>
+                      <option value="DOUBLE">Double (Sekamar Ber-2)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800">Ukuran Seragam / Batik</label>
+                    <select
+                      value={formData.uniformSize}
+                      onChange={(e) => setFormData({ ...formData, uniformSize: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-amber-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="S">S</option>
+                      <option value="M">M</option>
+                      <option value="L">L</option>
+                      <option value="XL">XL</option>
+                      <option value="XXL">XXL</option>
+                      <option value="XXXL">XXXL</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* SEKSI 5: KONTAK & MAHRAM */}
+              <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
+                  <Phone className="w-4 h-4 text-teal-600" />
+                  <span>5. KONTAK & MAHRAM</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700">Nomor WhatsApp / HP *</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="08123456789"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Email Jamaah</label>
+                    <input
+                      type="email"
+                      placeholder="jamaah@gmail.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700">Nama Mahram / Pendamping</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. H. Ahmad Dahlan"
+                      value={formData.mahramName}
+                      onChange={(e) => setFormData({ ...formData, mahramName: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Hubungan Mahram</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Suami / Ayah / Kakak Kandung"
+                      value={formData.mahramRelation}
+                      onChange={(e) => setFormData({ ...formData, mahramRelation: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700">Kontak Darurat Keluarga</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ibu Siti (Istri)"
+                      value={formData.emergencyContactName}
+                      onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">No. HP Darurat</label>
+                    <input
+                      type="tel"
+                      placeholder="08198765432"
+                      value={formData.emergencyContactPhone}
+                      onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SEKSI 6: CATATAN KESEHATAN & KHUSUS */}
+              <div>
+                <label className="font-bold text-slate-700">Catatan Riwayat Kesehatan & Kebutuhan Khusus</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Membutuhkan bantuan kursi roda saat tawaf, riwayat alergi obat, dll..."
+                  value={formData.healthNotes}
+                  onChange={(e) => setFormData({ ...formData, healthNotes: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border text-slate-600 font-bold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-sm"
+                >
+                  {loading ? "Menyimpan..." : "Simpan Jamaah"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit Data Jamaah */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-amber-600" />
+                Edit / Ubah Data Jamaah
+              </h3>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* KTP AI / OCR SCANNER IN EDIT MODAL */}
+            <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-2 border-dashed border-amber-300 rounded-2xl p-3.5 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs">
+                    <Scan className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      📷 Update Data dari Foto e-KTP
+                    </h4>
+                    <p className="text-[10px] text-slate-500">
+                      Scan foto KTP baru untuk memperbarui NIK, Nama, TTL, dan Alamat secara instan.
+                    </p>
+                  </div>
+                </div>
+
+                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 shadow-xs transition-all">
+                  {isScanningKtp ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Membaca KTP...
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-3.5 h-3.5" /> Upload Foto KTP
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={isScanningKtp}
+                    onChange={(e) => handleKtpFileChange(e, true)}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {ocrSuccessMsg && (
+                <div className="p-2 rounded-xl bg-amber-100 border border-amber-300 text-amber-950 text-xs font-semibold">
+                  {ocrSuccessMsg}
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
+              {/* SEKSI 1: IDENTITAS KTP */}
+              <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
+                  <UserCheck className="w-4 h-4 text-emerald-600" />
+                  <span>1. NAMA JAMAAH & NIK (DATA IDENTITAS KTP)</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700">Nama Lengkap Sesuai KTP/Paspor *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. H. Bambang Sulistyo"
+                      value={editFormData.name}
+                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Nomor Induk Kependudukan (NIK) *</label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={16}
+                      placeholder="16 Digit NIK KTP"
+                      value={editFormData.nik}
+                      onChange={(e) => setEditFormData({ ...editFormData, nik: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-mono font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700">Jenis Kelamin</label>
+                    <select
+                      value={editFormData.gender}
+                      onChange={(e) => setEditFormData({ ...editFormData, gender: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="MALE">Laki-laki</option>
+                      <option value="FEMALE">Perempuan</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Golongan Darah</label>
+                    <select
+                      value={editFormData.bloodType}
+                      onChange={(e) => setEditFormData({ ...editFormData, bloodType: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="AB">AB</option>
+                      <option value="O">O</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="font-bold text-slate-700">Kota / Domisili</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Jakarta Selatan"
+                      value={editFormData.city}
+                      onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700">Alamat Lengkap KTP</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Jl. Melati No. 12 RT 04/RW 02"
+                    value={editFormData.address}
+                    onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* SEKSI 2: PAKET & STATUS */}
+              <div className="bg-emerald-50/40 p-3.5 rounded-2xl border border-emerald-200/80 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-950 border-b border-emerald-200/70 pb-2">
+                  <Plane className="w-4 h-4 text-emerald-600" />
+                  <span>2. PROGRAM PAKET & STATUS PERJALANAN</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-800">Pilih Paket Keberangkatan *</label>
+                    <select
+                      required
+                      value={editFormData.packageId}
+                      onChange={(e) => setEditFormData({ ...editFormData, packageId: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                    >
+                      {packages.map((pkg) => (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.name} - {formatDate(pkg.departureDate, "dd MMM yyyy")}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800">Status Perjalanan Jamaah *</label>
+                    <select
+                      value={editFormData.status}
+                      onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-slate-900"
+                    >
+                      <option value="REGISTERED">📋 Terdaftar Baru (REGISTERED)</option>
+                      <option value="DP_PAID">💳 DP Terbayar (DP_PAID)</option>
+                      <option value="FULLY_PAID">💰 Lunas 100% (FULLY_PAID)</option>
+                      <option value="DOCUMENTS_READY">📑 Berkas Lengkap (DOCUMENTS_READY)</option>
+                      <option value="VISA_ISSUED">🎫 Visa Terbit (VISA_ISSUED)</option>
+                      <option value="DEPARTED">✈️ Di Tanah Suci (DEPARTED)</option>
+                      <option value="RETURNED">🕋 Selesai / Pulang (RETURNED)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* SEKSI 3: PASPOR, VISA SAUDI & TTL */}
+              <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3.5">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  <span>3. PASPOR, VISA SAUDI & TTL (DOKUMEN PERJALANAN)</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700">Tempat Lahir</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Surabaya"
+                      value={editFormData.placeOfBirth}
+                      onChange={(e) => setEditFormData({ ...editFormData, placeOfBirth: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Tanggal Lahir</label>
+                    <input
+                      type="date"
+                      value={editFormData.dateOfBirth}
+                      onChange={(e) => setEditFormData({ ...editFormData, dateOfBirth: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    />
+                  </div>
+                </div>
+
+                {/* SUB-SECTION 1: STATUS PASPOR */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-3.5 space-y-3 shadow-2xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div>
+                      <label className="font-bold text-slate-900 flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        <span>Apakah Jamaah Sudah Memiliki Paspor?</span>
+                      </label>
+                      <p className="text-[10px] text-slate-500">Pilih "Sudah Ada" jika paspor fisik sudah tersedia.</p>
+                    </div>
+
+                    <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditFormData({
+                            ...editFormData,
+                            hasPassport: false,
+                            passportNumber: "",
+                            passportExpiry: "",
+                          })
+                        }
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                          !editFormData.hasPassport
+                            ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        ❌ Belum Ada Paspor
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditFormData({ ...editFormData, hasPassport: true })}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                          editFormData.hasPassport
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        ✅ Sudah Ada Paspor
+                      </button>
+                    </div>
+                  </div>
+
+                  {editFormData.hasPassport ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="font-bold text-slate-700">Nomor Paspor RI *</label>
+                        <input
+                          type="text"
+                          required={editFormData.hasPassport}
+                          placeholder="e.g. C8921475"
+                          value={editFormData.passportNumber}
+                          onChange={(e) =>
+                            setEditFormData({ ...editFormData, passportNumber: e.target.value.toUpperCase() })
+                          }
+                          className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-mono font-bold text-slate-900 focus:bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-700">Masa Berlaku Paspor (Expiry) *</label>
+                        <input
+                          type="date"
+                          required={editFormData.hasPassport}
+                          value={editFormData.passportExpiry}
+                          onChange={(e) => setEditFormData({ ...editFormData, passportExpiry: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
+                      <span className="text-base">⏳</span>
+                      <span>Paspor belum ada / sedang proses di kantor Imigrasi. Kolom nomor paspor disembunyikan dan dapat dilengkapi menyusul saat edit data.</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* SUB-SECTION 2: STATUS E-VISA */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-3.5 space-y-3 shadow-2xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div>
+                      <label className="font-bold text-slate-900 flex items-center gap-1.5">
+                        <Shield className="w-4 h-4 text-emerald-600" />
+                        <span>Apakah E-Visa Umroh Sudah Diterbitkan?</span>
+                      </label>
+                      <p className="text-[10px] text-slate-500">Pilih "Sudah Terbit" jika visa dari MoFA Saudi sudah keluar.</p>
+                    </div>
+
+                    <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditFormData({
+                            ...editFormData,
+                            hasVisa: false,
+                            visaNumber: "",
+                            visaIssueDate: "",
+                            visaExpiryDate: "",
+                            mofaNumber: "",
+                            muassasahName: "",
+                            insuranceNumber: "",
+                          })
+                        }
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                          !editFormData.hasVisa
+                            ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        ⏳ Belum Terbit Visa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditFormData({ ...editFormData, hasVisa: true })}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                          editFormData.hasVisa
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        ✅ Sudah Terbit Visa
+                      </button>
+                    </div>
+                  </div>
+
+                  {editFormData.hasVisa ? (
+                    <div className="space-y-3 pt-1">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="font-bold text-slate-700">Nomor E-Visa Saudi (MoFA) *</label>
+                          <input
+                            type="text"
+                            required={editFormData.hasVisa}
+                            placeholder="e.g. 6098234123"
+                            value={editFormData.visaNumber}
+                            onChange={(e) => setEditFormData({ ...editFormData, visaNumber: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-emerald-50/40 font-mono font-bold text-emerald-900 focus:bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700">Nomor MOFA Saudi</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. MOFA-881920"
+                            value={editFormData.mofaNumber}
+                            onChange={(e) => setEditFormData({ ...editFormData, mofaNumber: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="font-bold text-slate-700">Syarikah / Muassasah Penjamin</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Dallah / Al-Riyadah / Rawafina"
+                            value={editFormData.muassasahName}
+                            onChange={(e) => setEditFormData({ ...editFormData, muassasahName: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700">Masa Berlaku E-Visa</label>
+                          <input
+                            type="date"
+                            value={editFormData.visaExpiryDate}
+                            onChange={(e) => setEditFormData({ ...editFormData, visaExpiryDate: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-semibold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
+                      <span className="text-base">🕋</span>
+                      <span>E-Visa belum terbit dari Kementerian Haji & Umrah Saudi. Kolom data visa disembunyikan dan dapat diinput menyusul saat edit data.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SEKSI 4: KAMAR & SERAGAM */}
+              <div className="bg-amber-50/50 p-3.5 rounded-2xl border border-amber-200/80 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-amber-900 border-b border-amber-200 pb-2">
+                  <Boxes className="w-4 h-4 text-amber-700" />
+                  <span>4. KAMAR & SERAGAM</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-800">Tipe Kamar Hotel</label>
+                    <select
+                      value={editFormData.roomType}
+                      onChange={(e) => setEditFormData({ ...editFormData, roomType: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="QUAD">Quad Room (Ber-4)</option>
+                      <option value="TRIPLE">Triple Room (Ber-3)</option>
+                      <option value="DOUBLE">Double Room (Ber-2)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800">Ukuran Seragam / Batik</label>
+                    <select
+                      value={editFormData.uniformSize}
+                      onChange={(e) => setEditFormData({ ...editFormData, uniformSize: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="S">S</option>
+                      <option value="M">M</option>
+                      <option value="L">L</option>
+                      <option value="XL">XL</option>
+                      <option value="XXL">XXL</option>
+                      <option value="XXXL">XXXL</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* SEKSI 5: KONTAK & MAHRAM */}
+              <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
+                  <Phone className="w-4 h-4 text-teal-600" />
+                  <span>5. KONTAK & MAHRAM / PENDAMPING</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700">Nomor WhatsApp Jamaah *</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="e.g. 08123456789"
+                      value={editFormData.phone}
+                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Email Jamaah (Opsional)</label>
+                    <input
+                      type="email"
+                      placeholder="e.g. jamaah@gmail.com"
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
+                  <div>
+                    <label className="font-bold text-slate-700">Nama Mahram / Pendamping</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Hj. Siti Aminah"
+                      value={editFormData.mahramName}
+                      onChange={(e) => setEditFormData({ ...editFormData, mahramName: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Hubungan Mahram</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Istri, Suami, Ayah Kandung"
+                      value={editFormData.mahramRelation}
+                      onChange={(e) => setEditFormData({ ...editFormData, mahramRelation: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
+                  <div>
+                    <label className="font-bold text-slate-700">Nama Kontak Darurat Keluarga</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ahmad (Anak Sulung)"
+                      value={editFormData.emergencyContactName}
+                      onChange={(e) => setEditFormData({ ...editFormData, emergencyContactName: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">No HP Kontak Darurat</label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 08129876543"
+                      value={editFormData.emergencyContactPhone}
+                      onChange={(e) => setEditFormData({ ...editFormData, emergencyContactPhone: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SEKSI 6: CATATAN KESEHATAN & KHUSUS */}
+              <div>
+                <label className="font-bold text-slate-700">Catatan Riwayat Kesehatan & Kebutuhan Khusus</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Membutuhkan bantuan kursi roda saat tawaf, riwayat alergi obat, dll..."
+                  value={editFormData.healthNotes}
+                  onChange={(e) => setEditFormData({ ...editFormData, healthNotes: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border text-slate-600 font-bold hover:bg-slate-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 shadow-sm"
+                >
+                  {loading ? "Menyimpan..." : "Simpan Perubahan Data"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

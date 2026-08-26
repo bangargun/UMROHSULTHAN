@@ -1,0 +1,361 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String    @id @default(uuid())
+  name      String
+  username  String    @unique @default("master")
+  password  String    @default("1234")
+  email     String?   @unique
+  phone     String?
+  role      String    @default("SUPERADMIN") // SUPERADMIN, ADMIN_OPERASIONAL, ADMIN_FINANCE, ADMIN_MARKETING, STAF_LOGISTIK
+  avatar    String?
+  isActive  Boolean   @default(true)
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model TravelSetting {
+  id               String   @id @default("default-settings")
+  companyName      String   @default("PT SULTHAN HARAMAIN TOUR & TRAVEL")
+  licenseNumber    String   @default("PPIU Kemenag RI No. U.412 Tahun 2022")
+  kemenhanLicense  String?  @default("Izin Khusus Kemenhan RI No. B/108/M/XII/2023")
+  address          String   @default("Sulthan Haramain Tower, Jl. Prof. Dr. Satrio No. 88, Kuningan, Jakarta Selatan 12940")
+  phone            String   @default("(021) 5290-8888 / 0811-9876-5432")
+  email            String   @default("salam@sulthanharamain.com")
+  website          String   @default("www.sulthanharamain.com")
+  directorName     String   @default("H. Sulthan Syarif, Lc., M.A.")
+  directorTitle    String   @default("Direktur Utama")
+  bankBSI          String   @default("8888-999-123 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL")
+  bankBCA          String   @default("731-888-9900 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL")
+  bankMandiri      String   @default("137-00-8888999-1 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL")
+  updatedAt        DateTime @updatedAt
+}
+
+model RequirementTemplate {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isMandatory Boolean  @default(true)
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Package {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  name          String
+  description   String?
+  departureDate DateTime
+  returnDate    DateTime
+  durationDays  Int       @default(9)
+  hotelMakkah   String
+  hotelMadinah  String
+  airline       String
+  priceQuad     Float
+  priceTriple   Float
+  priceDouble   Float
+  quota         Int
+  bookedCount   Int       @default(0)
+  status        String    @default("ACTIVE") // ACTIVE, FULL, COMPLETED, DRAFT
+  pilgrims      Pilgrim[]
+  expenses      Expense[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Lead {
+  id             String            @id @default(uuid())
+  name           String
+  phone          String
+  email          String?
+  city           String?
+  source         String            @default("INSTAGRAM") // INSTAGRAM, TIKTOK, WEBSITE, REFERRAL, WALK_IN, AGENT
+  status         String            @default("NEW") // NEW, CONTACTED, INTERESTED, QUOTATION_SENT, CLOSING_DP, LOST
+  notes          String?
+  budget         Float?
+  estimatedPax   Int               @default(1)
+  assignedAgent  String?
+  interactions   LeadInteraction[]
+  pilgrim        Pilgrim?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model LeadInteraction {
+  id                String    @id @default(uuid())
+  leadId            String
+  lead              Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type              String    @default("WHATSAPP") // CALL, WHATSAPP, MEETING, EMAIL
+  summary           String
+  nextFollowUpDate  DateTime?
+  createdAt         DateTime  @default(now())
+}
+
+model Pilgrim {
+  id                    String                @id @default(uuid())
+  leadId                String?               @unique
+  lead                  Lead?                 @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  packageId             String
+  package               Package               @relation(fields: [packageId], references: [id])
+  
+  // Data Pribadi
+  name                  String
+  nik                   String                @unique
+  passportNumber        String?
+  passportExpiry        DateTime?
+  visaNumber            String?   // Nomor E-Visa Umroh / Visa MoFA Saudi
+  visaIssueDate         DateTime? // Tanggal Terbit Visa
+  visaExpiryDate        DateTime? // Tanggal Masa Berlaku Visa
+  mofaNumber            String?   // Nomor MOFA Saudi
+  muassasahName         String?   // Nama Syarikah / Muassasah Penjamin di Arab Saudi
+  insuranceNumber       String?   // Nomor Asuransi Kesehatan Saudi
+  placeOfBirth          String?
+  dateOfBirth           DateTime?
+  gender                String                @default("MALE") // MALE, FEMALE
+  phone                 String
+  email                 String?
+  address               String?
+  city                  String?
+  province              String?
+  
+  // Kontak Darurat & Mahram
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  mahramName            String?
+  mahramRelation        String?
+  
+  // Preferensi
+  roomType              String                @default("QUAD") // QUAD, TRIPLE, DOUBLE
+  uniformSize           String                @default("L") // S, M, L, XL, XXL, XXXL
+  bloodType             String?
+  healthNotes           String?
+  
+  // Status
+  status                String                @default("REGISTERED") // REGISTERED, DP_PAID, FULLY_PAID, DOCUMENTS_READY, VISA_ISSUED, DEPARTED, RETURNED
+  
+  // Relations
+  invoices              Invoice[]
+  handovers             LogisticsHandover[]
+  requirements          PilgrimRequirement[]
+  letters               OfficialLetter[]
+  
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+}
+
+model Invoice {
+  id            String    @id @default(uuid())
+  invoiceNumber String    @unique
+  pilgrimId     String
+  pilgrim       Pilgrim   @relation(fields: [pilgrimId], references: [id], onDelete: Cascade)
+  type          String    @default("DP") // DP, INSTALLMENT, FULL_PAYMENT
+  title         String
+  amount        Float
+  dueDate       DateTime
+  status        String    @default("PENDING") // PENDING, PAID, OVERDUE, CANCELLED
+  paymentMethod String?   // BANK_TRANSFER, CASH, QRIS
+  paymentDate   DateTime?
+  proofUrl      String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Expense {
+  id              String    @id @default(uuid())
+  packageId       String?
+  package         Package?  @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  category        String    @default("OPERASIONAL_KANTOR") // TIKET_PESAWAT, HOTEL_SAUDI, VISA_ASURANSI, LOGISTIK_VENDOR, MUTHAWWIF_HANDLING, MARKETING_IKLAN, OPERASIONAL_KANTOR
+  title           String
+  amount          Float
+  expenseDate     DateTime  @default(now())
+  paymentMethod   String    @default("BANK_TRANSFER") // BANK_TRANSFER, CASH, CREDIT_CARD
+  recipientVendor String?
+  notes           String?
+  proofUrl        String?
+  createdBy       String    @default("Admin Keuangan")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Equipment {
+  id             String            @id @default(uuid())
+  name           String
+  sku            String            @unique
+  category       String            @default("AKSESORIS") // BAGASI, KAIN, SERAGAM, AKSESORIS, DOKUMEN
+  totalStock     Int               @default(0)
+  availableStock Int               @default(0)
+  unit           String            @default("PCS") // PCS, SET, LEMBAR
+  minStockAlert  Int               @default(10)
+  description    String?
+  movements      StockMovement[]
+  handoverItems  HandoverItem[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model StockMovement {
+  id           String    @id @default(uuid())
+  equipmentId  String
+  equipment    Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  type         String    @default("IN_PURCHASE") // IN_PURCHASE, OUT_DISTRIBUTION, RETURN, ADJUSTMENT
+  quantity     Int
+  referenceNo  String?
+  notes        String?
+  createdBy    String?
+  movementDate DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+}
+
+model LogisticsHandover {
+  id            String         @id @default(uuid())
+  pilgrimId     String
+  pilgrim       Pilgrim        @relation(fields: [pilgrimId], references: [id], onDelete: Cascade)
+  handoverDate  DateTime       @default(now())
+  officerName   String
+  recipientName String
+  signatureUrl  String?        // Base64 Signature Image or data URL
+  notes         String?
+  isCompleted   Boolean        @default(false)
+  items         HandoverItem[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model HandoverItem {
+  id          String            @id @default(uuid())
+  handoverId  String
+  handover    LogisticsHandover @relation(fields: [handoverId], references: [id], onDelete: Cascade)
+  equipmentId String
+  equipment   Equipment         @relation(fields: [equipmentId], references: [id])
+  quantity    Int               @default(1)
+  isGiven     Boolean           @default(false)
+  notes       String?
+}
+
+model PilgrimRequirement {
+  id          String    @id @default(uuid())
+  pilgrimId   String
+  pilgrim     Pilgrim   @relation(fields: [pilgrimId], references: [id], onDelete: Cascade)
+  name        String    // e.g. "Paspor Asli (Min 8 Bulan)", "Buku Kuning Vaksin Meningitis", "Pasfoto 4x6 Latar Putih (80% Wajah)", "Fotokopi KTP & KK", "Buku Nikah / Akta Lahir"
+  isSubmitted Boolean   @default(false)
+  isVerified  Boolean   @default(false)
+  notes       String?
+  fileUrl     String?
+  verifiedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model OfficialLetter {
+  id                     String    @id @default(uuid())
+  letterNumber           String    @unique
+  pilgrimId              String
+  pilgrim                Pilgrim   @relation(fields: [pilgrimId], references: [id], onDelete: Cascade)
+  type                   String    // SURAT_REKOMENDASI_PASPOR, SURAT_ENDORSEMENT_PASPOR, SURAT_IZIN_CUTI, SURAT_PENGANTAR_KEMENAG, SURAT_KETERANGAN_JAMAAH, SURAT_CUSTOM
+  customTitle            String?   // For custom letter type or override
+  customSubject          String?   // Perihal / Hal Surat
+  customBody             String?   // Custom body paragraph
+  destinationInstitution String    // Kantor Imigrasi / PT ABC / Kemenag Kota
+  applicantJobTitle      String?   // Jabatan untuk surat cuti (e.g., Guru, Karyawan, PNS)
+  customNotes            String?
+  issueDate              DateTime  @default(now())
+  generatedBy            String    @default("Admin Travel")
+  createdAt              DateTime  @default(now())
+}
+
+model ChartOfAccount {
+  id            String    @id @default(uuid())
+  code          String    @unique // e.g. "1101", "4101", "5101", "6101"
+  name          String    // e.g. "Kas Utama", "Pendapatan Paket Umroh Reguler", "Beban Tiket & Maskapai"
+  category      String    // ASSET, LIABILITY, EQUITY, REVENUE, HPP_EXPENSE, OPEX_EXPENSE
+  group         String    // e.g. "Kas & Bank", "Pendapatan Operasional", "Beban Pokok Penjualan (HPP)", "Beban Operasional & Kantor"
+  normalBalance String    @default("DEBIT") // DEBIT, CREDIT
+  description   String?
+  isActive      Boolean   @default(true)
+  orderIndex    Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model LetterTemplate {
+  id             String   @id @default(uuid())
+  code           String   @unique // e.g. "ENDOS", "PASPOR", "CUTI", "KEMENAG", "JAMAAH", "MAHRAM", "RESMI"
+  typeKey        String   @unique // e.g. "SURAT_ENDORSEMENT_PASPOR", "SURAT_REKOMENDASI_PASPOR", etc.
+  title          String   // e.g. "Surat Permohonan Endos Nama di Paspor"
+  subject        String   // e.g. "Permohonan Penambahan / Endorsement Nama di Paspor"
+  defaultDest    String   // e.g. "Kepala Kantor Imigrasi Kelas I / II TPI"
+  defaultNotes   String?  // e.g. "Penambahan nama menjadi 3 suku kata..."
+  bodyTemplate   String?  // Template paragraf isi surat
+  orderIndex     Int      @default(1)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model JournalEntry {
+  id              String             @id @default(uuid())
+  entryNumber     String             @unique // e.g. "JU-202608-0001"
+  transactionDate DateTime           @default(now())
+  description     String             // Keterangan transaksi
+  referenceNo     String?            // No Ref / Invoice / Kwitansi / PO
+  sourceModule    String?            // "MANUAL", "INVOICE", "EXPENSE"
+  sourceId        String?
+  lines           JournalEntryLine[]
+  createdBy       String             @default("Admin Akuntansi")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model JournalEntryLine {
+  id              String         @id @default(uuid())
+  journalEntryId  String
+  journalEntry    JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountCode     String         // e.g. "1102"
+  accountName     String         // e.g. "Bank Syariah Indonesia (BSI)"
+  accountCategory String         // ASSET, LIABILITY, EQUITY, REVENUE, HPP_EXPENSE, OPEX_EXPENSE
+  debit           Float          @default(0)
+  credit          Float          @default(0)
+  memo            String?
+  createdAt       DateTime       @default(now())
+}
+
+model AppRole {
+  id          String           @id @default(uuid())
+  key         String           @unique // e.g. "SUPERADMIN", "ADMIN_OPERASIONAL", etc.
+  name        String           // e.g. "Superadmin (Akses Penuh)", "Admin Operasional", etc.
+  description String?
+  badgeColor  String           @default("bg-slate-100 text-slate-800")
+  isSystem    Boolean          @default(false)
+  orderIndex  Int              @default(1)
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model RolePermission {
+  id          String   @id @default(uuid())
+  roleKey     String   // SUPERADMIN, ADMIN_OPERASIONAL, etc.
+  roleId      String?
+  role        AppRole? @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  moduleKey   String   // dashboard, leads, pilgrims, alumni, finance, profit-loss, logistics, handovers, requirements, letters, agents, master, settings
+  moduleName  String   // Dashboard & Analitik, Marketing & Leads, etc.
+  canView     Boolean  @default(true)
+  canCreate   Boolean  @default(false)
+  canEdit     Boolean  @default(false)
+  canDelete   Boolean  @default(false)
+  canExport   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([roleKey, moduleKey])
+}
