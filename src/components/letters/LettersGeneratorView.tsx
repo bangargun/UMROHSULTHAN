@@ -34,6 +34,7 @@ export default function LettersGeneratorView({
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(!!initialPilgrim);
   const [selectedLetterForPrint, setSelectedLetterForPrint] = useState<any | null>(null);
+  const [includeLegalAttachments, setIncludeLegalAttachments] = useState(true);
   const [travelSettings, setTravelSettings] = useState<any>({
     companyName: "PT SULTHAN HARAMAIN TOUR & TRAVEL",
     licenseNumber: "PPIU Kemenag RI No. U.412 Tahun 2022",
@@ -647,17 +648,22 @@ export default function LettersGeneratorView({
       {/* Modal 2: Tampilan Dokumen Surat Resmi Siap Cetak (A4 Standard Print View) */}
       {selectedLetterForPrint && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-8 shadow-2xl space-y-6 max-h-[95vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 no-print">
-              <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" /> Pratinjau Dokumen Resmi PPIU
-              </span>
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[95vh] overflow-y-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 no-print">
+              <div>
+                <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" /> Pratinjau Dokumen Resmi PPIU
+                </span>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  {includeLegalAttachments ? "Surat Resmi + 3 Halaman Dokumen Legalitas (SK Kemenkumham & NIB)" : "Hanya Surat Resmi (1 Halaman)"}
+                </p>
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-all"
                 >
-                  <Printer className="w-4 h-4" /> Cetak Surat Sekarang
+                  <Printer className="w-4 h-4" /> Cetak / Unduh PDF Sekarang
                 </button>
                 <button
                   onClick={() => setSelectedLetterForPrint(null)}
@@ -666,6 +672,22 @@ export default function LettersGeneratorView({
                   <X className="w-5 h-5" />
                 </button>
               </div>
+            </div>
+
+            {/* Legal Document Attachment Toggle */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-amber-50/90 p-3.5 rounded-2xl border border-amber-200 no-print">
+              <label className="flex items-center gap-2.5 text-xs font-bold text-amber-950 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={includeLegalAttachments}
+                  onChange={(e) => setIncludeLegalAttachments(e.target.checked)}
+                  className="rounded border-amber-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                />
+                <span>Lampirkan Salinan Dokumen Legalitas Resmi (SK Kemenkumham RI & NIB Berbasis Risiko)</span>
+              </label>
+              <span className="text-[10px] font-bold text-amber-900 bg-amber-100/90 px-2.5 py-1 rounded-full border border-amber-300">
+                {includeLegalAttachments ? "📄 Total 4 Halaman Siap Cetak" : "📄 1 Halaman Surat Saja"}
+              </span>
             </div>
 
             {/* Official Letter A4 Template (Matching Exact Geometric PPIU Reference) */}
@@ -895,12 +917,80 @@ export default function LettersGeneratorView({
                       📞 {travelSettings.phone || "0811-9876-5432"}
                     </span>
                     <span className="flex items-center gap-1">
-                      ✉️ {travelSettings.email || "salam@sulthanharamain.com"}
+                      ✉️ {travelSettings.email || "barokahsulthanharamain@gmail.com"}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* ATTACHMENT PAGES (LAMPIRAN DOKUMEN LEGALITAS RESMI PPIU) */}
+            {includeLegalAttachments && (
+              <div className="space-y-6">
+                {/* PAGE 2: SK KEMENKUMHAM RI */}
+                <div className="print:page-break border border-slate-300 p-6 sm:p-8 rounded-2xl bg-white shadow-sm flex flex-col justify-between print:border-none print:shadow-none print:p-0">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 text-slate-800">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800">
+                        LAMPIRAN I: SALINAN KEPUTUSAN MENTERI HUKUM REPUBLIK INDONESIA
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-500">
+                        HALAMAN 2 DARI 4
+                      </span>
+                    </div>
+                    <div className="p-1 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
+                      <img
+                        src="/legal-docs/legalitas-kemenkumham.png"
+                        alt="SK Kemenkumham Pengesahan PT Barokah Sulthan Haramain"
+                        className="w-full max-h-[1050px] object-contain mx-auto"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* PAGE 3: NIB HALAMAN 1 */}
+                <div className="print:page-break border border-slate-300 p-6 sm:p-8 rounded-2xl bg-white shadow-sm flex flex-col justify-between print:border-none print:shadow-none print:p-0">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 text-slate-800">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800">
+                        LAMPIRAN II: NOMOR INDUK BERUSAHA (NIB) 1504260072814 - PEMERINTAH RI
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-500">
+                        HALAMAN 3 DARI 4
+                      </span>
+                    </div>
+                    <div className="p-1 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
+                      <img
+                        src="/legal-docs/legalitas-nib-1.png"
+                        alt="NIB PT Barokah Sulthan Haramain"
+                        className="w-full max-h-[1050px] object-contain mx-auto"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* PAGE 4: LAMPIRAN NIB KBLI 79122 (UMROH & HAJI KHUSUS) */}
+                <div className="print:page-break border border-slate-300 p-6 sm:p-8 rounded-2xl bg-white shadow-sm flex flex-col justify-between print:border-none print:shadow-none print:p-0">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 text-slate-800">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800">
+                        LAMPIRAN III: LAMPIRAN NIB KBLI 79122 (BIRO PERJALANAN IBADAH UMROH & HAJI KHUSUS)
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-500">
+                        HALAMAN 4 DARI 4
+                      </span>
+                    </div>
+                    <div className="p-1 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
+                      <img
+                        src="/legal-docs/legalitas-nib-2.png"
+                        alt="Lampiran NIB KBLI 79122 PPIU"
+                        className="w-full max-h-[1050px] object-contain mx-auto"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

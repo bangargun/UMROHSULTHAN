@@ -11,18 +11,18 @@ export async function GET() {
       setting = await prisma.travelSetting.create({
         data: {
           id: "default-settings",
-          companyName: "PT SULTHAN HARAMAIN TOUR & TRAVEL",
-          licenseNumber: "PPIU Kemenag RI No. U.412 Tahun 2022",
-          kemenhanLicense: "Izin Khusus Kemenhan RI No. B/108/M/XII/2023",
-          address: "Sulthan Haramain Tower, Jl. Prof. Dr. Satrio No. 88, Kuningan, Jakarta Selatan 12940",
-          phone: "(021) 5290-8888 / 0811-9876-5432",
-          email: "salam@sulthanharamain.com",
+          companyName: "PT BAROKAH SULTHAN HARAMAIN",
+          licenseNumber: "SK Kemenkumham No. AHU-0007388.AH.01.01.TAHUN 2026 • NIB: 1504260072814",
+          kemenhanLicense: "KBLI 79122: Aktivitas Biro Perjalanan Ibadah Umroh & Haji Khusus",
+          address: "Jl. Syekh Beringin Perumahan Griya Palm Asri Blok B, Tebing Tinggi, Sumatera Utara 20631",
+          phone: "0821-6733-9464",
+          email: "barokahsulthanharamain@gmail.com",
           website: "www.sulthanharamain.com",
-          directorName: "H. Sulthan Syarif, Lc., M.A.",
+          directorName: "Direktur Utama",
           directorTitle: "Direktur Utama",
-          bankBSI: "8888-999-123 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL",
-          bankBCA: "731-888-9900 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL",
-          bankMandiri: "137-00-8888999-1 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL",
+          bankBSI: "8888-999-123 a.n PT BAROKAH SULTHAN HARAMAIN",
+          bankBCA: "731-888-9900 a.n PT BAROKAH SULTHAN HARAMAIN",
+          bankMandiri: "137-00-8888999-1 a.n PT BAROKAH SULTHAN HARAMAIN",
         },
       });
     }
@@ -70,24 +70,24 @@ export async function PUT(request: Request) {
       },
       create: {
         id: "default-settings",
-        companyName: companyName || "PT SULTHAN HARAMAIN TOUR & TRAVEL",
-        licenseNumber: licenseNumber || "PPIU Kemenag RI No. U.412 Tahun 2022",
-        kemenhanLicense: kemenhanLicense || "Izin Khusus Kemenhan RI No. B/108/M/XII/2023",
-        address: address || "Sulthan Haramain Tower, Jakarta Selatan",
-        phone: phone || "0811-9876-5432",
-        email: email || "salam@sulthanharamain.com",
+        companyName: companyName || "PT BAROKAH SULTHAN HARAMAIN",
+        licenseNumber: licenseNumber || "SK Kemenkumham No. AHU-0007388.AH.01.01.TAHUN 2026 • NIB: 1504260072814",
+        kemenhanLicense: kemenhanLicense || "KBLI 79122: Aktivitas Biro Perjalanan Ibadah Umroh & Haji Khusus",
+        address: address || "Jl. Syekh Beringin Perumahan Griya Palm Asri Blok B, Tebing Tinggi, Sumatera Utara 20631",
+        phone: phone || "0821-6733-9464",
+        email: email || "barokahsulthanharamain@gmail.com",
         website: website || "www.sulthanharamain.com",
-        directorName: directorName || "H. Sulthan Syarif, Lc.",
+        directorName: directorName || "Direktur Utama",
         directorTitle: directorTitle || "Direktur Utama",
-        bankBSI: bankBSI || "8888-999-123 a.n PT SULTHAN HARAMAIN",
-        bankBCA: bankBCA || "731-888-9900 a.n PT SULTHAN HARAMAIN",
-        bankMandiri: bankMandiri || "137-00-8888999-1 a.n PT SULTHAN HARAMAIN",
+        bankBSI: bankBSI || "8888-999-123 a.n PT BAROKAH SULTHAN HARAMAIN",
+        bankBCA: bankBCA || "731-888-9900 a.n PT BAROKAH SULTHAN HARAMAIN",
+        bankMandiri: bankMandiri || "137-00-8888999-1 a.n PT BAROKAH SULTHAN HARAMAIN",
       },
     });
 
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Error updating settings:", error);
-    return NextResponse.json({ error: "Failed to update settings" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update travel settings" }, { status: 500 });
   }
 }
