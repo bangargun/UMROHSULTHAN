@@ -565,7 +565,7 @@ export default function AlumniPilgrimsView({
                           </span>
                           <div>
                             <span className="text-[10px] text-slate-500">
-                              Size: <strong>{p.uniformSize || "L"}</strong> • Goldar: {p.bloodType || "-"}
+                              Size: <strong>{p.uniformSize || "L"}</strong> • Goldar: {p.bloodType === "TIDAK_TAHU" ? "Tidak Tahu" : (p.bloodType || "-")}
                             </span>
                           </div>
                         </div>

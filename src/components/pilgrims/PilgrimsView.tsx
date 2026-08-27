@@ -1117,7 +1117,7 @@ export default function PilgrimsView({
                 <div>
                   <span className="text-[10px] text-slate-400">Jenis Kelamin / Gol. Darah:</span>
                   <p className="text-slate-800">
-                    {selectedPilgrim.gender === "MALE" ? "Laki-laki" : "Perempuan"} • Gol: {selectedPilgrim.bloodType || "-"}
+                    {selectedPilgrim.gender === "MALE" ? "Laki-laki" : "Perempuan"} • Gol: {selectedPilgrim.bloodType === "TIDAK_TAHU" ? "Tidak Tahu" : (selectedPilgrim.bloodType || "-")}
                   </p>
                 </div>
                 <div>
@@ -1644,6 +1644,7 @@ export default function PilgrimsView({
                       <option value="B">B</option>
                       <option value="AB">AB</option>
                       <option value="O">O</option>
+                      <option value="TIDAK_TAHU">Tidak Tahu</option>
                     </select>
                   </div>
                   <div className="col-span-2 sm:col-span-1">
@@ -2556,6 +2557,7 @@ export default function PilgrimsView({
                       <option value="B">B</option>
                       <option value="AB">AB</option>
                       <option value="O">O</option>
+                      <option value="TIDAK_TAHU">Tidak Tahu</option>
                     </select>
                   </div>
                   <div className="col-span-2 sm:col-span-1">

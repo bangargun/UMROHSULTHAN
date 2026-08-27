@@ -76,12 +76,14 @@ function parseKtpText(rawText: string) {
     result.gender = "FEMALE";
   }
 
-  // 5. Golongan Darah (Gol. Darah : A / B / AB / O)
-  const bloodMatch = fullText.match(/(?:Gol\.?\s*Darah|Darah)\s*[:=\-]?\s*([ABO0]{1,2})/i);
+  // 5. Golongan Darah (Gol. Darah : A / B / AB / O / - / TIDAK TAHU)
+  const bloodMatch = fullText.match(/(?:Gol\.?\s*Darah|Darah)\s*[:=\-]?\s*([ABO0\-]{1,2}|TIDAK\s*TAHU)/i);
   if (bloodMatch) {
-    let blood = bloodMatch[1].toUpperCase().replace("0", "O");
+    let blood = bloodMatch[1].toUpperCase().replace("0", "O").trim();
     if (["A", "B", "AB", "O"].includes(blood)) {
       result.bloodType = blood;
+    } else if (blood === "-" || blood.includes("TIDAK")) {
+      result.bloodType = "TIDAK_TAHU";
     }
   }
 
