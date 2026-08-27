@@ -18,7 +18,7 @@ import {
   Building,
   Sparkles,
 } from "lucide-react";
-import { formatCurrency, formatDate, getStatusBadge, generateWhatsAppReminderUrl } from "@/lib/utils";
+import { formatCurrency, formatDate, getStatusBadge, generateWhatsAppReminderUrl, formatRupiahWithWords } from "@/lib/utils";
 
 interface FinanceViewProps {
   invoices: any[];
@@ -639,10 +639,10 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                   </span>
                 </div>
 
-                <div className="flex">
-                  <span className="w-36 text-slate-500 font-semibold">Uang Sejumlah:</span>
-                  <span className="flex-1 font-extrabold italic text-emerald-900 bg-emerald-50/80 p-2 rounded border border-emerald-200">
-                    "{formatCurrency(selectedInvoiceForReceipt.amount)} Rupiah"
+                <div className="flex items-start">
+                  <span className="w-36 text-slate-500 font-semibold pt-1">Uang Sejumlah:</span>
+                  <span className="flex-1 font-bold text-slate-900 bg-emerald-50/90 p-2.5 rounded-xl border border-emerald-200 text-xs sm:text-sm leading-relaxed">
+                    "{formatRupiahWithWords(selectedInvoiceForReceipt.amount)}"
                   </span>
                 </div>
 
@@ -669,15 +669,15 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 </div>
 
                 <div className="text-center w-48">
-                  <p className="text-xs text-slate-600">Jakarta, {formatDate(new Date(), "dd MMMM yyyy")}</p>
+                  <p className="text-xs text-slate-600">Tebing Tinggi, {formatDate(selectedInvoiceForReceipt.paymentDate || new Date(), "dd MMMM yyyy")}</p>
                   <p className="text-xs font-bold text-slate-700 mt-0.5">Bagian Keuangan / Pimpinan,</p>
                   <div className="h-14 flex items-center justify-center">
                     <span className="font-serif italic text-xs text-emerald-700 font-bold border-b border-emerald-400 pb-0.5">
                       [Tanda Tangan & Stempel Resmi]
                     </span>
                   </div>
-                  <p className="text-xs font-bold text-slate-900">{travelSettings.directorName}</p>
-                  <p className="text-[10px] text-slate-400">{travelSettings.directorTitle}</p>
+                  <p className="text-xs font-bold text-slate-900">{travelSettings.directorName || "ATIYATUL AMRA"}</p>
+                  <p className="text-[10px] text-slate-400">{travelSettings.directorTitle || "Direktur Utama"}</p>
                 </div>
               </div>
             </div>

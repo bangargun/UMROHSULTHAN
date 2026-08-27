@@ -16,6 +16,47 @@ export function formatCurrency(amount: number | null | undefined): string {
   }).format(amount);
 }
 
+export function terbilang(n: number | null | undefined): string {
+  if (n === null || n === undefined || isNaN(n) || n === 0) return "Nol Rupiah";
+  const satuan = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
+
+  function convert(num: number): string {
+    let temp = "";
+    if (num < 12) {
+      temp = " " + satuan[num];
+    } else if (num < 20) {
+      temp = convert(num - 10) + " Belas";
+    } else if (num < 100) {
+      temp = convert(Math.floor(num / 10)) + " Puluh" + convert(num % 10);
+    } else if (num < 200) {
+      temp = " Seratus" + convert(num - 100);
+    } else if (num < 1000) {
+      temp = convert(Math.floor(num / 100)) + " Ratus" + convert(num % 100);
+    } else if (num < 2000) {
+      temp = " Seribu" + convert(num - 1000);
+    } else if (num < 1000000) {
+      temp = convert(Math.floor(num / 1000)) + " Ribu" + convert(num % 1000);
+    } else if (num < 1000000000) {
+      temp = convert(Math.floor(num / 1000000)) + " Juta" + convert(num % 1000000);
+    } else if (num < 1000000000000) {
+      temp = convert(Math.floor(num / 1000000000)) + " Miliar" + convert(num % 1000000000);
+    } else if (num < 1000000000000000) {
+      temp = convert(Math.floor(num / 1000000000000)) + " Triliun" + convert(num % 1000000000000);
+    }
+    return temp;
+  }
+
+  const result = convert(Math.abs(Math.floor(n))).trim();
+  return result ? `${result} Rupiah` : "Nol Rupiah";
+}
+
+export function formatRupiahWithWords(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined) return "Rp. 0,- (Nol Rupiah)";
+  const formattedNominal = "Rp. " + new Intl.NumberFormat("id-ID").format(amount) + ",-";
+  const textWords = terbilang(amount);
+  return `${formattedNominal} (${textWords})`;
+}
+
 export function formatDate(date: Date | string | null | undefined, pattern: string = "dd MMMM yyyy"): string {
   if (!date) return "-";
   const d = typeof date === "string" ? new Date(date) : date;
