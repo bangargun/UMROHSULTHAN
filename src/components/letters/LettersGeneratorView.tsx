@@ -40,13 +40,13 @@ export default function LettersGeneratorView({
   const [selectedLetterForPrint, setSelectedLetterForPrint] = useState<any | null>(null);
   const [includeLegalAttachments, setIncludeLegalAttachments] = useState(true);
   const [travelSettings, setTravelSettings] = useState<any>({
-    companyName: "PT SULTHAN HARAMAIN TOUR & TRAVEL",
-    licenseNumber: "PPIU Kemenag RI No. U.412 Tahun 2022",
-    kemenhanLicense: "Izin Khusus Kemenhan RI No. B/108/M/XII/2023",
-    address: "Sulthan Haramain Tower, Jl. Prof. Dr. Satrio No. 88, Kuningan, Jakarta Selatan 12940",
-    phone: "(021) 5290-8888 / 0811-9876-5432",
-    email: "salam@sulthanharamain.com",
-    directorName: "H. Sulthan Syarif, Lc., M.A.",
+    companyName: "PT BAROKAH SULTHAN HARAMAIN",
+    licenseNumber: "25052200384080005",
+    kemenhanLicense: "Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026",
+    address: "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631",
+    phone: "0821-6733-9464",
+    email: "barokahsulthanharamain@gmail.com",
+    directorName: "ATIYATUL AMRA",
     directorTitle: "Direktur Utama",
   });
 
@@ -1139,21 +1139,24 @@ export default function LettersGeneratorView({
                     />
                   </div>
                   <div className="flex-1 text-left">
-                    <h1 className="text-xl font-black tracking-tight text-slate-950 uppercase">
+                    <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-950 uppercase leading-none">
                       {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
                     </h1>
-                    <p className="text-[11px] font-bold text-slate-800 tracking-wide mt-0.5">
+                    <p className="text-[10px] sm:text-[10.5px] text-slate-700 leading-tight mt-1">
+                      {travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}
+                    </p>
+                    <p className="text-[9.5px] sm:text-[10px] font-semibold text-slate-700 leading-tight mt-0.5">
+                      Telp / WhatsApp: {travelSettings.phone || "0821-6733-9464"} • Email: {travelSettings.email || "barokahsulthanharamain@gmail.com"}
+                    </p>
+                    <p className="text-[9.5px] sm:text-[10px] font-bold text-slate-900 leading-tight mt-0.5 tracking-tight">
+                      {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026"}
+                    </p>
+                    <p className="text-[8px] sm:text-[8.5px] font-semibold text-slate-500 tracking-wide mt-0.5 uppercase">
                       NO. IZIN PPIU : {(travelSettings.licenseNumber || "25052200384080005")
                         .replace(/•?\s*NIB[\s\S]*/i, "")
                         .replace(/•?\s*KBLI[\s\S]*/i, "")
                         .replace(/NO\.\s*IZIN\s*PPIU\s*:\s*/i, "")
                         .trim()}
-                    </p>
-                    <p className="text-[10px] text-slate-600 leading-tight mt-0.5">
-                      {travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}
-                    </p>
-                    <p className="text-[10px] font-semibold text-slate-700 leading-tight mt-0.5">
-                      Telp / WhatsApp: {travelSettings.phone || "0821-6733-9464"} {travelSettings.email && ` • Email: ${travelSettings.email}`}
                     </p>
                   </div>
                 </div>

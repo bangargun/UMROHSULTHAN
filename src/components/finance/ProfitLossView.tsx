@@ -628,18 +628,36 @@ export default function ProfitLossView({ packages, onRefreshAll }: ProfitLossVie
       {activeTab === "STATEMENT" && (
         <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm max-w-4xl mx-auto space-y-6">
           {/* Header Report */}
-          <div className="text-center border-b-2 border-slate-900 pb-4">
-            <h1 className="text-lg font-black tracking-wide uppercase text-slate-900">
-              {travelSettings.companyName}
+          <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
+            <h1 className="text-base sm:text-lg font-black tracking-wide uppercase text-slate-900 leading-none">
+              {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
             </h1>
-            <p className="text-xs font-bold uppercase tracking-wider text-emerald-800 mt-0.5">
-              LAPORAN LABA RUGI KOMPREHENSIF (INCOME STATEMENT)
+            <p className="text-[10px] text-slate-600 leading-tight">
+              {travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}
             </p>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              {startDate && endDate
-                ? `Periode: ${formatDate(startDate, "dd MMM yyyy")} s.d. ${formatDate(endDate, "dd MMM yyyy")}`
-                : "Periode Tahun Berjalan 1447H / 2026M"} • {travelSettings.licenseNumber}
+            <p className="text-[9.5px] font-semibold text-slate-700 leading-tight">
+              Telp / WhatsApp: {travelSettings.phone || "0821-6733-9464"} • Email: {travelSettings.email || "barokahsulthanharamain@gmail.com"}
             </p>
+            <p className="text-[9.5px] font-bold text-slate-900 leading-tight">
+              {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026"}
+            </p>
+            <p className="text-[8px] sm:text-[8.5px] font-semibold text-slate-500 tracking-wide uppercase">
+              NO. IZIN PPIU : {(travelSettings.licenseNumber || "25052200384080005")
+                .replace(/•?\s*NIB[\s\S]*/i, "")
+                .replace(/•?\s*KBLI[\s\S]*/i, "")
+                .replace(/NO\.\s*IZIN\s*PPIU\s*:\s*/i, "")
+                .trim()}
+            </p>
+            <div className="pt-2">
+              <p className="text-xs font-black uppercase tracking-wider text-emerald-800">
+                LAPORAN LABA RUGI KOMPREHENSIF (INCOME STATEMENT)
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                {startDate && endDate
+                  ? `Periode: ${formatDate(startDate, "dd MMM yyyy")} s.d. ${formatDate(endDate, "dd MMM yyyy")}`
+                  : "Periode Tahun Berjalan 1447H / 2026M"}
+              </p>
+            </div>
           </div>
 
           {/* Statement Content */}

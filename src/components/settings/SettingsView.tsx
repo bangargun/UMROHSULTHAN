@@ -1284,6 +1284,18 @@ export default function SettingsView({ currentUser, onUpdateCurrentUser, onRefre
                   </div>
                 </div>
 
+                <div>
+                  <label className="font-bold text-slate-700">Keputusan Menteri Hukum Republik Indonesia *</label>
+                  <input
+                    type="text"
+                    required
+                    value={travelSettings.kemenhanLicense || ""}
+                    onChange={(e) => setTravelSettings({ ...travelSettings, kemenhanLicense: e.target.value })}
+                    placeholder="Contoh: Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026"
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold text-slate-900 bg-white"
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="font-bold text-slate-700">Nama Direktur Utama / Penanggung Jawab *</label>

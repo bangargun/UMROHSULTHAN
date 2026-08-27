@@ -45,18 +45,18 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
 
   // Sub-data states
   const [travelSettings, setTravelSettings] = useState<any>({
-    companyName: "PT SULTHAN HARAMAIN TOUR & TRAVEL",
-    licenseNumber: "PPIU Kemenag RI No. U.412 Tahun 2022",
-    kemenhanLicense: "Izin Khusus Kemenhan RI No. B/108/M/XII/2023",
-    address: "Sulthan Haramain Tower, Jl. Prof. Dr. Satrio No. 88, Kuningan, Jakarta Selatan 12940",
-    phone: "(021) 5290-8888 / 0811-9876-5432",
-    email: "salam@sulthanharamain.com",
-    website: "www.sulthanharamain.com",
-    directorName: "H. Sulthan Syarif, Lc., M.A.",
+    companyName: "PT BAROKAH SULTHAN HARAMAIN",
+    licenseNumber: "25052200384080005",
+    kemenhanLicense: "Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026",
+    address: "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631",
+    phone: "0821-6733-9464",
+    email: "barokahsulthanharamain@gmail.com",
+    website: "www.barokahgroupindonesia.tech",
+    directorName: "ATIYATUL AMRA",
     directorTitle: "Direktur Utama",
-    bankBSI: "8888-999-123 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL",
-    bankBCA: "731-888-9900 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL",
-    bankMandiri: "137-00-8888999-1 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL",
+    bankBSI: "",
+    bankBCA: "",
+    bankMandiri: "107-00-7777-2020 a.n SULTHAN HARAMAIN",
   });
   const [reqTemplates, setReqTemplates] = useState<any[]>([]);
   const [staffUsers, setStaffUsers] = useState<any[]>([]);
@@ -1341,13 +1341,13 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
               </div>
 
               <div>
-                <label className="font-bold text-slate-700">Nomor Izin / Rekomendasi Kemenhan RI</label>
+                <label className="font-bold text-slate-700">Keputusan Menteri Hukum Republik Indonesia *</label>
                 <input
                   type="text"
-                  placeholder="Izin Khusus Kemenhan RI No. B/108/M/XII/2023"
+                  placeholder="Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026"
                   value={travelSettings.kemenhanLicense || ""}
                   onChange={(e) => setTravelSettings({ ...travelSettings, kemenhanLicense: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-mono text-emerald-900"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold text-slate-900"
                 />
               </div>
             </div>
