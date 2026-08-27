@@ -106,6 +106,65 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const {
+      id,
+      pilgrimId,
+      type,
+      customTitle,
+      customSubject,
+      customBody,
+      destinationInstitution,
+      applicantJobTitle,
+      customNotes,
+      generatedBy,
+      fatherName,
+    } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "ID surat wajib disertakan" }, { status: 400 });
+    }
+
+    const updated = await prisma.officialLetter.update({
+      where: { id },
+      data: {
+        pilgrimId: pilgrimId || undefined,
+        type: type || undefined,
+        customTitle: customTitle || null,
+        customSubject: customSubject || null,
+        customBody: customBody || null,
+        destinationInstitution: destinationInstitution || undefined,
+        applicantJobTitle: applicantJobTitle || null,
+        customNotes: customNotes || null,
+        generatedBy: generatedBy || undefined,
+      },
+      include: {
+        pilgrim: {
+          include: { package: true },
+        },
+      },
+    });
+
+    if (pilgrimId && fatherName && fatherName.trim() !== "") {
+      try {
+        await prisma.pilgrim.update({
+          where: { id: pilgrimId },
+          data: { fatherName: fatherName.trim().toUpperCase() },
+        });
+      } catch (err) {
+        console.warn("Auto-update fatherName warning:", err);
+      }
+    }
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("Error updating official letter:", error);
+    return NextResponse.json({ error: "Failed to update official letter" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

@@ -15,6 +15,8 @@ import {
   Trash2,
   FilePlus,
   CheckCircle2,
+  Pencil,
+  Edit3,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -33,6 +35,8 @@ export default function LettersGeneratorView({
 }: LettersGeneratorViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(!!initialPilgrim);
+  const [editingLetter, setEditingLetter] = useState<any | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedLetterForPrint, setSelectedLetterForPrint] = useState<any | null>(null);
   const [includeLegalAttachments, setIncludeLegalAttachments] = useState(true);
   const [travelSettings, setTravelSettings] = useState<any>({
@@ -79,6 +83,20 @@ export default function LettersGeneratorView({
     fatherName: initialPilgrim?.fatherName || "",
     endorsedTargetName: "",
     customNotes: "Permohonan penambahan nama pada halaman pengesahan paspor untuk syarat Visa Umroh.",
+    generatedBy: "H. Sulthan Syarif, Lc., M.A.",
+  });
+
+  const [editFormData, setEditFormData] = useState({
+    pilgrimId: "",
+    type: "SURAT_ENDORSEMENT_PASPOR",
+    customTitle: "",
+    customSubject: "",
+    customBody: "",
+    destinationInstitution: "",
+    applicantJobTitle: "Karyawan Swasta",
+    fatherName: "",
+    endorsedTargetName: "",
+    customNotes: "",
     generatedBy: "H. Sulthan Syarif, Lc., M.A.",
   });
 
@@ -250,6 +268,59 @@ export default function LettersGeneratorView({
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleOpenEditLetter = (letter: any) => {
+    setEditingLetter(letter);
+    const p = letter.pilgrim;
+    setEditFormData({
+      pilgrimId: letter.pilgrimId || "",
+      type: letter.type || "SURAT_ENDORSEMENT_PASPOR",
+      customTitle: letter.customTitle || "",
+      customSubject: letter.customSubject || "",
+      customBody: letter.customBody || "",
+      destinationInstitution: letter.destinationInstitution || "",
+      applicantJobTitle: letter.applicantJobTitle || "Karyawan Swasta",
+      fatherName: p?.fatherName || "",
+      endorsedTargetName: getEndorsedName(letter),
+      customNotes: letter.customNotes || "",
+      generatedBy: letter.generatedBy || travelSettings.directorName || "H. Sulthan Syarif, Lc., M.A.",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEditLetter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLetter) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/letters", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingLetter.id,
+          ...editFormData,
+        }),
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        alert("Surat resmi berhasil diperbarui!");
+        setIsEditModalOpen(false);
+        setEditingLetter(null);
+        onRefresh();
+        if (selectedLetterForPrint && selectedLetterForPrint.id === updated.id) {
+          setSelectedLetterForPrint(updated);
+        }
+      } else {
+        const data = await res.json();
+        alert(data.error || "Gagal memperbarui surat.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -465,6 +536,14 @@ export default function LettersGeneratorView({
                         >
                           <Printer className="w-3.5 h-3.5" />
                           Pratinjau & Cetak
+                        </button>
+
+                        <button
+                          onClick={() => handleOpenEditLetter(l)}
+                          className="p-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors"
+                          title="Edit Data Surat"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
                         </button>
 
                         <button
@@ -701,6 +780,241 @@ export default function LettersGeneratorView({
                   className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-xs"
                 >
                   {loading ? "Menerbitkan..." : "Generate Surat PDF"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit Surat Resmi */}
+      {isEditModalOpen && editingLetter && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 no-print overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                  Edit Data Dokumen Resmi
+                </span>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Pencil className="w-5 h-5 text-amber-600" />
+                  Edit Surat: {editingLetter.letterNumber}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingLetter(null);
+                }}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditLetter} className="space-y-3.5 text-xs">
+              <div>
+                <label className="font-bold text-slate-700">Pilih Jamaah Umroh Terdaftar *</label>
+                <select
+                  required
+                  value={editFormData.pilgrimId}
+                  onChange={(e) => {
+                    const selectedP = pilgrims.find((p) => p.id === e.target.value);
+                    const fName = selectedP?.fatherName || "";
+                    setEditFormData({
+                      ...editFormData,
+                      pilgrimId: e.target.value,
+                      fatherName: fName,
+                      endorsedTargetName: computeEndorsementName(selectedP?.name || "", fName),
+                    });
+                  }}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold focus:ring-2 focus:ring-amber-500/20"
+                >
+                  {pilgrims.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} - (NIK: {p.nik} | {p.package?.name || "Paket"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700">Pilih Template Keperluan Surat *</label>
+                <select
+                  value={editFormData.type}
+                  onChange={(e) => {
+                    setEditFormData({
+                      ...editFormData,
+                      type: e.target.value,
+                    });
+                  }}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-amber-500/20"
+                >
+                  {letterTemplates.length === 0 ? (
+                    <>
+                      <option value="SURAT_ENDORSEMENT_PASPOR">✨ Surat Permohonan Endos Nama di Paspor (Imigrasi - 3 Kata)</option>
+                      <option value="SURAT_REKOMENDASI_PASPOR">Surat Rekomendasi Pembuatan Paspor Baru (Imigrasi)</option>
+                      <option value="SURAT_IZIN_CUTI">Surat Permohonan Izin Cuti Kerja / Kuliah / Sekolah</option>
+                      <option value="SURAT_PENGANTAR_KEMENAG">Surat Pengantar Rekomendasi Kemenag Kab/Kota</option>
+                      <option value="SURAT_KETERANGAN_JAMAAH">Surat Keterangan Terdaftar Calon Jamaah Umroh</option>
+                      <option value="SURAT_MAHRAM">Surat Keterangan Mahram & Pendampingan Keluarga</option>
+                      <option value="SURAT_CUSTOM">➕ Buat Jenis Surat Kustom Lainnya...</option>
+                    </>
+                  ) : (
+                    letterTemplates.map((t) => (
+                      <option key={t.id} value={t.typeKey}>
+                        [{t.code}] {t.title}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              {/* SPECIFIC FIELDS FOR ENDORSEMENT PASPOR */}
+              {editFormData.type === "SURAT_ENDORSEMENT_PASPOR" && (
+                <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-300 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-amber-950 font-bold text-xs">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
+                      Detail Endorsement Nama Paspor (Nama + Nama Orang Tua Laki-laki)
+                    </div>
+                    <span className="text-[10px] bg-amber-200/80 text-amber-900 font-bold px-2 py-0.5 rounded-md">
+                      Syarat Visa Umroh
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-800">
+                        Nama Orang Tua Laki-laki (Ayah Kandung) *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. AHMAD DAHLAN"
+                        value={editFormData.fatherName}
+                        onChange={(e) => {
+                          const newFather = e.target.value;
+                          const currentPilgrim = pilgrims.find((p) => p.id === editFormData.pilgrimId);
+                          setEditFormData({
+                            ...editFormData,
+                            fatherName: newFather,
+                            endorsedTargetName: computeEndorsementName(currentPilgrim?.name || "", newFather),
+                          });
+                        }}
+                        className="mt-1 w-full rounded-xl border border-amber-300 p-2.5 bg-white font-bold text-slate-900 uppercase focus:ring-2 focus:ring-amber-500/20"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-800">
+                        Nama Pengajuan Endorsement (3 Kata) *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. LINA AHMAD DAHLAN"
+                        value={editFormData.endorsedTargetName}
+                        onChange={(e) => setEditFormData({ ...editFormData, endorsedTargetName: e.target.value.toUpperCase() })}
+                        className="mt-1 w-full rounded-xl border border-amber-400 p-2.5 bg-white font-black text-slate-950 uppercase text-sm tracking-wide focus:ring-2 focus:ring-amber-500/20 shadow-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SPECIFIC FIELDS FOR CUSTOM LETTER */}
+              {editFormData.type === "SURAT_CUSTOM" && (
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5">
+                  <div>
+                    <label className="font-bold text-slate-800">Judul / Jenis Surat Kustom *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. SURAT KETERANGAN PENDAMPINGAN LANSIA"
+                      value={editFormData.customTitle}
+                      onChange={(e) => setEditFormData({ ...editFormData, customTitle: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800">Perihal / Hal Surat *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Permohonan Fasilitas Kursi Roda dan Prioritas Layanan"
+                      value={editFormData.customSubject}
+                      onChange={(e) => setEditFormData({ ...editFormData, customSubject: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800">Paragraf Isi / Permohonan Khusus</label>
+                    <textarea
+                      rows={3}
+                      value={editFormData.customBody}
+                      onChange={(e) => setEditFormData({ ...editFormData, customBody: e.target.value })}
+                      placeholder="Tuliskan isi permohonan atau pernyataan yang diinginkan..."
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* DESTINATION INSTITUTION */}
+              <div>
+                <label className="font-bold text-slate-700">Tujuan Surat / Nama Instansi & Pejabat *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Kepala Kantor Imigrasi Kelas I TPI Jakarta Selatan"
+                  value={editFormData.destinationInstitution}
+                  onChange={(e) => setEditFormData({ ...editFormData, destinationInstitution: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                />
+              </div>
+
+              {editFormData.type === "SURAT_IZIN_CUTI" && (
+                <div>
+                  <label className="font-bold text-slate-700">Profesi / Jabatan Jamaah di Tempat Kerja</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Staff Keuangan / Guru / Manajer Operasional"
+                    value={editFormData.applicantJobTitle}
+                    onChange={(e) => setEditFormData({ ...editFormData, applicantJobTitle: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="font-bold text-slate-700">Keterangan / Keperluan Tambahan</label>
+                <textarea
+                  rows={2}
+                  value={editFormData.customNotes}
+                  onChange={(e) => setEditFormData({ ...editFormData, customNotes: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditingLetter(null);
+                  }}
+                  className="px-4 py-2 rounded-xl border text-slate-600 font-bold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700 shadow-xs flex items-center gap-1.5"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  {loading ? "Menyimpan..." : "Simpan Perubahan Surat"}
                 </button>
               </div>
             </form>
