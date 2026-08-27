@@ -76,7 +76,7 @@ export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilg
     packageId: "",
     budget: "",
     estimatedPax: "1",
-    assignedAgent: "Siti Rahmawati (Marketing)",
+    assignedAgent: "",
     notes: "",
   });
 
@@ -150,7 +150,7 @@ export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilg
           packageId: "",
           budget: "",
           estimatedPax: "1",
-          assignedAgent: "Siti Rahmawati (Marketing)",
+          assignedAgent: "",
           notes: "",
         });
         onRefresh();
@@ -177,7 +177,7 @@ export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilg
       packageId: lead.packageId || "",
       budget: lead.budget ? String(lead.budget) : "",
       estimatedPax: String(lead.estimatedPax || 1),
-      assignedAgent: lead.assignedAgent || "Siti Rahmawati (Marketing)",
+      assignedAgent: lead.assignedAgent || "",
       notes: lead.notes || "",
     });
     setIsEditModalOpen(true);
@@ -337,7 +337,7 @@ export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilg
                 packageId: packages[0]?.id || "",
                 budget: "",
                 estimatedPax: "1",
-                assignedAgent: "Siti Rahmawati (Marketing)",
+                assignedAgent: "",
                 notes: "",
               });
               setIsAddModalOpen(true);

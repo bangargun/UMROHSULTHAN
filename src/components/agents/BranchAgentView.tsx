@@ -70,10 +70,10 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
   const [newAgentForm, setNewAgentForm] = useState({
     name: "",
     phone: "",
-    city: "Jakarta",
+    city: "",
     referralCode: "",
-    commissionPerPax: "1500000",
-    bankName: "BSI",
+    commissionPerPax: "",
+    bankName: "",
     accountNumber: "",
     accountHolder: "",
   });
@@ -82,7 +82,7 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
   const [newBranchForm, setNewBranchForm] = useState({
     code: "",
     name: "",
-    city: "Jakarta",
+    city: "",
     address: "",
     headName: "",
     phone: "",
@@ -100,7 +100,7 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
     roomType: "QUAD",
     uniformSize: "L",
     referralCode: "",
-    dpAmount: "10000000",
+    dpAmount: "",
   });
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
 
@@ -125,10 +125,10 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
         setNewAgentForm({
           name: "",
           phone: "",
-          city: "Jakarta",
+          city: "",
           referralCode: "",
-          commissionPerPax: "1500000",
-          bankName: "BSI",
+          commissionPerPax: "",
+          bankName: "",
           accountNumber: "",
           accountHolder: "",
         });
