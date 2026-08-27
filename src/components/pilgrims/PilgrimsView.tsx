@@ -55,6 +55,32 @@ export default function PilgrimsView({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPilgrimId, setEditingPilgrimId] = useState<string | null>(null);
 
+  // Helper to calculate age from birth date string
+  const calculateAge = (dobString: string | null | undefined) => {
+    if (!dobString) return null;
+    const birth = new Date(dobString);
+    if (isNaN(birth.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  // Smart Mahram & Underage Guardian states for Add Modal
+  const [addHasMahramOption, setAddHasMahramOption] = useState<boolean | null>(null);
+  const [addHasGuardianOption, setAddHasGuardianOption] = useState<boolean | null>(null);
+  const [addGuardianRelationType, setAddGuardianRelationType] = useState<string>("AYAH");
+  const [addMahramInputMode, setAddMahramInputMode] = useState<"DB" | "MANUAL">("DB");
+
+  // Smart Mahram & Underage Guardian states for Edit Modal
+  const [editHasMahramOption, setEditHasMahramOption] = useState<boolean | null>(null);
+  const [editHasGuardianOption, setEditHasGuardianOption] = useState<boolean | null>(null);
+  const [editGuardianRelationType, setEditGuardianRelationType] = useState<string>("AYAH");
+  const [editMahramInputMode, setEditMahramInputMode] = useState<"DB" | "MANUAL">("DB");
+
   // KTP & KK OCR states
   const [isScanningKtp, setIsScanningKtp] = useState(false);
   const [ktpPreviewUrl, setKtpPreviewUrl] = useState<string | null>(null);
@@ -406,6 +432,13 @@ export default function PilgrimsView({
       healthNotes: p.healthNotes || "",
       status: p.status || "REGISTERED",
     });
+
+    const hasMah = Boolean(p.mahramName && p.mahramName.trim() !== "");
+    setEditHasMahramOption(hasMah);
+    setEditHasGuardianOption(hasMah);
+    setEditGuardianRelationType(p.mahramRelation || "AYAH");
+    setEditMahramInputMode("DB");
+
     setIsEditModalOpen(true);
   };
 
@@ -1645,7 +1678,21 @@ export default function PilgrimsView({
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-700">Tanggal Lahir</label>
+                    <label className="font-bold text-slate-700 flex items-center justify-between">
+                      <span>Tanggal Lahir</span>
+                      {calculateAge(formData.dateOfBirth) !== null && (
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                            calculateAge(formData.dateOfBirth)! < 17
+                              ? "bg-amber-100 text-amber-900 border border-amber-300"
+                              : "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                          }`}
+                        >
+                          Usia: {calculateAge(formData.dateOfBirth)} Tahun{" "}
+                          {calculateAge(formData.dateOfBirth)! < 17 ? "👶 (< 17 Thn)" : "👤 (Dewasa)"}
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="date"
                       value={formData.dateOfBirth}
@@ -1907,28 +1954,330 @@ export default function PilgrimsView({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="font-bold text-slate-700">Nama Mahram / Pendamping</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. H. Ahmad Dahlan"
-                      value={formData.mahramName}
-                      onChange={(e) => setFormData({ ...formData, mahramName: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700">Hubungan Mahram</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Suami / Ayah / Kakak Kandung"
-                      value={formData.mahramRelation}
-                      onChange={(e) => setFormData({ ...formData, mahramRelation: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
-                    />
-                  </div>
-                </div>
+                {/* SMART CONDITIONAL MAHRAM & GUARDIAN SECTION */}
+                {(() => {
+                  const addAge = calculateAge(formData.dateOfBirth);
+                  const addIsUnder17 = addAge !== null && addAge < 17;
+                  const addIsFemale = formData.gender === "FEMALE";
+                  const samePackagePilgrims = pilgrims.filter((p) => p.packageId === (formData.packageId || packages[0]?.id));
+                  const malePilgrimsInPackage = samePackagePilgrims.filter((p) => p.gender === "MALE");
+
+                  if (addIsUnder17) {
+                    return (
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50/70 p-3.5 rounded-2xl border border-blue-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-bold text-blue-950 text-xs">
+                            <UserCheck className="w-4 h-4 text-blue-600" />
+                            <span>Deteksi Usia: Jamaah Berusia di Bawah 17 Tahun ({addAge} Tahun)</span>
+                          </div>
+                          <span className="text-[10px] bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded-md border border-blue-200">
+                            Regulasi Perlindungan Anak
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="font-bold text-slate-800 text-xs block">
+                            Apakah ada orang tua / keluarga yang ikut serta mendampingi dalam keberangkatan ini?
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAddHasGuardianOption(true);
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  mahramRelation: prev.mahramRelation || "AYAH KANDUNG",
+                                }));
+                              }}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                                addHasGuardianOption === true || (addHasGuardianOption === null && Boolean(formData.mahramName))
+                                  ? "bg-blue-600 text-white shadow-xs"
+                                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              ✅ Ya, Ada Orang Tua / Pendamping
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAddHasGuardianOption(false);
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  mahramName: "",
+                                  mahramRelation: "TANPA PENDAMPING ORANG TUA (TL/MUTHAWWIF)",
+                                }));
+                              }}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                                addHasGuardianOption === false
+                                  ? "bg-slate-800 text-white shadow-xs"
+                                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              ❌ Tidak Ada (Pendampingan Petugas / TL)
+                            </button>
+                          </div>
+                        </div>
+
+                        {(addHasGuardianOption === true || (addHasGuardianOption === null && Boolean(formData.mahramName))) && (
+                          <div className="pt-2 border-t border-blue-200/60 space-y-3">
+                            <div>
+                              <label className="font-bold text-slate-800 text-xs block mb-1">
+                                Pilih Hubungan Pendamping / Wali:
+                              </label>
+                              <div className="flex flex-wrap gap-1.5">
+                                {[
+                                  { label: "Ayah Kandung", val: "AYAH KANDUNG" },
+                                  { label: "Ibu Kandung", val: "IBU KANDUNG" },
+                                  { label: "Kakak / Abang", val: "KAKAK / ABANG KANDUNG" },
+                                  { label: "Wali / Keluarga Lain", val: "WALI KELUARGA" },
+                                ].map((rel) => (
+                                  <button
+                                    key={rel.val}
+                                    type="button"
+                                    onClick={() => {
+                                      setAddGuardianRelationType(rel.val);
+                                      setFormData((prev) => ({ ...prev, mahramRelation: rel.val }));
+                                    }}
+                                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                                      (formData.mahramRelation || addGuardianRelationType) === rel.val
+                                        ? "bg-indigo-600 text-white shadow-xs"
+                                        : "bg-white border border-blue-200 text-blue-900 hover:bg-blue-100/50"
+                                    }`}
+                                  >
+                                    {rel.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Pick from database in same package */}
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="font-bold text-slate-800 text-xs">
+                                  Pilih Nama Pendamping dari Jamaah Paket Keberangkatan yang Sama:
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setAddMahramInputMode(addMahramInputMode === "DB" ? "MANUAL" : "DB")}
+                                  className="text-[10px] text-blue-700 font-bold hover:underline"
+                                >
+                                  {addMahramInputMode === "DB" ? "✏️ Input Manual" : "📋 Pilih dari Database Paket"}
+                                </button>
+                              </div>
+
+                              {addMahramInputMode === "DB" ? (
+                                <select
+                                  value={formData.mahramName}
+                                  onChange={(e) => {
+                                    const selectedName = e.target.value;
+                                    const currentRel = formData.mahramRelation || addGuardianRelationType;
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      mahramName: selectedName,
+                                      fatherName: currentRel === "AYAH KANDUNG" ? selectedName : prev.fatherName,
+                                      motherName: currentRel === "IBU KANDUNG" ? selectedName : prev.motherName,
+                                    }));
+                                  }}
+                                  className="w-full rounded-xl border border-blue-300 p-2.5 bg-white font-bold text-slate-900 text-xs"
+                                >
+                                  <option value="">-- Pilih Jamaah dari Database Paket Ini --</option>
+                                  {((formData.mahramRelation || addGuardianRelationType) === "AYAH KANDUNG"
+                                    ? samePackagePilgrims.filter((p) => p.gender === "MALE")
+                                    : (formData.mahramRelation || addGuardianRelationType) === "IBU KANDUNG"
+                                    ? samePackagePilgrims.filter((p) => p.gender === "FEMALE")
+                                    : samePackagePilgrims
+                                  ).map((p) => (
+                                    <option key={p.id} value={p.name}>
+                                      {p.name} (NIK: {p.nik || "-"}) - {p.gender === "MALE" ? "Laki-laki" : "Perempuan"}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  placeholder="Ketik nama pendamping / wali..."
+                                  value={formData.mahramName}
+                                  onChange={(e) => setFormData({ ...formData, mahramName: e.target.value })}
+                                  className="w-full rounded-xl border border-blue-300 p-2.5 bg-white font-bold text-slate-900 text-xs"
+                                />
+                              )}
+                              <p className="text-[10px] text-slate-500 mt-1">
+                                💡 Data otomatis ditarik dari manifest jamaah yang terdaftar pada paket keberangkatan ini.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  if (addIsFemale) {
+                    return (
+                      <div className="bg-gradient-to-r from-purple-50 to-pink-50/60 p-3.5 rounded-2xl border border-purple-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-bold text-purple-950 text-xs">
+                            <UserCheck className="w-4 h-4 text-purple-700" />
+                            <span>Ketentuan Mahram Jamaah Wanita ({addAge !== null ? `${addAge} Tahun` : "Dewasa"})</span>
+                          </div>
+                          <span className="text-[10px] bg-purple-100 text-purple-900 font-bold px-2 py-0.5 rounded-md border border-purple-200">
+                            Syarat Visa Umroh Saudi
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="font-bold text-slate-800 text-xs block">
+                            Apakah jamaah memiliki mahram dalam keberangkatan umroh ini?
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAddHasMahramOption(true);
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  mahramRelation: prev.mahramRelation || "SUAMI",
+                                }));
+                              }}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                                addHasMahramOption === true || (addHasMahramOption === null && Boolean(formData.mahramName))
+                                  ? "bg-purple-700 text-white shadow-xs"
+                                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              ✅ Ya, Memiliki Mahram
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAddHasMahramOption(false);
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  mahramName: "",
+                                  mahramRelation: "MANDIRI / TANPA MAHRAM",
+                                }));
+                              }}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                                addHasMahramOption === false
+                                  ? "bg-slate-800 text-white shadow-xs"
+                                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              ❌ Tidak (Berangkat Mandiri)
+                            </button>
+                          </div>
+                        </div>
+
+                        {(addHasMahramOption === true || (addHasMahramOption === null && Boolean(formData.mahramName))) && (
+                          <div className="pt-2 border-t border-purple-200/60 space-y-3">
+                            <div>
+                              <label className="font-bold text-slate-800 text-xs block mb-1">
+                                Pilih Hubungan Mahram:
+                              </label>
+                              <div className="flex flex-wrap gap-1.5">
+                                {[
+                                  { label: "Suami", val: "SUAMI" },
+                                  { label: "Ayah Kandung", val: "AYAH KANDUNG" },
+                                  { label: "Anak Laki-laki", val: "ANAK LAKI-LAKI" },
+                                  { label: "Saudara Kandung", val: "SAUDARA KANDUNG" },
+                                  { label: "Paman / Kakek", val: "PAMAN / KAKEK" },
+                                ].map((rel) => (
+                                  <button
+                                    key={rel.val}
+                                    type="button"
+                                    onClick={() => {
+                                      setFormData((prev) => ({ ...prev, mahramRelation: rel.val }));
+                                    }}
+                                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                                      (formData.mahramRelation || "SUAMI") === rel.val
+                                        ? "bg-purple-700 text-white shadow-xs"
+                                        : "bg-white border border-purple-200 text-purple-900 hover:bg-purple-100/50"
+                                    }`}
+                                  >
+                                    {rel.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Pick from database in same package */}
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="font-bold text-slate-800 text-xs">
+                                  Pilih Nama Mahram dari Jamaah Pria di Paket Keberangkatan yang Sama:
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setAddMahramInputMode(addMahramInputMode === "DB" ? "MANUAL" : "DB")}
+                                  className="text-[10px] text-purple-700 font-bold hover:underline"
+                                >
+                                  {addMahramInputMode === "DB" ? "✏️ Input Manual" : "📋 Pilih dari Database Paket"}
+                                </button>
+                              </div>
+
+                              {addMahramInputMode === "DB" ? (
+                                <select
+                                  value={formData.mahramName}
+                                  onChange={(e) => {
+                                    const selectedName = e.target.value;
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      mahramName: selectedName,
+                                      fatherName: formData.mahramRelation === "AYAH KANDUNG" ? selectedName : prev.fatherName,
+                                    }));
+                                  }}
+                                  className="w-full rounded-xl border border-purple-300 p-2.5 bg-white font-bold text-slate-900 text-xs"
+                                >
+                                  <option value="">-- Pilih Mahram Pria dari Database Paket Ini --</option>
+                                  {malePilgrimsInPackage.map((p) => (
+                                    <option key={p.id} value={p.name}>
+                                      {p.name} (NIK: {p.nik || "-"})
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  placeholder="Ketik nama mahram..."
+                                  value={formData.mahramName}
+                                  onChange={(e) => setFormData({ ...formData, mahramName: e.target.value })}
+                                  className="w-full rounded-xl border border-purple-300 p-2.5 bg-white font-bold text-slate-900 text-xs"
+                                />
+                              )}
+                              <p className="text-[10px] text-slate-500 mt-1">
+                                💡 Data otomatis memfilter jamaah laki-laki yang terdaftar pada paket keberangkatan ini.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700">Nama Mahram / Kerabat yang Disertai (Opsional)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Ibu Fatimah (Istri / Ibu)"
+                          value={formData.mahramName}
+                          onChange={(e) => setFormData({ ...formData, mahramName: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-700">Hubungan Kerabat</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Istri / Ibu Kandung"
+                          value={formData.mahramRelation}
+                          onChange={(e) => setFormData({ ...formData, mahramRelation: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
@@ -2248,7 +2597,21 @@ export default function PilgrimsView({
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-700">Tanggal Lahir</label>
+                    <label className="font-bold text-slate-700 flex items-center justify-between">
+                      <span>Tanggal Lahir</span>
+                      {calculateAge(editFormData.dateOfBirth) !== null && (
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                            calculateAge(editFormData.dateOfBirth)! < 17
+                              ? "bg-amber-100 text-amber-900 border border-amber-300"
+                              : "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                          }`}
+                        >
+                          Usia: {calculateAge(editFormData.dateOfBirth)} Tahun{" "}
+                          {calculateAge(editFormData.dateOfBirth)! < 17 ? "👶 (< 17 Thn)" : "👤 (Dewasa)"}
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="date"
                       value={editFormData.dateOfBirth}
@@ -2510,28 +2873,332 @@ export default function PilgrimsView({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
-                  <div>
-                    <label className="font-bold text-slate-700">Nama Mahram / Pendamping</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Hj. Siti Aminah"
-                      value={editFormData.mahramName}
-                      onChange={(e) => setEditFormData({ ...editFormData, mahramName: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700">Hubungan Mahram</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Istri, Suami, Ayah Kandung"
-                      value={editFormData.mahramRelation}
-                      onChange={(e) => setEditFormData({ ...editFormData, mahramRelation: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
-                    />
-                  </div>
-                </div>
+                {/* SMART CONDITIONAL MAHRAM & GUARDIAN SECTION (EDIT MODAL) */}
+                {(() => {
+                  const editAge = calculateAge(editFormData.dateOfBirth);
+                  const editIsUnder17 = editAge !== null && editAge < 17;
+                  const editIsFemale = editFormData.gender === "FEMALE";
+                  const samePackagePilgrims = pilgrims.filter(
+                    (p) => p.packageId === (editFormData.packageId || packages[0]?.id) && p.id !== editingPilgrimId
+                  );
+                  const malePilgrimsInPackage = samePackagePilgrims.filter((p) => p.gender === "MALE");
+
+                  if (editIsUnder17) {
+                    return (
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50/70 p-3.5 rounded-2xl border border-blue-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-bold text-blue-950 text-xs">
+                            <UserCheck className="w-4 h-4 text-blue-600" />
+                            <span>Deteksi Usia: Jamaah Berusia di Bawah 17 Tahun ({editAge} Tahun)</span>
+                          </div>
+                          <span className="text-[10px] bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded-md border border-blue-200">
+                            Regulasi Perlindungan Anak
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="font-bold text-slate-800 text-xs block">
+                            Apakah ada orang tua / keluarga yang ikut serta mendampingi dalam keberangkatan ini?
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditHasGuardianOption(true);
+                                setEditFormData((prev) => ({
+                                  ...prev,
+                                  mahramRelation: prev.mahramRelation || "AYAH KANDUNG",
+                                }));
+                              }}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                                editHasGuardianOption === true || (editHasGuardianOption === null && Boolean(editFormData.mahramName))
+                                  ? "bg-blue-600 text-white shadow-xs"
+                                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              ✅ Ya, Ada Orang Tua / Pendamping
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditHasGuardianOption(false);
+                                setEditFormData((prev) => ({
+                                  ...prev,
+                                  mahramName: "",
+                                  mahramRelation: "TANPA PENDAMPING ORANG TUA (TL/MUTHAWWIF)",
+                                }));
+                              }}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                                editHasGuardianOption === false
+                                  ? "bg-slate-800 text-white shadow-xs"
+                                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              ❌ Tidak Ada (Pendampingan Petugas / TL)
+                            </button>
+                          </div>
+                        </div>
+
+                        {(editHasGuardianOption === true || (editHasGuardianOption === null && Boolean(editFormData.mahramName))) && (
+                          <div className="pt-2 border-t border-blue-200/60 space-y-3">
+                            <div>
+                              <label className="font-bold text-slate-800 text-xs block mb-1">
+                                Pilih Hubungan Pendamping / Wali:
+                              </label>
+                              <div className="flex flex-wrap gap-1.5">
+                                {[
+                                  { label: "Ayah Kandung", val: "AYAH KANDUNG" },
+                                  { label: "Ibu Kandung", val: "IBU KANDUNG" },
+                                  { label: "Kakak / Abang", val: "KAKAK / ABANG KANDUNG" },
+                                  { label: "Wali / Keluarga Lain", val: "WALI KELUARGA" },
+                                ].map((rel) => (
+                                  <button
+                                    key={rel.val}
+                                    type="button"
+                                    onClick={() => {
+                                      setEditGuardianRelationType(rel.val);
+                                      setEditFormData((prev) => ({ ...prev, mahramRelation: rel.val }));
+                                    }}
+                                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                                      (editFormData.mahramRelation || editGuardianRelationType) === rel.val
+                                        ? "bg-indigo-600 text-white shadow-xs"
+                                        : "bg-white border border-blue-200 text-blue-900 hover:bg-blue-100/50"
+                                    }`}
+                                  >
+                                    {rel.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Pick from database in same package */}
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="font-bold text-slate-800 text-xs">
+                                  Pilih Nama Pendamping dari Jamaah Paket Keberangkatan yang Sama:
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditMahramInputMode(editMahramInputMode === "DB" ? "MANUAL" : "DB")}
+                                  className="text-[10px] text-blue-700 font-bold hover:underline"
+                                >
+                                  {editMahramInputMode === "DB" ? "✏️ Input Manual" : "📋 Pilih dari Database Paket"}
+                                </button>
+                              </div>
+
+                              {editMahramInputMode === "DB" ? (
+                                <select
+                                  value={editFormData.mahramName}
+                                  onChange={(e) => {
+                                    const selectedName = e.target.value;
+                                    const currentRel = editFormData.mahramRelation || editGuardianRelationType;
+                                    setEditFormData((prev) => ({
+                                      ...prev,
+                                      mahramName: selectedName,
+                                      fatherName: currentRel === "AYAH KANDUNG" ? selectedName : prev.fatherName,
+                                      motherName: currentRel === "IBU KANDUNG" ? selectedName : prev.motherName,
+                                    }));
+                                  }}
+                                  className="w-full rounded-xl border border-blue-300 p-2.5 bg-white font-bold text-slate-900 text-xs"
+                                >
+                                  <option value="">-- Pilih Jamaah dari Database Paket Ini --</option>
+                                  {((editFormData.mahramRelation || editGuardianRelationType) === "AYAH KANDUNG"
+                                    ? samePackagePilgrims.filter((p) => p.gender === "MALE")
+                                    : (editFormData.mahramRelation || editGuardianRelationType) === "IBU KANDUNG"
+                                    ? samePackagePilgrims.filter((p) => p.gender === "FEMALE")
+                                    : samePackagePilgrims
+                                  ).map((p) => (
+                                    <option key={p.id} value={p.name}>
+                                      {p.name} (NIK: {p.nik || "-"}) - {p.gender === "MALE" ? "Laki-laki" : "Perempuan"}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  placeholder="Ketik nama pendamping / wali..."
+                                  value={editFormData.mahramName}
+                                  onChange={(e) => setEditFormData({ ...editFormData, mahramName: e.target.value })}
+                                  className="w-full rounded-xl border border-blue-300 p-2.5 bg-white font-bold text-slate-900 text-xs"
+                                />
+                              )}
+                              <p className="text-[10px] text-slate-500 mt-1">
+                                💡 Data otomatis ditarik dari manifest jamaah yang terdaftar pada paket keberangkatan ini.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  if (editIsFemale) {
+                    return (
+                      <div className="bg-gradient-to-r from-purple-50 to-pink-50/60 p-3.5 rounded-2xl border border-purple-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-bold text-purple-950 text-xs">
+                            <UserCheck className="w-4 h-4 text-purple-700" />
+                            <span>Ketentuan Mahram Jamaah Wanita ({editAge !== null ? `${editAge} Tahun` : "Dewasa"})</span>
+                          </div>
+                          <span className="text-[10px] bg-purple-100 text-purple-900 font-bold px-2 py-0.5 rounded-md border border-purple-200">
+                            Syarat Visa Umroh Saudi
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="font-bold text-slate-800 text-xs block">
+                            Apakah jamaah memiliki mahram dalam keberangkatan umroh ini?
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditHasMahramOption(true);
+                                setEditFormData((prev) => ({
+                                  ...prev,
+                                  mahramRelation: prev.mahramRelation || "SUAMI",
+                                }));
+                              }}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                                editHasMahramOption === true || (editHasMahramOption === null && Boolean(editFormData.mahramName))
+                                  ? "bg-purple-700 text-white shadow-xs"
+                                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              ✅ Ya, Memiliki Mahram
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditHasMahramOption(false);
+                                setEditFormData((prev) => ({
+                                  ...prev,
+                                  mahramName: "",
+                                  mahramRelation: "MANDIRI / TANPA MAHRAM",
+                                }));
+                              }}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                                editHasMahramOption === false
+                                  ? "bg-slate-800 text-white shadow-xs"
+                                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              ❌ Tidak (Berangkat Mandiri)
+                            </button>
+                          </div>
+                        </div>
+
+                        {(editHasMahramOption === true || (editHasMahramOption === null && Boolean(editFormData.mahramName))) && (
+                          <div className="pt-2 border-t border-purple-200/60 space-y-3">
+                            <div>
+                              <label className="font-bold text-slate-800 text-xs block mb-1">
+                                Pilih Hubungan Mahram:
+                              </label>
+                              <div className="flex flex-wrap gap-1.5">
+                                {[
+                                  { label: "Suami", val: "SUAMI" },
+                                  { label: "Ayah Kandung", val: "AYAH KANDUNG" },
+                                  { label: "Anak Laki-laki", val: "ANAK LAKI-LAKI" },
+                                  { label: "Saudara Kandung", val: "SAUDARA KANDUNG" },
+                                  { label: "Paman / Kakek", val: "PAMAN / KAKEK" },
+                                ].map((rel) => (
+                                  <button
+                                    key={rel.val}
+                                    type="button"
+                                    onClick={() => {
+                                      setEditFormData((prev) => ({ ...prev, mahramRelation: rel.val }));
+                                    }}
+                                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                                      (editFormData.mahramRelation || "SUAMI") === rel.val
+                                        ? "bg-purple-700 text-white shadow-xs"
+                                        : "bg-white border border-purple-200 text-purple-900 hover:bg-purple-100/50"
+                                    }`}
+                                  >
+                                    {rel.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Pick from database in same package */}
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="font-bold text-slate-800 text-xs">
+                                  Pilih Nama Mahram dari Jamaah Pria di Paket Keberangkatan yang Sama:
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditMahramInputMode(editMahramInputMode === "DB" ? "MANUAL" : "DB")}
+                                  className="text-[10px] text-purple-700 font-bold hover:underline"
+                                >
+                                  {editMahramInputMode === "DB" ? "✏️ Input Manual" : "📋 Pilih dari Database Paket"}
+                                </button>
+                              </div>
+
+                              {editMahramInputMode === "DB" ? (
+                                <select
+                                  value={editFormData.mahramName}
+                                  onChange={(e) => {
+                                    const selectedName = e.target.value;
+                                    setEditFormData((prev) => ({
+                                      ...prev,
+                                      mahramName: selectedName,
+                                      fatherName: editFormData.mahramRelation === "AYAH KANDUNG" ? selectedName : prev.fatherName,
+                                    }));
+                                  }}
+                                  className="w-full rounded-xl border border-purple-300 p-2.5 bg-white font-bold text-slate-900 text-xs"
+                                >
+                                  <option value="">-- Pilih Mahram Pria dari Database Paket Ini --</option>
+                                  {malePilgrimsInPackage.map((p) => (
+                                    <option key={p.id} value={p.name}>
+                                      {p.name} (NIK: {p.nik || "-"})
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  placeholder="Ketik nama mahram..."
+                                  value={editFormData.mahramName}
+                                  onChange={(e) => setEditFormData({ ...editFormData, mahramName: e.target.value })}
+                                  className="w-full rounded-xl border border-purple-300 p-2.5 bg-white font-bold text-slate-900 text-xs"
+                                />
+                              )}
+                              <p className="text-[10px] text-slate-500 mt-1">
+                                💡 Data otomatis memfilter jamaah laki-laki yang terdaftar pada paket keberangkatan ini.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700">Nama Mahram / Kerabat yang Disertai (Opsional)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Ibu Fatimah (Istri / Ibu)"
+                          value={editFormData.mahramName}
+                          onChange={(e) => setEditFormData({ ...editFormData, mahramName: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-700">Hubungan Kerabat</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Istri / Ibu Kandung"
+                          value={editFormData.mahramRelation}
+                          onChange={(e) => setEditFormData({ ...editFormData, mahramRelation: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
                   <div>
