@@ -23,6 +23,7 @@ import {
   Send,
   UserPlus,
   Tag,
+  BookOpen,
 } from "lucide-react";
 import { formatCurrency, formatDate, getStatusBadge } from "@/lib/utils";
 
@@ -31,9 +32,10 @@ interface LeadsViewProps {
   packages: any[];
   onRefresh: () => void;
   onNavigateToPilgrim?: () => void;
+  onNavigateToFaq?: () => void;
 }
 
-export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilgrim }: LeadsViewProps) {
+export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilgrim, onNavigateToFaq }: LeadsViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -312,29 +314,40 @@ export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilg
             Pencatatan prospek calon jamaah, sumber perujuk (Mitra Agen/Alumni), follow-up WhatsApp, dan konversi pendaftaran.
           </p>
         </div>
-        <button
-          onClick={() => {
-            setFormData({
-              name: "",
-              phone: "",
-              email: "",
-              city: "",
-              source: "INSTAGRAM",
-              agentName: "",
-              referralPilgrimName: "",
-              packageId: packages[0]?.id || "",
-              budget: "",
-              estimatedPax: "1",
-              assignedAgent: "Siti Rahmawati (Marketing)",
-              notes: "",
-            });
-            setIsAddModalOpen(true);
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          + Tambah Calon Jamaah
-        </button>
+        <div className="flex items-center gap-2">
+          {onNavigateToFaq && (
+            <button
+              onClick={onNavigateToFaq}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition-all"
+            >
+              <BookOpen className="w-4 h-4 text-emerald-400" />
+              📖 Playbook & Skrip Closing
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setFormData({
+                name: "",
+                phone: "",
+                email: "",
+                city: "",
+                source: "INSTAGRAM",
+                agentName: "",
+                referralPilgrimName: "",
+                packageId: packages[0]?.id || "",
+                budget: "",
+                estimatedPax: "1",
+                assignedAgent: "Siti Rahmawati (Marketing)",
+                notes: "",
+              });
+              setIsAddModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            + Tambah Calon Jamaah
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}

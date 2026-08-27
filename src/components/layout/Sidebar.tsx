@@ -18,6 +18,7 @@ import {
   Building2,
   Award,
   Settings,
+  BookOpen,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -46,6 +47,12 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
       desc: "Pipeline prospek jamaah",
       badge: badgeCounts?.leads,
       badgeColor: "bg-blue-100 text-blue-700",
+    },
+    {
+      id: "faq",
+      label: "Playbook & FAQ Sales",
+      icon: BookOpen,
+      desc: "Closing & SOP Komplain WA",
     },
     {
       id: "pilgrims",

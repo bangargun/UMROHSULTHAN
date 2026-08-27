@@ -420,3 +420,17 @@ model MasterAirline {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model SalesFaq {
+  id          String   @id @default(uuid())
+  category    String   // CLOSING_OBJECTION, COMPLAINT_HANDLING, FAQ_UMUM, SYARAT_VISA, FASILITAS_HOTEL, REFUND_KEUANGAN
+  title       String   // e.g. "Objection: Harga Terlalu Mahal Dibanding Travel Lain"
+  question    String   // The customer objection or question
+  answer      String   // Internal explanation / key points
+  waScript    String?  // Ready-to-copy WhatsApp script
+  tags        String?  // e.g. "harga, promo, closing, diskon"
+  isMandatory Boolean  @default(true)
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

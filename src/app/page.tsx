@@ -14,6 +14,7 @@ import HandoverChecklistView from "@/components/handovers/HandoverChecklistView"
 import RequirementsChecklistView from "@/components/requirements/RequirementsChecklistView";
 import LettersGeneratorView from "@/components/letters/LettersGeneratorView";
 import BranchAgentView from "@/components/agents/BranchAgentView";
+import SalesFaqView from "@/components/faq/SalesFaqView";
 import MasterDataView from "@/components/master/MasterDataView";
 import SettingsView from "@/components/settings/SettingsView";
 import LoginView from "@/components/auth/LoginView";
@@ -225,7 +226,12 @@ export default function Home() {
               packages={packages}
               onRefresh={fetchAllData}
               onNavigateToPilgrim={() => handleNavigateTab("pilgrims")}
+              onNavigateToFaq={() => handleNavigateTab("faq")}
             />
+          )}
+
+          {activeTab === "faq" && (
+            <SalesFaqView />
           )}
 
           {activeTab === "pilgrims" && (
