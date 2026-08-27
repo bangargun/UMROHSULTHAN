@@ -81,6 +81,28 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
   const [editingLetterTmpl, setEditingLetterTmpl] = useState<any | null>(null);
   const [isAddLetterTmplOpen, setIsAddLetterTmplOpen] = useState(false);
 
+  // Master Hotels & Airlines Catalogs
+  const [makkahHotels, setMakkahHotels] = useState<any[]>([]);
+  const [madinahHotels, setMadinahHotels] = useState<any[]>([]);
+  const [airlines, setAirlines] = useState<any[]>([]);
+
+  // Quick Add Hotel Modal State
+  const [isQuickAddHotelOpen, setIsQuickAddHotelOpen] = useState(false);
+  const [quickHotelCity, setQuickHotelCity] = useState<"MAKKAH" | "MADINAH">("MAKKAH");
+  const [quickHotelForm, setQuickHotelForm] = useState({
+    name: "",
+    rating: "5",
+    distance: "",
+  });
+
+  // Quick Add Airline Modal State
+  const [isQuickAddAirlineOpen, setIsQuickAddAirlineOpen] = useState(false);
+  const [quickAirlineForm, setQuickAirlineForm] = useState({
+    name: "",
+    code: "",
+    routeType: "DIRECT",
+  });
+
   // Letter Template Form State
   const [letterTmplForm, setLetterTmplForm] = useState({
     code: "",
@@ -155,25 +177,34 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
 
   const fetchExtraMasterData = async () => {
     try {
-      const [settingsRes, reqRes, usersRes, accountsRes, lettersRes] = await Promise.all([
+      const [settingsRes, reqRes, usersRes, accountsRes, lettersRes, makkahRes, madinahRes, airlinesRes] = await Promise.all([
         fetch("/api/settings"),
         fetch("/api/requirements/templates"),
         fetch("/api/users"),
         fetch("/api/accounts"),
         fetch("/api/letters/templates"),
+        fetch("/api/master/hotels?city=MAKKAH"),
+        fetch("/api/master/hotels?city=MADINAH"),
+        fetch("/api/master/airlines"),
       ]);
-      const [sData, rData, uData, aData, lData] = await Promise.all([
+      const [sData, rData, uData, aData, lData, mData, mdData, alData] = await Promise.all([
         settingsRes.json(),
         reqRes.json(),
         usersRes.json(),
         accountsRes.json(),
         lettersRes.json(),
+        makkahRes.json(),
+        madinahRes.json(),
+        airlinesRes.json(),
       ]);
       if (sData) setTravelSettings(sData);
       if (rData) setReqTemplates(rData);
       if (uData) setStaffUsers(uData);
       if (aData && Array.isArray(aData)) setAccounts(aData);
       if (lData && Array.isArray(lData)) setLetterTemplates(lData);
+      if (mData && Array.isArray(mData)) setMakkahHotels(mData);
+      if (mdData && Array.isArray(mdData)) setMadinahHotels(mdData);
+      if (alData && Array.isArray(alData)) setAirlines(alData);
     } catch (err) {
       console.error(err);
     }
@@ -182,6 +213,74 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
   useEffect(() => {
     fetchExtraMasterData();
   }, []);
+
+  // Quick Add Hotel Handler
+  const handleSaveQuickHotel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickHotelForm.name.trim()) return;
+    setLoading(true);
+    try {
+      const payload = {
+        name: quickHotelForm.name.trim(),
+        city: quickHotelCity,
+        rating: quickHotelForm.rating,
+        distance: quickHotelForm.distance || null,
+      };
+      const res = await fetch("/api/master/hotels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        if (quickHotelCity === "MAKKAH") {
+          setPackageForm((prev) => ({ ...prev, hotelMakkah: created.name }));
+        } else {
+          setPackageForm((prev) => ({ ...prev, hotelMadinah: created.name }));
+        }
+        setIsQuickAddHotelOpen(false);
+        setQuickHotelForm({ name: "", rating: "5", distance: "" });
+        alert(`Hotel "${created.name}" berhasil disimpan ke database Master Hotel & dipilih untuk paket!`);
+        fetchExtraMasterData();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Gagal menyimpan hotel");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Quick Add Airline Handler
+  const handleSaveQuickAirline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickAirlineForm.name.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/master/airlines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(quickAirlineForm),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setPackageForm((prev) => ({ ...prev, airline: created.name }));
+        setIsQuickAddAirlineOpen(false);
+        setQuickAirlineForm({ name: "", code: "", routeType: "DIRECT" });
+        alert(`Maskapai "${created.name}" berhasil disimpan ke database Master Maskapai & dipilih untuk paket!`);
+        fetchExtraMasterData();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Gagal menyimpan maskapai");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handlers for Letter Templates & Code Abbreviations
   const handleSaveLetterTmpl = async (e: React.FormEvent) => {
@@ -1758,43 +1857,122 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
               </div>
 
               <div className="grid grid-cols-2 gap-3">
+                {/* Hotel Makkah */}
                 <div>
-                  <label className="font-bold text-slate-700">Hotel Makkah</label>
-                  <input
-                    type="text"
-                    value={packageForm.hotelMakkah}
-                    onChange={(e) => setPackageForm({ ...packageForm, hotelMakkah: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2"
-                  />
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-700 text-xs">Hotel Makkah *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuickHotelCity("MAKKAH");
+                        setQuickHotelForm({ name: "", rating: "5", distance: "" });
+                        setIsQuickAddHotelOpen(true);
+                      }}
+                      className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" /> + Tambah Hotel
+                    </button>
+                  </div>
+                  <div className="mt-1 flex gap-1.5">
+                    <select
+                      value={packageForm.hotelMakkah}
+                      onChange={(e) => setPackageForm({ ...packageForm, hotelMakkah: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
+                    >
+                      <option value="">-- Pilih Hotel Makkah --</option>
+                      {makkahHotels.map((h) => (
+                        <option key={h.id} value={h.name}>
+                          {h.name} {h.rating ? `(★${h.rating})` : ""} {h.distance ? `• ${h.distance}` : ""}
+                        </option>
+                      ))}
+                      {packageForm.hotelMakkah && !makkahHotels.some((h) => h.name === packageForm.hotelMakkah) && (
+                        <option value={packageForm.hotelMakkah}>{packageForm.hotelMakkah} (Kustom)</option>
+                      )}
+                    </select>
+                  </div>
                 </div>
+
+                {/* Hotel Madinah */}
                 <div>
-                  <label className="font-bold text-slate-700">Hotel Madinah</label>
-                  <input
-                    type="text"
-                    value={packageForm.hotelMadinah}
-                    onChange={(e) => setPackageForm({ ...packageForm, hotelMadinah: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2"
-                  />
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-700 text-xs">Hotel Madinah *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuickHotelCity("MADINAH");
+                        setQuickHotelForm({ name: "", rating: "5", distance: "" });
+                        setIsQuickAddHotelOpen(true);
+                      }}
+                      className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" /> + Tambah Hotel
+                    </button>
+                  </div>
+                  <div className="mt-1 flex gap-1.5">
+                    <select
+                      value={packageForm.hotelMadinah}
+                      onChange={(e) => setPackageForm({ ...packageForm, hotelMadinah: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
+                    >
+                      <option value="">-- Pilih Hotel Madinah --</option>
+                      {madinahHotels.map((h) => (
+                        <option key={h.id} value={h.name}>
+                          {h.name} {h.rating ? `(★${h.rating})` : ""} {h.distance ? `• ${h.distance}` : ""}
+                        </option>
+                      ))}
+                      {packageForm.hotelMadinah && !madinahHotels.some((h) => h.name === packageForm.hotelMadinah) && (
+                        <option value={packageForm.hotelMadinah}>{packageForm.hotelMadinah} (Kustom)</option>
+                      )}
+                    </select>
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
+                {/* Maskapai Penerbangan */}
                 <div>
-                  <label className="font-bold text-slate-700">Maskapai Penerbangan</label>
-                  <input
-                    type="text"
-                    value={packageForm.airline}
-                    onChange={(e) => setPackageForm({ ...packageForm, airline: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2"
-                  />
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-700 text-xs">Maskapai Penerbangan *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuickAirlineForm({ name: "", code: "", routeType: "DIRECT" });
+                        setIsQuickAddAirlineOpen(true);
+                      }}
+                      className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" /> + Tambah Maskapai
+                    </button>
+                  </div>
+                  <div className="mt-1 flex gap-1.5">
+                    <select
+                      value={packageForm.airline}
+                      onChange={(e) => setPackageForm({ ...packageForm, airline: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
+                    >
+                      <option value="">-- Pilih Maskapai Penerbangan --</option>
+                      {airlines.map((a) => (
+                        <option key={a.id} value={a.name}>
+                          ✈️ {a.name} {a.code ? `(${a.code})` : ""}
+                        </option>
+                      ))}
+                      {packageForm.airline && !airlines.some((a) => a.name === packageForm.airline) && (
+                        <option value={packageForm.airline}>✈️ {packageForm.airline} (Kustom)</option>
+                      )}
+                    </select>
+                  </div>
                 </div>
+
+                {/* Kuota Seat */}
                 <div>
-                  <label className="font-bold text-slate-700">Kuota Seat</label>
+                  <label className="font-bold text-slate-700 text-xs">Kuota Seat Jamaah *</label>
                   <input
                     type="number"
+                    required
+                    min="1"
                     value={packageForm.quota}
                     onChange={(e) => setPackageForm({ ...packageForm, quota: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2"
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs font-bold"
                   />
                 </div>
               </div>
@@ -2430,6 +2608,181 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
                   className="px-5 py-2 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 shadow-xs"
                 >
                   {loading ? "Menyimpan..." : "Simpan Kode & Template"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL QUICK ADD MASTER HOTEL (MAKKAH / MADINAH) */}
+      {isQuickAddHotelOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-emerald-600" />
+                Tambah Master Hotel {quickHotelCity === "MAKKAH" ? "Makkah" : "Madinah"}
+              </h3>
+              <button
+                onClick={() => setIsQuickAddHotelOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveQuickHotel} className="space-y-3.5 text-xs">
+              <div>
+                <label className="font-bold text-slate-700">Nama Lengkap Hotel *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder={
+                    quickHotelCity === "MAKKAH"
+                      ? "e.g. Fairmont Makkah Clock Royal Tower"
+                      : "e.g. Dar Al Taqwa Hotel Madinah"
+                  }
+                  value={quickHotelForm.name}
+                  onChange={(e) => setQuickHotelForm({ ...quickHotelForm, name: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700">Kelas Bintang Hotel *</label>
+                  <select
+                    value={quickHotelForm.rating}
+                    onChange={(e) => setQuickHotelForm({ ...quickHotelForm, rating: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold text-amber-900"
+                  >
+                    <option value="5">⭐⭐⭐⭐⭐ Bintang 5</option>
+                    <option value="4">⭐⭐⭐⭐ Bintang 4</option>
+                    <option value="3">⭐⭐⭐ Bintang 3</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700">Kota Lokasi</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={quickHotelCity === "MAKKAH" ? "Kota Makkah" : "Kota Madinah"}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-slate-100 font-bold text-slate-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700">Jarak / Lokasi ke Masjid (Opsional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Pelataran Depan Masjid / 50m dari Pintu Utama"
+                  value={quickHotelForm.distance}
+                  onChange={(e) => setQuickHotelForm({ ...quickHotelForm, distance: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                />
+              </div>
+
+              <p className="text-[11px] text-emerald-700 bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+                ✨ Hotel baru akan otomatis disimpan ke database Master dan langsung terpilih pada paket umroh.
+              </p>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsQuickAddHotelOpen(false)}
+                  className="px-4 py-2 rounded-xl border text-slate-600 font-bold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-xs"
+                >
+                  {loading ? "Menyimpan..." : "Simpan Hotel"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL QUICK ADD MASTER MASKAPAI */}
+      {isQuickAddAirlineOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Plane className="w-5 h-5 text-emerald-600" />
+                Tambah Maskapai Penerbangan Baru
+              </h3>
+              <button
+                onClick={() => setIsQuickAddAirlineOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveQuickAirline} className="space-y-3.5 text-xs">
+              <div>
+                <label className="font-bold text-slate-700">Nama Maskapai Penerbangan *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Garuda Indonesia (Direct CGK - JED)"
+                  value={quickAirlineForm.name}
+                  onChange={(e) => setQuickAirlineForm({ ...quickAirlineForm, name: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700">Kode IATA (Opsional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. GA / SV / EK"
+                    value={quickAirlineForm.code}
+                    onChange={(e) => setQuickAirlineForm({ ...quickAirlineForm, code: e.target.value.toUpperCase() })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-mono uppercase font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700">Tipe Penerbangan</label>
+                  <select
+                    value={quickAirlineForm.routeType}
+                    onChange={(e) => setQuickAirlineForm({ ...quickAirlineForm, routeType: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-medium"
+                  >
+                    <option value="DIRECT">Direct (Langsung)</option>
+                    <option value="TRANSIT">Transit (1x Stop)</option>
+                  </select>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-emerald-700 bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+                ✨ Maskapai baru akan otomatis tersimpan di database Master dan langsung terpilih pada paket umroh.
+              </p>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsQuickAddAirlineOpen(false)}
+                  className="px-4 py-2 rounded-xl border text-slate-600 font-bold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-xs"
+                >
+                  {loading ? "Menyimpan..." : "Simpan Maskapai"}
                 </button>
               </div>
             </form>

@@ -399,3 +399,24 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model MasterHotel {
+  id        String   @id @default(uuid())
+  name      String   // e.g. "Pullman Zamzam (Bintang 5)"
+  city      String   // "MAKKAH" or "MADINAH"
+  rating    Int      @default(5)
+  distance  String?  // e.g. "Depan Pelataran Masjidil Haram"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, city])
+}
+
+model MasterAirline {
+  id        String   @id @default(uuid())
+  name      String   @unique // e.g. "Saudia Airlines (Direct CGK-JED)"
+  code      String?  // e.g. "SV"
+  routeType String?  @default("DIRECT") // DIRECT, TRANSIT
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
