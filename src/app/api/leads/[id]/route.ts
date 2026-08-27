@@ -24,7 +24,21 @@ export async function GET(request: Request, { params }: { params: { id: string }
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const body = await request.json();
-    const { name, phone, email, city, source, status, notes, budget, estimatedPax, assignedAgent } = body;
+    const {
+      name,
+      phone,
+      email,
+      city,
+      source,
+      agentName,
+      referralPilgrimName,
+      packageId,
+      status,
+      notes,
+      budget,
+      estimatedPax,
+      assignedAgent,
+    } = body;
 
     const updated = await prisma.lead.update({
       where: { id: params.id },
@@ -34,6 +48,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         email,
         city,
         source,
+        agentName: source === "AGENT" ? agentName || null : null,
+        referralPilgrimName: source === "REFERRAL" ? referralPilgrimName || null : null,
+        packageId: packageId !== undefined ? packageId : undefined,
         status,
         notes,
         budget: budget !== undefined ? parseFloat(budget) : undefined,

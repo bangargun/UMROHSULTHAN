@@ -24,7 +24,20 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, phone, email, city, source, notes, budget, estimatedPax, assignedAgent } = body;
+    const {
+      name,
+      phone,
+      email,
+      city,
+      source,
+      agentName,
+      referralPilgrimName,
+      packageId,
+      notes,
+      budget,
+      estimatedPax,
+      assignedAgent,
+    } = body;
 
     if (!name || !phone) {
       return NextResponse.json({ error: "Nama dan Nomor Telepon wajib diisi" }, { status: 400 });
@@ -37,6 +50,9 @@ export async function POST(request: Request) {
         email: email || null,
         city: city || null,
         source: source || "INSTAGRAM",
+        agentName: source === "AGENT" ? agentName || null : null,
+        referralPilgrimName: source === "REFERRAL" ? referralPilgrimName || null : null,
+        packageId: packageId || null,
         status: "NEW",
         notes: notes || null,
         budget: budget ? parseFloat(budget) : null,
@@ -46,11 +62,15 @@ export async function POST(request: Request) {
     });
 
     // Create initial interaction
+    let sourceDetail = lead.source;
+    if (lead.source === "AGENT" && lead.agentName) sourceDetail += ` (Mitra: ${lead.agentName})`;
+    if (lead.source === "REFERRAL" && lead.referralPilgrimName) sourceDetail += ` (Perujuk: ${lead.referralPilgrimName})`;
+
     await prisma.leadInteraction.create({
       data: {
         leadId: lead.id,
         type: "WHATSAPP",
-        summary: `Lead baru dibuat via channel ${lead.source}. Catatan: ${notes || "Belum ada catatan."}`,
+        summary: `Lead baru dibuat via channel ${sourceDetail}. Catatan: ${notes || "Belum ada catatan."}`,
       },
     });
 

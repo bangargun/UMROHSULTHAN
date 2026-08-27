@@ -118,6 +118,8 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
     priceTriple: "32500000",
     priceDouble: "36000000",
     quota: "45",
+    commissionAgent: "1500000",
+    commissionReferral: "500000",
     status: "ACTIVE",
   });
 
@@ -586,6 +588,8 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
                   priceTriple: "32500000",
                   priceDouble: "36000000",
                   quota: "45",
+                  commissionAgent: "1500000",
+                  commissionReferral: "500000",
                   status: "ACTIVE",
                 });
                 setIsAddPackageOpen(true);
@@ -636,6 +640,17 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
                   </div>
                 </div>
 
+                {/* Commission Rates Badge */}
+                <div className="flex flex-wrap items-center gap-2 p-2 bg-amber-50/60 rounded-xl border border-amber-200/80 text-[11px]">
+                  <span className="font-bold text-amber-900 flex items-center gap-1">
+                    🏷️ Komisi Mitra/Agen: <strong className="text-emerald-800 font-mono">{formatCurrency(p.commissionAgent || 1500000)}</strong> /pax
+                  </span>
+                  <span className="text-amber-400">•</span>
+                  <span className="font-bold text-amber-900 flex items-center gap-1">
+                    Referral Alumni: <strong className="text-emerald-800 font-mono">{formatCurrency(p.commissionReferral || 500000)}</strong> /pax
+                  </span>
+                </div>
+
                 <div className="flex items-center justify-between text-xs text-slate-600 pt-1">
                   <span>✈️ {p.airline} • 🏨 {p.hotelMakkah}</span>
                   <span className="font-bold text-emerald-700">Kuota: {p.bookedCount || 0}/{p.quota} Seat</span>
@@ -659,6 +674,8 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
                         priceTriple: String(p.priceTriple),
                         priceDouble: String(p.priceDouble),
                         quota: String(p.quota),
+                        commissionAgent: String(p.commissionAgent || 1500000),
+                        commissionReferral: String(p.commissionReferral || 500000),
                         status: p.status,
                       });
                       setIsAddPackageOpen(true);
@@ -1812,6 +1829,37 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
                     onChange={(e) => setPackageForm({ ...packageForm, priceDouble: e.target.value })}
                     className="mt-1 w-full rounded-xl border border-slate-200 p-2 font-bold"
                   />
+                </div>
+              </div>
+
+              {/* Setting Komisi Paket */}
+              <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl space-y-2">
+                <p className="text-xs font-black text-amber-900 flex items-center gap-1.5">
+                  🏷️ Skema Komisi per Pax (Terintegrasi ke Modul Agen & Laba Rugi)
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700">Komisi Mitra / Agen per Pax (Rp) *</label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="1500000"
+                      value={packageForm.commissionAgent}
+                      onChange={(e) => setPackageForm({ ...packageForm, commissionAgent: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2 bg-white text-xs font-mono font-bold text-emerald-800 focus:ring-2 focus:ring-amber-500/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700">Komisi Referral Alumni per Pax (Rp) *</label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="500000"
+                      value={packageForm.commissionReferral}
+                      onChange={(e) => setPackageForm({ ...packageForm, commissionReferral: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2 bg-white text-xs font-mono font-bold text-emerald-800 focus:ring-2 focus:ring-amber-500/20"
+                    />
+                  </div>
                 </div>
               </div>
 

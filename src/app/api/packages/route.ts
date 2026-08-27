@@ -34,6 +34,8 @@ export async function POST(request: Request) {
       priceTriple,
       priceDouble,
       quota,
+      commissionAgent,
+      commissionReferral,
     } = body;
 
     const pkg = await prisma.package.create({
@@ -51,6 +53,8 @@ export async function POST(request: Request) {
         priceTriple: parseFloat(priceTriple),
         priceDouble: parseFloat(priceDouble),
         quota: parseInt(quota) || 45,
+        commissionAgent: commissionAgent !== undefined ? parseFloat(commissionAgent) : 1500000,
+        commissionReferral: commissionReferral !== undefined ? parseFloat(commissionReferral) : 500000,
       },
     });
 

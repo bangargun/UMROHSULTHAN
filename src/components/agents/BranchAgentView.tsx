@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Building2,
   Users,
@@ -18,6 +18,8 @@ import {
   FileCheck,
   Send,
   Trash2,
+  CreditCard,
+  Building,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -31,12 +33,38 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
   const [searchTerm, setSearchTerm] = useState("");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false);
+  const [isAddBranchOpen, setIsAddBranchOpen] = useState(false);
+  const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
+  const [selectedAgentForPayout, setSelectedAgentForPayout] = useState<any | null>(null);
+  const [payoutAmount, setPayoutAmount] = useState("");
 
   // Cabang Sulthan Haramain
   const [branches, setBranches] = useState<any[]>([]);
 
   // Agents Freelance
   const [agents, setAgents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Load from DB
+  const loadData = async () => {
+    try {
+      const [agRes, brRes] = await Promise.all([fetch("/api/agents"), fetch("/api/branches")]);
+      if (agRes.ok) {
+        const agData = await agRes.json();
+        if (Array.isArray(agData)) setAgents(agData);
+      }
+      if (brRes.ok) {
+        const brData = await brRes.json();
+        if (Array.isArray(brData)) setBranches(brData);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Form input new agent
   const [newAgentForm, setNewAgentForm] = useState({
@@ -45,6 +73,20 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
     city: "Jakarta",
     referralCode: "",
     commissionPerPax: "1500000",
+    bankName: "BSI",
+    accountNumber: "",
+    accountHolder: "",
+  });
+
+  // Form input new branch
+  const [newBranchForm, setNewBranchForm] = useState({
+    code: "",
+    name: "",
+    city: "Jakarta",
+    address: "",
+    headName: "",
+    phone: "",
+    email: "",
   });
 
   // Public Booking Form Simulator
@@ -57,7 +99,7 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
     city: "",
     roomType: "QUAD",
     uniformSize: "L",
-    referralCode: "SULTHAN-BDG01",
+    referralCode: "",
     dpAmount: "10000000",
   });
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
@@ -69,32 +111,170 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
     setTimeout(() => setCopiedCode(null), 3000);
   };
 
-  const handleAddAgent = (e: React.FormEvent) => {
+  const handleAddAgent = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newAg = {
-      id: `ag-${Date.now()}`,
-      name: newAgentForm.name,
-      phone: newAgentForm.phone,
-      city: newAgentForm.city,
-      referralCode: newAgentForm.referralCode || `SULTHAN-${newAgentForm.city.slice(0, 3).toUpperCase()}${Math.floor(10 + Math.random() * 90)}`,
-      commissionPerPax: parseFloat(newAgentForm.commissionPerPax) || 1500000,
-      closingPax: 0,
-      totalEarned: 0,
-      paidCommission: 0,
-      pendingCommission: 0,
-      status: "ACTIVE",
-    };
-    setAgents([...agents, newAg]);
-    setIsAddAgentOpen(false);
-    setNewAgentForm({ name: "", phone: "", city: "Jakarta", referralCode: "", commissionPerPax: "1500000" });
-    alert("Agen freelance baru berhasil ditambahkan!");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newAgentForm),
+      });
+      if (res.ok) {
+        setIsAddAgentOpen(false);
+        setNewAgentForm({
+          name: "",
+          phone: "",
+          city: "Jakarta",
+          referralCode: "",
+          commissionPerPax: "1500000",
+          bankName: "BSI",
+          accountNumber: "",
+          accountHolder: "",
+        });
+        alert("Agen freelance baru berhasil ditambahkan!");
+        loadData();
+        if (onRefreshAll) onRefreshAll();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Gagal menambahkan agen");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAgent = async (id: string, name: string) => {
+    if (!confirm(`Hapus agen "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/agents/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        loadData();
+        if (onRefreshAll) onRefreshAll();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddBranch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch("/api/branches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newBranchForm),
+      });
+      if (res.ok) {
+        setIsAddBranchOpen(false);
+        setNewBranchForm({
+          code: "",
+          name: "",
+          city: "Jakarta",
+          address: "",
+          headName: "",
+          phone: "",
+          email: "",
+        });
+        alert("Kantor cabang baru berhasil ditambahkan!");
+        loadData();
+        if (onRefreshAll) onRefreshAll();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Gagal menambahkan cabang");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteBranch = async (id: string, name: string) => {
+    if (!confirm(`Hapus kantor cabang "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/branches/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        loadData();
+        if (onRefreshAll) onRefreshAll();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handlePayoutCommissionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAgentForPayout) return;
+    const nominal = parseFloat(payoutAmount);
+    if (!nominal || nominal <= 0) {
+      alert("Nominal pencairan komisi tidak valid");
+      return;
+    }
+    setLoading(true);
+    try {
+      const newPaid = (selectedAgentForPayout.paidCommission || 0) + nominal;
+      const res = await fetch(`/api/agents/${selectedAgentForPayout.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paidCommission: newPaid }),
+      });
+      if (res.ok) {
+        // Record Journal Entry for Commission Payout
+        const entryNumber = `JU-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
+        await fetch("/api/journal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            entryNumber,
+            transactionDate: new Date().toISOString().split("T")[0],
+            description: `Pencairan Pembayaran Komisi Agen: ${selectedAgentForPayout.name} (${selectedAgentForPayout.city})`,
+            sourceModule: "EXPENSE",
+            lines: [
+              {
+                accountCode: "2102",
+                accountName: "Hutang Komisi Agen",
+                accountCategory: "LIABILITY",
+                debit: nominal,
+                credit: 0,
+                memo: `Pencairan komisi ke ${selectedAgentForPayout.name}`,
+              },
+              {
+                accountCode: "1102",
+                accountName: "Bank BSI Utama",
+                accountCategory: "ASSET",
+                debit: 0,
+                credit: nominal,
+                memo: `Transfer pembayaran komisi via BSI ${selectedAgentForPayout.accountNumber || ""}`,
+              },
+            ],
+          }),
+        });
+
+        setIsPayoutModalOpen(false);
+        setSelectedAgentForPayout(null);
+        setPayoutAmount("");
+        alert(`Pencairan komisi sebesar ${formatCurrency(nominal)} untuk "${selectedAgentForPayout.name}" berhasil dicatat di database dan Jurnal Umum!`);
+        loadData();
+        if (onRefreshAll) onRefreshAll();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePublicBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmittingBooking(true);
     try {
-      // 1. Submit lead to CRM with agent source
+      const refCode = bookingForm.referralCode.trim().toUpperCase();
+      const matchedAgent = agents.find((a) => a.referralCode.toUpperCase() === refCode);
+
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,11 +283,13 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
           phone: bookingForm.phone,
           email: bookingForm.email,
           city: bookingForm.city,
-          source: "WEBSITE",
+          source: matchedAgent ? "AGENT" : "WEBSITE",
+          agentName: matchedAgent ? matchedAgent.name : null,
+          packageId: bookingForm.packageId || null,
           status: "NEW",
           estimatedPax: 1,
-          assignedAgent: `Agen Referral (${bookingForm.referralCode || "Kantor Pusat"})`,
-          notes: `Pendaftaran mandiri via Web Portal Sulthan Haramain. Pilihan Kamar: ${bookingForm.roomType}, Baju: ${bookingForm.uniformSize}`,
+          assignedAgent: matchedAgent ? `Mitra: ${matchedAgent.name}` : "Admin Pusat",
+          notes: `Pendaftaran mandiri via Web Portal Sulthan Haramain. Kamar: ${bookingForm.roomType}, Baju: ${bookingForm.uniformSize}`,
         }),
       });
 
@@ -142,7 +324,7 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
     (a) =>
       a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.referralCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.city.toLowerCase().includes(searchTerm.toLowerCase())
+      (a.city && a.city.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -155,7 +337,7 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
             Jaringan Kantor Cabang & Agen Freelance
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Kelola kantor cabang multi-kota, link referral agen freelance, komisi per pax, dan formulir pendaftaran online mandiri.
+            Kelola kantor cabang multi-kota, link referral agen freelance, komisi per pax terhubung ke Paket Umroh & Laba Rugi.
           </p>
         </div>
 
@@ -229,7 +411,7 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
               />
             </div>
             <p className="text-xs text-slate-500 font-medium">
-              Komisi Standar: <strong>Rp 1.500.000 / Pax Jamaah Berangkat</strong>
+              Komisi per pax terhubung otomatis ke <strong className="text-emerald-700">Paket Umroh</strong> & <strong className="text-emerald-700">Jurnal Umum Laba Rugi</strong>.
             </p>
           </div>
 
@@ -237,23 +419,27 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-bold uppercase border-b border-slate-200">
+                <thead className="bg-slate-50 text-slate-600 font-bold uppercase border-b border-slate-200 text-[10px]">
                   <tr>
                     <th className="py-3 px-4">Nama Agen & Kota Cabang</th>
-                    <th className="py-3 px-4">Kontak WhatsApp</th>
+                    <th className="py-3 px-4">Kontak & Rekening</th>
                     <th className="py-3 px-4">Kode Referral & Link Web</th>
                     <th className="py-3 px-4 text-center">Closing Pax</th>
                     <th className="py-3 px-4 text-right">Total Komisi</th>
                     <th className="py-3 px-4 text-right">Telah Cair</th>
                     <th className="py-3 px-4 text-right">Sisa Payout</th>
-                    <th className="py-3 px-4 text-center">Aksi</th>
+                    <th className="py-3 px-4 text-center">Aksi & Payout</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                   {filteredAgents.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-10 text-center text-slate-400">
-                        Belum ada data agen freelance. Klik <strong>"+ Tambah Agen Freelance"</strong> untuk menambahkan.
+                      <td colSpan={8} className="py-12 text-center text-slate-400">
+                        <Users className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                        <p className="text-sm font-semibold text-slate-600">Belum ada data agen freelance</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Klik tombol <strong>"+ Tambah Agen Freelance"</strong> di atas untuk mendaftarkan agen baru.
+                        </p>
                       </td>
                     </tr>
                   ) : (
@@ -266,8 +452,13 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
                           </span>
                         </td>
 
-                        <td className="py-3 px-4 font-semibold text-slate-800">
-                          {ag.phone}
+                        <td className="py-3 px-4">
+                          <p className="font-semibold text-slate-800">{ag.phone}</p>
+                          {ag.accountNumber && (
+                            <span className="text-[10px] text-slate-400 block font-mono">
+                              {ag.bankName}: {ag.accountNumber} ({ag.accountHolder || ag.name})
+                            </span>
+                          )}
                         </td>
 
                         <td className="py-3 px-4">
@@ -294,34 +485,45 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
                         </td>
 
                         <td className="py-3 px-4 text-center">
-                          <span className="font-black text-slate-900 text-sm">{ag.closingPax}</span>
-                          <span className="text-[10px] text-slate-400 block">Jamaah</span>
+                          <span className="font-black text-slate-900 text-sm">{ag.totalClosingPax || 0}</span>
+                          <span className="text-[10px] text-slate-400 block">Pax Jamaah</span>
                         </td>
 
                         <td className="py-3 px-4 text-right font-bold text-slate-900">
-                          {formatCurrency(ag.totalEarned)}
+                          {formatCurrency(ag.totalCommissionEarned || 0)}
                         </td>
 
                         <td className="py-3 px-4 text-right font-bold text-emerald-700">
-                          {formatCurrency(ag.paidCommission)}
+                          {formatCurrency(ag.paidCommission || 0)}
                         </td>
 
                         <td className="py-3 px-4 text-right font-black text-amber-800">
-                          {formatCurrency(ag.pendingCommission)}
+                          {formatCurrency(ag.pendingCommission || 0)}
                         </td>
 
                         <td className="py-3 px-4 text-center">
-                          <button
-                            onClick={() => {
-                              if (confirm(`Hapus agen "${ag.name}"?`)) {
-                                setAgents(agents.filter((item) => item.id !== ag.id));
-                              }
-                            }}
-                            className="p-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
-                            title="Hapus Agen"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setSelectedAgentForPayout(ag);
+                                setPayoutAmount(String(ag.pendingCommission || 0));
+                                setIsPayoutModalOpen(true);
+                              }}
+                              disabled={!ag.pendingCommission || ag.pendingCommission <= 0}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-[10px] font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                              title="Cairkan Komisi Agen"
+                            >
+                              <CreditCard className="w-3 h-3" /> Payout
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteAgent(ag.id, ag.name)}
+                              className="p-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+                              title="Hapus Agen"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -335,74 +537,92 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
 
       {/* TAB 2: KANTOR CABANG MULTI-KOTA */}
       {activeTab === "BRANCHES" && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-bold uppercase border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4">Kota Cabang</th>
-                  <th className="py-3 px-4">Pimpinan Cabang</th>
-                  <th className="py-3 px-4">Alamat Kantor</th>
-                  <th className="py-3 px-4">Kontak Telepon</th>
-                  <th className="py-3 px-4 text-center">Agen Aktif</th>
-                  <th className="py-3 px-4 text-right">Total Jamaah Berangkat</th>
-                  <th className="py-3 px-4 text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {branches.length === 0 ? (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">Daftar Kantor Cabang Resmi Sulthan Haramain</h3>
+              <p className="text-xs text-slate-400">Jaringan perwakilan dan kantor operasional daerah</p>
+            </div>
+            <button
+              onClick={() => setIsAddBranchOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-amber-700"
+            >
+              <Plus className="w-4 h-4" /> + Tambah Cabang
+            </button>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 font-bold uppercase border-b border-slate-200 text-[10px]">
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-slate-400">
-                      Belum ada data kantor cabang terdaftar.
-                    </td>
+                    <th className="py-3 px-4">Kode & Nama Cabang</th>
+                    <th className="py-3 px-4">Kota</th>
+                    <th className="py-3 px-4">Pimpinan Cabang</th>
+                    <th className="py-3 px-4">Alamat Kantor</th>
+                    <th className="py-3 px-4">Kontak Telepon</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-center">Aksi</th>
                   </tr>
-                ) : (
-                  branches.map((br) => (
-                    <tr key={br.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-slate-900">
-                        {br.city}
-                      </td>
-
-                      <td className="py-3.5 px-4 font-semibold text-slate-800">
-                        {br.head}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-slate-600 max-w-[280px]">
-                        {br.address}
-                      </td>
-
-                      <td className="py-3.5 px-4 font-mono text-slate-800">
-                        {br.phone}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
-                          {br.agentsCount} Agen
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right font-black text-emerald-800 text-sm">
-                        {br.totalPax} Pax
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => {
-                            if (confirm(`Hapus cabang "${br.city}"?`)) {
-                              setBranches(branches.filter((item) => item.id !== br.id));
-                            }
-                          }}
-                          className="p-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
-                          title="Hapus Cabang"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  {branches.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-slate-400">
+                        <Building2 className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                        <p className="text-sm font-semibold text-slate-600">Belum ada kantor cabang</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Klik "+ Tambah Cabang" untuk mendaftarkan kantor cabang resmi.
+                        </p>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    branches.map((br) => (
+                      <tr key={br.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-slate-900">
+                          <span className="font-mono text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 mr-2 text-[10px]">
+                            {br.code}
+                          </span>
+                          {br.name}
+                        </td>
+
+                        <td className="py-3.5 px-4 font-semibold text-slate-800">
+                          {br.city}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-slate-800">
+                          {br.headName || "-"}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-slate-600 max-w-[280px]">
+                          {br.address || "-"}
+                        </td>
+
+                        <td className="py-3.5 px-4 font-mono text-slate-800">
+                          {br.phone || "-"}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px]">
+                            {br.status}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-center">
+                          <button
+                            onClick={() => handleDeleteBranch(br.id, br.name)}
+                            className="p-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+                            title="Hapus Cabang"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -535,17 +755,6 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
               />
             </div>
 
-            {/* Payment info DP */}
-            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 space-y-2">
-              <span className="font-bold text-amber-900 block text-xs">Informasi Pembayaran DP Seat:</span>
-              <p className="text-[11px] text-slate-600">
-                Nominal DP Penguncian Seat: <strong>Rp 10.000.000 / Pax</strong>
-              </p>
-              <p className="text-[11px] text-slate-600">
-                Rekening Resmi: <strong>Bank Syariah Indonesia (BSI) Rek: 8888-999-123 a.n PT Sulthan Haramain Tour & Travel</strong>
-              </p>
-            </div>
-
             <button
               type="submit"
               disabled={isSubmittingBooking}
@@ -599,39 +808,35 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
                 </div>
                 <div>
                   <label className="font-bold text-slate-700">Kota Cabang</label>
-                  <select
+                  <input
+                    type="text"
+                    placeholder="Jakarta / Bandung"
                     value={newAgentForm.city}
                     onChange={(e) => setNewAgentForm({ ...newAgentForm, city: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
-                  >
-                    <option value="Jakarta">Jakarta</option>
-                    <option value="Bandung">Bandung</option>
-                    <option value="Surabaya">Surabaya</option>
-                    <option value="Makassar">Makassar</option>
-                    <option value="Medan">Medan</option>
-                    <option value="Solo">Solo</option>
-                  </select>
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700">Kode Referral (Custom)</label>
+                  <label className="font-bold text-slate-700">Bank Pencairan</label>
                   <input
                     type="text"
-                    placeholder="Auto Generated"
-                    value={newAgentForm.referralCode}
-                    onChange={(e) => setNewAgentForm({ ...newAgentForm, referralCode: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-mono uppercase"
+                    placeholder="BSI / BCA / Mandiri"
+                    value={newAgentForm.bankName}
+                    onChange={(e) => setNewAgentForm({ ...newAgentForm, bankName: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700">Komisi per Pax (Rp)</label>
+                  <label className="font-bold text-slate-700">No Rekening</label>
                   <input
-                    type="number"
-                    value={newAgentForm.commissionPerPax}
-                    onChange={(e) => setNewAgentForm({ ...newAgentForm, commissionPerPax: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold text-emerald-700"
+                    type="text"
+                    placeholder="8888-xxx-xxx"
+                    value={newAgentForm.accountNumber}
+                    onChange={(e) => setNewAgentForm({ ...newAgentForm, accountNumber: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-mono"
                   />
                 </div>
               </div>
@@ -646,9 +851,180 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
                 </button>
                 <button
                   type="submit"
+                  disabled={loading}
                   className="px-5 py-2 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700"
                 >
-                  Simpan Agen
+                  {loading ? "Menyimpan..." : "Simpan Agen"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL TAMBAH CABANG */}
+      {isAddBranchOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 no-print">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-amber-600" />
+                Tambah Kantor Cabang Baru
+              </h3>
+              <button onClick={() => setIsAddBranchOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddBranch} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700">Kode Cabang *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="SULTHAN-BDG"
+                    value={newBranchForm.code}
+                    onChange={(e) => setNewBranchForm({ ...newBranchForm, code: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-mono uppercase font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700">Kota Cabang *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Bandung"
+                    value={newBranchForm.city}
+                    onChange={(e) => setNewBranchForm({ ...newBranchForm, city: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700">Nama Kantor Cabang *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Kantor Cabang Bandung Dago"
+                  value={newBranchForm.name}
+                  onChange={(e) => setNewBranchForm({ ...newBranchForm, name: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700">Kepala Cabang</label>
+                  <input
+                    type="text"
+                    placeholder="H. Ahmad Firdaus"
+                    value={newBranchForm.headName}
+                    onChange={(e) => setNewBranchForm({ ...newBranchForm, headName: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700">No Telepon Kantor</label>
+                  <input
+                    type="tel"
+                    placeholder="(022) 2501234"
+                    value={newBranchForm.phone}
+                    onChange={(e) => setNewBranchForm({ ...newBranchForm, phone: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700">Alamat Lengkap</label>
+                <textarea
+                  rows={2}
+                  placeholder="Jl. Ir. H. Juanda No. 120..."
+                  value={newBranchForm.address}
+                  onChange={(e) => setNewBranchForm({ ...newBranchForm, address: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddBranchOpen(false)}
+                  className="px-4 py-2 rounded-xl border text-slate-600 font-bold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700"
+                >
+                  {loading ? "Menyimpan..." : "Simpan Cabang"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PENCAIRAN KOMISI / PAYOUT */}
+      {isPayoutModalOpen && selectedAgentForPayout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 no-print">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-emerald-600" />
+                Pencairan Payout Komisi Agen
+              </h3>
+              <button onClick={() => setIsPayoutModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePayoutCommissionSubmit} className="space-y-3 text-xs">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <p className="font-bold text-slate-900">{selectedAgentForPayout.name} (Cabang {selectedAgentForPayout.city})</p>
+                <p className="text-slate-500 font-mono">Kode Referral: {selectedAgentForPayout.referralCode}</p>
+                <p className="text-slate-500">
+                  Rekening: <strong>{selectedAgentForPayout.bankName} {selectedAgentForPayout.accountNumber || "-"}</strong> a.n {selectedAgentForPayout.accountHolder || selectedAgentForPayout.name}
+                </p>
+                <p className="text-emerald-700 font-bold pt-1">
+                  Sisa Komisi Tertunggak: <span className="font-mono text-base">{formatCurrency(selectedAgentForPayout.pendingCommission || 0)}</span>
+                </p>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700">Nominal Pencairan Komisi (Rp) *</label>
+                <input
+                  type="number"
+                  required
+                  max={selectedAgentForPayout.pendingCommission || 0}
+                  value={payoutAmount}
+                  onChange={(e) => setPayoutAmount(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold font-mono text-emerald-800 text-sm focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div className="rounded-xl bg-amber-50 border border-amber-200 p-2.5 text-[11px] text-amber-900">
+                ⚡ Sistem otomatis menerbitkan <strong>Jurnal Pengeluaran Kas (Debet: Hutang Komisi, Kredit: Kas Bank)</strong>.
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPayoutModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border text-slate-600 font-bold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700"
+                >
+                  {loading ? "Memproses..." : "Konfirmasi Pembayaran Payout"}
                 </button>
               </div>
             </form>

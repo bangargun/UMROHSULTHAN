@@ -37,6 +37,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       priceTriple,
       priceDouble,
       quota,
+      commissionAgent,
+      commissionReferral,
       status,
     } = body;
 
@@ -56,6 +58,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         priceTriple: priceTriple !== undefined ? parseFloat(priceTriple) : undefined,
         priceDouble: priceDouble !== undefined ? parseFloat(priceDouble) : undefined,
         quota: quota !== undefined ? parseInt(quota) : undefined,
+        commissionAgent: commissionAgent !== undefined ? parseFloat(commissionAgent) : undefined,
+        commissionReferral: commissionReferral !== undefined ? parseFloat(commissionReferral) : undefined,
         status,
       },
     });

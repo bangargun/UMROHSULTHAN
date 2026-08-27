@@ -89,7 +89,15 @@ export async function GET(request: Request) {
         }
       });
 
-      const hppCategories = ["TIKET_PESAWAT", "HOTEL_SAUDI", "VISA_ASURANSI", "MUTHAWWIF_HANDLING", "LOGISTIK_VENDOR"];
+      const hppCategories = [
+        "TIKET_PESAWAT",
+        "HOTEL_SAUDI",
+        "VISA_ASURANSI",
+        "MUTHAWWIF_HANDLING",
+        "LOGISTIK_VENDOR",
+        "KOMISI_AGEN",
+        "KOMISI_REFERRAL",
+      ];
       expenses.forEach((exp) => {
         if (hppCategories.includes(exp.category)) {
           totalHPP += exp.amount;

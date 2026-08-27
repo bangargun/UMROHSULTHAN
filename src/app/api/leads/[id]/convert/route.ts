@@ -81,7 +81,95 @@ export async function POST(request: Request, { params }: { params: { id: string 
       },
     });
 
-    // 5. Query Master Requirement Templates (Dynamic Single Source of Truth)
+    // 5. Automatic Commission Calculation & Journal Entry
+    const isAgent = lead.source === "AGENT";
+    const isReferral = lead.source === "REFERRAL";
+    const paxCount = lead.estimatedPax || 1;
+    let commissionAmount = 0;
+    let beneficiaryName = "";
+
+    if (isAgent) {
+      commissionAmount = (pkg.commissionAgent || 1500000) * paxCount;
+      beneficiaryName = lead.agentName || "Mitra Lapangan";
+    } else if (isReferral) {
+      commissionAmount = (pkg.commissionReferral || 500000) * paxCount;
+      beneficiaryName = lead.referralPilgrimName || "Alumni / Jamaah";
+    }
+
+    if (commissionAmount > 0) {
+      // A. Create Journal Entry
+      const entryNumber = `JU-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
+      await prisma.journalEntry.create({
+        data: {
+          entryNumber,
+          transactionDate: new Date(),
+          description: `Akrual Komisi ${isAgent ? "Mitra/Agen" : "Referral"} (${beneficiaryName}) - Paket ${pkg.name} (${lead.name})`,
+          referenceNo: invoiceNumber,
+          sourceModule: "INVOICE",
+          sourceId: invoice.id,
+          createdBy: "Sistem Otomatis",
+          lines: {
+            create: [
+              {
+                accountCode: "5105",
+                accountName: isAgent ? "Beban Komisi Mitra & Agen" : "Beban Komisi Referral Alumni",
+                accountCategory: "HPP_EXPENSE",
+                debit: commissionAmount,
+                credit: 0,
+                memo: `Komisi ${paxCount} pax atas pendaftaran ${lead.name}`,
+              },
+              {
+                accountCode: "2102",
+                accountName: isAgent ? "Hutang Komisi Agen" : "Hutang Komisi Referral",
+                accountCategory: "LIABILITY",
+                debit: 0,
+                credit: commissionAmount,
+                memo: `Hutang komisi yang akan dicairkan ke ${beneficiaryName}`,
+              },
+            ],
+          },
+        },
+      });
+
+      // B. Create Package Expense for Profit Loss Tracking
+      await prisma.expense.create({
+        data: {
+          packageId: pkg.id,
+          title: `Komisi ${isAgent ? "Agen: " + beneficiaryName : "Referral: " + beneficiaryName} (${lead.name})`,
+          category: isAgent ? "KOMISI_AGEN" : "KOMISI_REFERRAL",
+          amount: commissionAmount,
+          recipientVendor: beneficiaryName,
+          expenseDate: new Date(),
+          notes: `Komisi otomatis per pax paket ${pkg.name}`,
+          paymentMethod: "BANK_TRANSFER",
+        },
+      });
+
+      // C. Update Agent Stats if matched in Agent table
+      if (isAgent && lead.agentName) {
+        const foundAgent = await prisma.agent.findFirst({
+          where: {
+            OR: [
+              { name: { equals: lead.agentName } },
+              { referralCode: { equals: lead.agentName } },
+            ],
+          },
+        });
+
+        if (foundAgent) {
+          await prisma.agent.update({
+            where: { id: foundAgent.id },
+            data: {
+              totalClosingPax: { increment: paxCount },
+              totalCommissionEarned: { increment: commissionAmount },
+              pendingCommission: { increment: commissionAmount },
+            },
+          });
+        }
+      }
+    }
+
+    // 6. Query Master Requirement Templates (Dynamic Single Source of Truth)
     let templates = await prisma.requirementTemplate.findMany({
       orderBy: { orderIndex: "asc" },
     });

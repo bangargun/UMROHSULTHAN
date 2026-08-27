@@ -50,44 +50,51 @@ model RequirementTemplate {
 }
 
 model Package {
-  id            String    @id @default(uuid())
-  code          String    @unique
-  name          String
-  description   String?
-  departureDate DateTime
-  returnDate    DateTime
-  durationDays  Int       @default(9)
-  hotelMakkah   String
-  hotelMadinah  String
-  airline       String
-  priceQuad     Float
-  priceTriple   Float
-  priceDouble   Float
-  quota         Int
-  bookedCount   Int       @default(0)
-  status        String    @default("ACTIVE") // ACTIVE, FULL, COMPLETED, DRAFT
-  pilgrims      Pilgrim[]
-  expenses      Expense[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                 String    @id @default(uuid())
+  code               String    @unique
+  name               String
+  description        String?
+  departureDate      DateTime
+  returnDate         DateTime
+  durationDays       Int       @default(9)
+  hotelMakkah        String
+  hotelMadinah       String
+  airline            String
+  priceQuad          Float
+  priceTriple        Float
+  priceDouble        Float
+  quota              Int
+  bookedCount        Int       @default(0)
+  commissionAgent    Float     @default(1500000) // Komisi Mitra / Agen per Pax
+  commissionReferral Float     @default(500000)  // Komisi Referral Alumni per Pax
+  status             String    @default("ACTIVE") // ACTIVE, FULL, COMPLETED, DRAFT
+  pilgrims           Pilgrim[]
+  leads              Lead[]
+  expenses           Expense[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 model Lead {
-  id             String            @id @default(uuid())
-  name           String
-  phone          String
-  email          String?
-  city           String?
-  source         String            @default("INSTAGRAM") // INSTAGRAM, TIKTOK, WEBSITE, REFERRAL, WALK_IN, AGENT
-  status         String            @default("NEW") // NEW, CONTACTED, INTERESTED, QUOTATION_SENT, CLOSING_DP, LOST
-  notes          String?
-  budget         Float?
-  estimatedPax   Int               @default(1)
-  assignedAgent  String?
-  interactions   LeadInteraction[]
-  pilgrim        Pilgrim?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id                  String            @id @default(uuid())
+  name                String
+  phone               String
+  email               String?
+  city                String?
+  source              String            @default("INSTAGRAM") // INSTAGRAM, TIKTOK, WEBSITE, REFERRAL, WALK_IN, AGENT
+  agentName           String?           // Nama Agen / Mitra Lapangan jika sumber = AGENT
+  referralPilgrimName String?           // Nama Jamaah / Alumni Perujuk jika sumber = REFERRAL
+  packageId           String?           // Paket Umroh yang Diminati
+  package             Package?          @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  status              String            @default("NEW") // NEW, CONTACTED, INTERESTED, QUOTATION_SENT, CLOSING_DP, LOST
+  notes               String?
+  budget              Float?
+  estimatedPax        Int               @default(1)
+  assignedAgent       String?
+  interactions        LeadInteraction[]
+  pilgrim             Pilgrim?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 }
 
 model LeadInteraction {
@@ -358,4 +365,37 @@ model RolePermission {
   updatedAt   DateTime @updatedAt
 
   @@unique([roleKey, moduleKey])
+}
+
+model Agent {
+  id                    String   @id @default(uuid())
+  name                  String
+  phone                 String   @unique
+  city                  String   @default("Jakarta")
+  referralCode          String   @unique
+  commissionPerPax      Float    @default(1500000)
+  totalClosingPax       Int      @default(0)
+  totalCommissionEarned Float    @default(0)
+  paidCommission        Float    @default(0)
+  pendingCommission     Float    @default(0)
+  bankName              String?  @default("BSI")
+  accountNumber         String?
+  accountHolder         String?
+  status                String   @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  code      String   @unique // e.g. "SULTHAN-BDG"
+  name      String   // e.g. "Kantor Cabang Bandung"
+  city      String   @default("Bandung")
+  address   String?
+  headName  String?  // Kepala Cabang
+  phone     String?
+  email     String?
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
