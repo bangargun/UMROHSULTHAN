@@ -29,6 +29,9 @@ import {
   HelpCircle,
   FileText,
   BadgeCheck,
+  Shirt,
+  Utensils,
+  ChevronRight,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
@@ -55,6 +58,11 @@ export default function PilgrimPortalView({
   const [audioProgress, setAudioProgress] = useState<number>(0);
   const [showPwaInstallPrompt, setShowPwaInstallPrompt] = useState(true);
 
+  // Dynamic Itinerary State
+  const [itineraries, setItineraries] = useState<any[]>([]);
+  const [loadingItinerary, setLoadingItinerary] = useState(false);
+  const [expandedDay, setExpandedDay] = useState<number | null>(null);
+
   // Auto-sync if currentUser has specific pilgrimId
   useEffect(() => {
     if (currentUser?.pilgrimId) {
@@ -70,6 +78,45 @@ export default function PilgrimPortalView({
 
   // Pilgrim lookup
   const currentPilgrim = pilgrims.find((p) => p.id === selectedPilgrimId) || pilgrims[0];
+
+  // Fetch package itinerary
+  useEffect(() => {
+    if (currentPilgrim?.packageId) {
+      fetchPackageItinerary(currentPilgrim.packageId);
+    }
+  }, [currentPilgrim?.packageId]);
+
+  const fetchPackageItinerary = async (pkgId: string) => {
+    setLoadingItinerary(true);
+    try {
+      const res = await fetch(`/api/packages/${pkgId}/itinerary`);
+      const data = await res.json();
+      if (res.ok && data.itineraries) {
+        setItineraries(data.itineraries);
+        // Default expand today's day or day 1
+        const curDay = calculateCurrentDay(data.package?.departureDate, data.itineraries.length);
+        setExpandedDay(curDay || 1);
+      }
+    } catch (err) {
+      console.error("Error fetching portal itinerary:", err);
+    } finally {
+      setLoadingItinerary(false);
+    }
+  };
+
+  const calculateCurrentDay = (departureDateStr?: string, totalDays: number = 9) => {
+    if (!departureDateStr) return null;
+    const dep = new Date(departureDateStr).setHours(0, 0, 0, 0);
+    const today = new Date().setHours(0, 0, 0, 0);
+    const diff = Math.floor((today - dep) / (1000 * 60 * 60 * 24)) + 1;
+    if (diff >= 1 && diff <= totalDays) return diff;
+    return null;
+  };
+
+  const currentActiveDayNumber = calculateCurrentDay(
+    currentPilgrim?.package?.departureDate,
+    itineraries.length || currentPilgrim?.package?.durationDays || 9
+  );
 
   // Invoices for current pilgrim
   const pilgrimInvoices = invoices.filter((i) => i.pilgrimId === currentPilgrim?.id);
@@ -474,6 +521,195 @@ export default function PilgrimPortalView({
                 </div>
               </div>
             </div>
+          </div>
+          {/* Day-by-Day Interactive Itinerary Timeline */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">
+                    🕋 Rundown Ibadah Harian
+                  </span>
+                  {currentActiveDayNumber && (
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white px-2.5 py-0.5 rounded-full animate-pulse">
+                      📍 Hari Ini: Hari Ke-{currentActiveDayNumber}
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-sm sm:text-base font-black text-slate-900 mt-1">
+                  Itinerary & Jadwal Kegiatan ({itineraries.length || currentPilgrim?.package?.durationDays || 9} Hari)
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Panduan waktu kumpul, titik lokasi, pakaian seragam, dan agenda ibadah harian jamaah.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  let waText = `🕋 *JADWAL ITINERARY SULTHAN HARAMAIN*\n`;
+                  waText += `Jamaah: *${currentPilgrim?.name}*\n`;
+                  waText += `Paket: *${currentPilgrim?.package?.name}*\n\n`;
+                  itineraries.forEach((d) => {
+                    waText += `📅 *Hari ${d.dayNumber}* (${d.date ? formatDate(d.date, "dd MMM") : ""}): ${d.title}\n`;
+                    if (d.time) waText += `⏰ ${d.time} | 📍 ${d.location || "-"}\n`;
+                    if (d.dresscode) waText += `👔 Pakaian: ${d.dresscode}\n\n`;
+                  });
+                  window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, "_blank");
+                }}
+                className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1.5 border border-emerald-200 transition-all self-start sm:self-auto cursor-pointer"
+              >
+                <Share2 className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Bagikan Jadwal ke WA</span>
+              </button>
+            </div>
+
+            {loadingItinerary ? (
+              <div className="py-8 text-center text-slate-400">
+                <Clock className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-600" />
+                <p className="text-xs font-bold">Memuat jadwal perjalanan...</p>
+              </div>
+            ) : itineraries.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                Jadwal harian belum dirilis oleh tim operasional.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {itineraries.map((day) => {
+                  const isToday = currentActiveDayNumber === day.dayNumber;
+                  const isExpanded = expandedDay === day.dayNumber;
+
+                  return (
+                    <div
+                      key={day.dayNumber}
+                      className={`rounded-2xl border transition-all overflow-hidden ${
+                        isToday
+                          ? "bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/30 shadow-xs"
+                          : isExpanded
+                          ? "bg-slate-50/80 border-slate-300 shadow-2xs"
+                          : "bg-white border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      {/* Day Clickable Header */}
+                      <button
+                        onClick={() => setExpandedDay(isExpanded ? null : day.dayNumber)}
+                        className="w-full p-4 text-left flex items-start sm:items-center justify-between gap-3 cursor-pointer"
+                      >
+                        <div className="flex items-start sm:items-center gap-3">
+                          <span
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-2xs ${
+                              isToday
+                                ? "bg-amber-500 text-white"
+                                : "bg-emerald-600 text-white"
+                            }`}
+                          >
+                            H-{day.dayNumber}
+                          </span>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-black text-slate-900">
+                                Hari Ke-{day.dayNumber}
+                              </span>
+                              {day.date && (
+                                <span className="text-[11px] text-slate-500 font-medium">
+                                  • {formatDate(day.date, "EEEE, dd MMM yyyy")}
+                                </span>
+                              )}
+                              {isToday && (
+                                <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500 text-white px-2 py-0.5 rounded-full">
+                                  📍 Hari Ini
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="text-xs sm:text-sm font-bold text-slate-800 mt-0.5">
+                              {day.title}
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 text-slate-400">
+                          {isExpanded ? (
+                            <span className="text-[10px] font-bold text-slate-500 hidden sm:inline">Tutup</span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-emerald-700 hidden sm:inline">Rincian</span>
+                          )}
+                          <ChevronRight
+                            className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-90 text-slate-700" : ""}`}
+                          />
+                        </div>
+                      </button>
+
+                      {/* Day Expanded Details */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 pt-1 border-t border-slate-200/60 space-y-3 text-xs bg-white/70">
+                          {/* Badges Info */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
+                            {day.time && (
+                              <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700">
+                                <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <div>
+                                  <p className="text-[9px] font-bold uppercase text-slate-400">Waktu Kumpul</p>
+                                  <p className="font-bold">{day.time}</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {day.location && (
+                              <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700">
+                                <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <div>
+                                  <p className="text-[9px] font-bold uppercase text-slate-400">Lokasi Kegiatan</p>
+                                  <p className="font-bold line-clamp-1">{day.location}</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {day.dresscode && (
+                              <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700">
+                                <Shirt className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <div>
+                                  <p className="text-[9px] font-bold uppercase text-slate-400">Pakaian / Seragam</p>
+                                  <p className="font-bold">{day.dresscode}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Description */}
+                          {day.description && (
+                            <div className="p-3 rounded-2xl bg-emerald-50/50 border border-emerald-100 text-slate-800 leading-relaxed">
+                              <p className="text-[10px] font-black uppercase text-emerald-800 mb-1">
+                                Rincian Agenda & Ibadah:
+                              </p>
+                              <p className="text-xs text-slate-700">{day.description}</p>
+                            </div>
+                          )}
+
+                          {/* Tips / Notes */}
+                          {day.notes && (
+                            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 text-xs">
+                              <span className="shrink-0">💡</span>
+                              <p className="text-[11px] italic">
+                                <strong>Tips Muthawwif:</strong> {day.notes}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Prayer Audio Quick Jump */}
+                          <div className="flex justify-end pt-1">
+                            <button
+                              onClick={() => setActiveTab("MANASIK")}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 shadow-2xs transition-all cursor-pointer"
+                            >
+                              <Volume2 className="w-3.5 h-3.5" /> Putar Audio Doa Manasik &rarr;
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

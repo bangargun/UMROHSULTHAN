@@ -27,8 +27,10 @@ import {
   Key,
   Users,
   KeyRound,
+  Calendar,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import PackageItineraryModal from "@/components/packages/PackageItineraryModal";
 
 interface MasterDataViewProps {
   packages: any[];
@@ -65,6 +67,7 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
   // Modals state
   const [editingPackage, setEditingPackage] = useState<any | null>(null);
   const [isAddPackageOpen, setIsAddPackageOpen] = useState(false);
+  const [selectedPackageForItinerary, setSelectedPackageForItinerary] = useState<any | null>(null);
 
   const [editingEquipment, setEditingEquipment] = useState<any | null>(null);
   const [isAddEquipmentOpen, setIsAddEquipmentOpen] = useState(false);
@@ -755,7 +758,13 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
                   <span className="font-bold text-emerald-700">Kuota: {p.bookedCount || 0}/{p.quota} Seat</span>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 flex-wrap">
+                  <button
+                    onClick={() => setSelectedPackageForItinerary(p)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold border border-emerald-200"
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-emerald-700" /> 🗓️ Kelola Itinerary
+                  </button>
                   <button
                     onClick={() => {
                       setEditingPackage(p);
@@ -2788,6 +2797,16 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
             </form>
           </div>
         </div>
+      )}
+
+      {/* Package Itinerary Modal */}
+      {selectedPackageForItinerary && (
+        <PackageItineraryModal
+          isOpen={!!selectedPackageForItinerary}
+          onClose={() => setSelectedPackageForItinerary(null)}
+          pkg={selectedPackageForItinerary}
+          onRefresh={onRefreshAll}
+        />
       )}
     </div>
   );

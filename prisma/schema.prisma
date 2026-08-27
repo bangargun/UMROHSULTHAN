@@ -74,6 +74,7 @@ model Package {
   pilgrims           Pilgrim[]
   leads              Lead[]
   expenses           Expense[]
+  itineraries        ItineraryDay[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 }
@@ -525,4 +526,24 @@ model AgentCommissionPayout {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
+
+model ItineraryDay {
+  id          String    @id @default(uuid())
+  packageId   String
+  package     Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  dayNumber   Int       // 1, 2, 3...
+  date        DateTime?
+  title       String
+  time        String?   // e.g. "08:00 WSA"
+  location    String?   // e.g. "Masjid Nabawi / Hotel Madinah"
+  dresscode   String?   // e.g. "Batik Travel Resmi"
+  mealPlan    String?   // e.g. "Sarapan, Makan Siang & Malam Hotel"
+  description String?   // Detailed Rundown
+  notes       String?   // Catatan Muthawwif / Tips
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([packageId, dayNumber])
+}
+
 
