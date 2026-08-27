@@ -76,59 +76,52 @@ export default function LettersGeneratorView({
     customBody: "",
     destinationInstitution: "Kepala Kantor Imigrasi Kelas I Khusus",
     applicantJobTitle: "Karyawan Swasta",
+    fatherName: initialPilgrim?.fatherName || "",
     endorsedTargetName: "",
-    customNotes: "Permohonan penambahan nama 3 kata pada halaman pengesahan paspor untuk syarat Visa Umroh.",
+    customNotes: "Permohonan penambahan nama pada halaman pengesahan paspor untuk syarat Visa Umroh.",
     generatedBy: "H. Sulthan Syarif, Lc., M.A.",
   });
 
   const [loading, setLoading] = useState(false);
 
-  // Helper to compute suggested 3-word endorsement name from [Nama Jamaah] + [Nama Ayah Kandung]
-  const computeSuggested3WordName = (p: any) => {
-    if (!p) return "";
-    const name = (p.name || "").trim().replace(/\s+/g, " ");
-    const words = name.split(" ").filter(Boolean);
-    if (words.length >= 3) return name.toUpperCase();
-
-    // Look for fatherName first, then mahramName
-    const father = (p.fatherName || p.mahramName || "").trim().replace(/\s+/g, " ");
-    if (father) {
-      const fWords = father.split(" ").filter(Boolean);
-      if (words.length === 1) {
-        if (fWords.length >= 2) {
-          return `${words[0]} ${fWords[0]} ${fWords[1]}`.toUpperCase();
-        } else {
-          return `${words[0]} BINTI ${fWords[0]}`.toUpperCase();
-        }
-      } else if (words.length === 2) {
-        return `${words[0]} ${words[1]} ${fWords[0]}`.toUpperCase();
-      }
-    }
-
-    return name.toUpperCase();
+  // Helper to compute endorsement name: [Nama Jamaah] + [Nama Orang Tua Laki-laki]
+  const computeEndorsementName = (pName: string, fName: string) => {
+    const cleanName = (pName || "").trim();
+    const cleanFather = (fName || "").trim();
+    if (!cleanFather) return cleanName.toUpperCase();
+    return `${cleanName} ${cleanFather}`.replace(/\s+/g, " ").toUpperCase();
   };
 
   // Helper to extract clean endorsed name from letter record
   const getEndorsedName = (letter: any) => {
     if (!letter) return "";
     const p = letter.pilgrim;
-    if (letter.customTitle && letter.customTitle !== "Surat Permohonan Endorsement Nama Paspor" && letter.customTitle !== "SURAT_ENDORSEMENT_PASPOR") {
-      return letter.customTitle.toUpperCase();
-    }
     if (letter.customNotes) {
       const match = letter.customNotes.match(/Target Nama Endorsement \(3 Kata\):\s*([^.\n]+)/i);
-      if (match) return match[1].trim().toUpperCase();
+      if (match && match[1].trim() !== (p?.name || "").trim()) {
+        return match[1].trim().toUpperCase();
+      }
     }
-    return computeSuggested3WordName(p);
+    if (
+      letter.customTitle &&
+      letter.customTitle !== "Surat Permohonan Endorsement Nama Paspor" &&
+      letter.customTitle !== "SURAT_ENDORSEMENT_PASPOR" &&
+      letter.customTitle.trim() !== ""
+    ) {
+      return letter.customTitle.toUpperCase();
+    }
+    return computeEndorsementName(p?.name || "", p?.fatherName || "");
   };
 
   // Auto-sync selected pilgrim details & suggested endorsement name
   useEffect(() => {
     const p = pilgrims.find((item) => item.id === formData.pilgrimId) || initialPilgrim;
-    if (p && formData.type === "SURAT_ENDORSEMENT_PASPOR") {
-      const suggested = computeSuggested3WordName(p);
+    if (p) {
+      const fName = p.fatherName || "";
+      const suggested = computeEndorsementName(p.name || "", fName);
       setFormData((prev) => ({
         ...prev,
+        fatherName: fName,
         endorsedTargetName: suggested,
       }));
     }
@@ -202,7 +195,15 @@ export default function LettersGeneratorView({
     e.preventDefault();
     setLoading(true);
     try {
-      // If endorsement, append target name to notes if not yet present
+      // If endorsement and fatherName was entered, update pilgrim record in DB
+      if (formData.type === "SURAT_ENDORSEMENT_PASPOR" && formData.pilgrimId && formData.fatherName) {
+        await fetch(`/api/pilgrims/${formData.pilgrimId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fatherName: formData.fatherName }),
+        });
+      }
+
       let finalNotes = formData.customNotes;
       if (formData.type === "SURAT_ENDORSEMENT_PASPOR" && formData.endorsedTargetName) {
         finalNotes = `Target Nama Endorsement (3 Kata): ${formData.endorsedTargetName}. ${formData.customNotes}`;
@@ -213,6 +214,7 @@ export default function LettersGeneratorView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          customTitle: formData.type === "SURAT_ENDORSEMENT_PASPOR" ? formData.endorsedTargetName : formData.customTitle,
           customNotes: finalNotes,
         }),
       });
@@ -554,37 +556,59 @@ export default function LettersGeneratorView({
 
               {/* SPECIFIC FIELDS FOR ENDORSEMENT PASPOR */}
               {formData.type === "SURAT_ENDORSEMENT_PASPOR" && (
-                <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-300 space-y-2.5">
+                <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-300 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-amber-950 font-bold text-xs">
                       <Sparkles className="w-4 h-4 text-amber-600" />
-                      Saran Rekomendasi Nama Endorsement (3 Suku Kata)
+                      Detail Endorsement Nama Paspor (Nama + Nama Orang Tua Laki-laki)
                     </div>
                     <span className="text-[10px] bg-amber-200/80 text-amber-900 font-bold px-2 py-0.5 rounded-md">
                       Syarat Visa Umroh
                     </span>
                   </div>
 
-                  <div>
-                    <label className="font-bold text-slate-800 flex items-center justify-between">
-                      <span>Target Nama 3 Kata Resmi di Paspor *</span>
-                      <span className="text-[10px] text-emerald-800 font-bold">
-                        {pilgrims.find((p) => p.id === formData.pilgrimId)?.fatherName
-                          ? `Ayah: ${pilgrims.find((p) => p.id === formData.pilgrimId)?.fatherName}`
-                          : "Nama Ayah Kandung"}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-800 flex items-center justify-between">
+                        <span>Nama Orang Tua Laki-laki (Ayah Kandung) *</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. AHMAD DAHLAN"
+                        value={formData.fatherName}
+                        onChange={(e) => {
+                          const newFather = e.target.value;
+                          const currentPilgrim = pilgrims.find((p) => p.id === formData.pilgrimId) || initialPilgrim;
+                          setFormData({
+                            ...formData,
+                            fatherName: newFather,
+                            endorsedTargetName: computeEndorsementName(currentPilgrim?.name || "", newFather),
+                          });
+                        }}
+                        className="mt-1 w-full rounded-xl border border-amber-300 p-2.5 bg-white font-bold text-slate-900 uppercase focus:ring-2 focus:ring-amber-500/20"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-0.5 block">
+                        Otomatis tersimpan ke profil master data jamaah.
                       </span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. LINA AHMAD DAHLAN"
-                      value={formData.endorsedTargetName}
-                      onChange={(e) => setFormData({ ...formData, endorsedTargetName: e.target.value.toUpperCase() })}
-                      className="mt-1 w-full rounded-xl border border-amber-400 p-2.5 bg-white font-bold text-slate-950 uppercase text-sm tracking-wide focus:ring-2 focus:ring-amber-500/20 shadow-xs"
-                    />
-                    <p className="text-[10px] text-slate-600 mt-1">
-                      💡 <strong>Saran Otomatis:</strong> Menggabungkan <code>[Nama Jamaah]</code> + <code>[Nama Ayah Kandung]</code>. Anda dapat mengedit nama rekomendasi ini jika ada variasi ejaan.
-                    </p>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-800">
+                        Nama Pengajuan Endorsement (Nama + Nama Orang Tua Laki-laki) *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. LINA AHMAD DAHLAN"
+                        value={formData.endorsedTargetName}
+                        onChange={(e) => setFormData({ ...formData, endorsedTargetName: e.target.value.toUpperCase() })}
+                        className="mt-1 w-full rounded-xl border border-amber-400 p-2.5 bg-white font-black text-slate-950 uppercase text-sm tracking-wide focus:ring-2 focus:ring-amber-500/20 shadow-xs"
+                      />
+                      <span className="text-[10px] text-emerald-800 font-bold mt-0.5 block">
+                        Format Resmi: [Nama Lengkap Jamaah] + [Nama Orang Tua Laki-laki]
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
