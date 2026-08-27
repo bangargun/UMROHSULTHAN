@@ -1,0 +1,27 @@
+{
+  "name": "Sulthan Haramain Umroh",
+  "short_name": "Sulthan Umroh",
+  "description": "Portal Mandiri Jamaah & Aplikasi Resmi PT Barokah Sulthan Haramain",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#064e3b",
+  "theme_color": "#064e3b",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/sulthan-haramain-logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/sulthan-haramain-logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "utilities", "lifestyle"]
+}

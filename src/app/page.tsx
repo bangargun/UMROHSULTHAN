@@ -200,6 +200,21 @@ export default function Home() {
   const pendingDocsCount = pilgrims.filter((p) => p.status === "REGISTERED" || p.status === "DP_PAID").length;
   const lowStockCount = equipment.filter((e) => e.availableStock <= e.minStockAlert).length;
 
+  // Dedicated Mobile App Portal for Non-Admin Pilgrim Users
+  if (authUser?.role === "PILGRIM") {
+    return (
+      <div className="min-h-screen bg-slate-900/5 text-slate-900 font-sans p-3 sm:p-6 max-w-4xl mx-auto">
+        <PilgrimPortalView
+          pilgrims={pilgrims}
+          packages={packages}
+          invoices={invoices}
+          currentUser={authUser}
+          onLogout={handleLogout}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* Top Navbar */}
@@ -238,6 +253,9 @@ export default function Home() {
             <PilgrimPortalView
               pilgrims={pilgrims}
               packages={packages}
+              invoices={invoices}
+              currentUser={authUser}
+              onLogout={handleLogout}
             />
           )}
 
