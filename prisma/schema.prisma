@@ -8,18 +8,21 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  name      String
-  username  String    @unique @default("master")
-  password  String    @default("1234")
-  email     String?   @unique
-  phone     String?
-  role      String    @default("SUPERADMIN") // SUPERADMIN, ADMIN_OPERASIONAL, ADMIN_FINANCE, ADMIN_MARKETING, STAF_LOGISTIK
-  avatar    String?
-  isActive  Boolean   @default(true)
-  lastLogin DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id            String    @id @default(uuid())
+  name          String
+  username      String    @unique @default("master")
+  password      String    @default("1234")
+  plainPassword String?   @default("1234")
+  email         String?   @unique
+  phone         String?
+  role          String    @default("SUPERADMIN") // SUPERADMIN, ADMIN_OPERASIONAL, ADMIN_FINANCE, ADMIN_MARKETING, STAF_LOGISTIK, PILGRIM
+  avatar        String?
+  isActive      Boolean   @default(true)
+  lastLogin     DateTime?
+  pilgrimId     String?   @unique
+  pilgrim       Pilgrim?  @relation(fields: [pilgrimId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model TravelSetting {
@@ -150,6 +153,10 @@ model Pilgrim {
   
   // Status
   status                String                @default("REGISTERED") // REGISTERED, DP_PAID, FULLY_PAID, DOCUMENTS_READY, VISA_ISSUED, DEPARTED, RETURNED
+
+  // Akun Portal & Password Jamaah
+  portalPassword        String?               @default("123456")
+  user                  User?
   
   // Relations
   invoices              Invoice[]

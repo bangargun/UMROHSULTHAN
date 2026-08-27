@@ -17,12 +17,25 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         name: name || undefined,
         username: username ? username.toLowerCase().trim() : undefined,
         password: password || undefined,
+        plainPassword: password || undefined,
         email: email !== undefined ? email : undefined,
         phone: phone !== undefined ? phone : undefined,
         role: role || undefined,
         isActive: isActive !== undefined ? isActive : undefined,
       },
+      include: {
+        pilgrim: {
+          include: { package: true },
+        },
+      },
     });
+
+    if (password && updated.pilgrimId) {
+      await prisma.pilgrim.update({
+        where: { id: updated.pilgrimId },
+        data: { portalPassword: password },
+      });
+    }
 
     return NextResponse.json(updated);
   } catch (error) {

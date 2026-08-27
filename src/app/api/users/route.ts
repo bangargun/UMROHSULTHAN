@@ -3,24 +3,71 @@ import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
-    let users = await prisma.user.findMany({
-      orderBy: { createdAt: "asc" },
-    });
-
-    if (users.length === 0) {
+    // 1. Ensure master account exists
+    let master = await prisma.user.findFirst({ where: { username: "master" } });
+    if (!master) {
       await prisma.user.create({
         data: {
           name: "Coach Argun",
           username: "master",
           password: "1234",
+          plainPassword: "1234",
           email: "master@sulthanharamain.com",
           phone: "081198765432",
           role: "SUPERADMIN",
           isActive: true,
         },
       });
-      users = await prisma.user.findMany({ orderBy: { createdAt: "asc" } });
     }
+
+    // 2. Auto-sync: Make sure every registered pilgrim has an active User account with password
+    const allPilgrims = await prisma.pilgrim.findMany({
+      include: { user: true },
+    });
+
+    for (const p of allPilgrims) {
+      if (!p.user) {
+        const cleanUsername = (p.nik || p.phone || `jamaah_${p.id.slice(0, 6)}`).toLowerCase().trim();
+        const pPassword = p.portalPassword || "123456";
+        
+        // Find if user with this username already exists
+        let existingUser = await prisma.user.findUnique({ where: { username: cleanUsername } });
+        if (!existingUser) {
+          await prisma.user.create({
+            data: {
+              name: p.name,
+              username: cleanUsername,
+              password: pPassword,
+              plainPassword: pPassword,
+              email: p.email || null,
+              phone: p.phone || null,
+              role: "PILGRIM",
+              isActive: true,
+              pilgrimId: p.id,
+            },
+          });
+        } else {
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: {
+              pilgrimId: p.id,
+              plainPassword: existingUser.plainPassword || pPassword,
+            },
+          });
+        }
+      }
+    }
+
+    const users = await prisma.user.findMany({
+      include: {
+        pilgrim: {
+          include: {
+            package: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
 
     return NextResponse.json(users);
   } catch (error) {
@@ -46,15 +93,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Username sudah terdaftar. Silakan pilih username lain." }, { status: 400 });
     }
 
+    const finalPass = password || "1234";
+
     const user = await prisma.user.create({
       data: {
         name,
         username: username.toLowerCase().trim(),
-        password: password || "1234",
+        password: finalPass,
+        plainPassword: finalPass,
         email: email || null,
         phone: phone || null,
         role: role || "ADMIN_OPERASIONAL",
         isActive: isActive !== undefined ? isActive : true,
+      },
+      include: {
+        pilgrim: {
+          include: { package: true },
+        },
       },
     });
 

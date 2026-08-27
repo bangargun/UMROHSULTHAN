@@ -767,14 +767,17 @@ export default function LettersGeneratorView({
                   </div>
                   <div className="flex-1 text-left">
                     <h1 className="text-xl font-black tracking-tight text-slate-950 uppercase">
-                      {travelSettings.companyName || "PT. SULTHAN HARAMAIN TOUR & TRAVEL"}
+                      {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
                     </h1>
-                    <p className="text-[11px] font-black text-slate-800 tracking-wide mt-0.5">
-                      NO. IZIN PPIU : {travelSettings.licenseNumber || "PPIU Kemenag RI No. U.412 Tahun 2022"}
-                      {travelSettings.kemenhanLicense && ` • ${travelSettings.kemenhanLicense}`}
+                    <p className="text-[11px] font-bold text-slate-800 tracking-wide mt-0.5">
+                      NO. IZIN PPIU : {(travelSettings.licenseNumber || "25052200384080005")
+                        .replace(/•?\s*NIB[\s\S]*/i, "")
+                        .replace(/•?\s*KBLI[\s\S]*/i, "")
+                        .replace(/NO\.\s*IZIN\s*PPIU\s*:\s*/i, "")
+                        .trim()}
                     </p>
                     <p className="text-[10px] text-slate-600 leading-tight mt-0.5">
-                      {travelSettings.address || "Sulthan Haramain Tower, Jl. Prof. Dr. Satrio No. 88, Kuningan, Jakarta Selatan"}
+                      {travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}
                     </p>
                   </div>
                 </div>

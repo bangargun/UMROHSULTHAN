@@ -29,6 +29,10 @@ import {
   CheckCircle2,
   Image as ImageIcon,
   Loader2,
+  Key,
+  Copy,
+  CheckCheck,
+  MessageSquare,
 } from "lucide-react";
 import { formatCurrency, formatDate, getStatusBadge } from "@/lib/utils";
 
@@ -1013,6 +1017,64 @@ export default function PilgrimsView({
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* Akun Portal Mandiri Jamaah & Password Card */}
+            <div className="rounded-2xl bg-gradient-to-r from-indigo-50 to-blue-50/70 border border-indigo-200 p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-indigo-200/60 pb-2">
+                <p className="font-bold text-indigo-950 flex items-center gap-1.5 text-xs">
+                  <Key className="w-4 h-4 text-indigo-600" />
+                  Akun Akses Portal Mandiri Jamaah (Login & Password)
+                </p>
+                <span className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-900 border border-indigo-200 text-[10px] font-bold">
+                  Akun Aktif
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-500 block">Username Login:</span>
+                  <span className="font-mono font-bold text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-slate-200 inline-block mt-0.5">
+                    {selectedPilgrim.nik}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-slate-500 block">Password Akun:</span>
+                  <span className="font-mono font-bold text-indigo-950 bg-white px-2.5 py-1 rounded-lg border border-indigo-300 inline-block mt-0.5">
+                    {selectedPilgrim.portalPassword || "123456"}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = `Akses Portal Jamaah Sulthan Haramain:\nNama: ${selectedPilgrim.name}\nUsername: ${selectedPilgrim.nik}\nPassword: ${selectedPilgrim.portalPassword || "123456"}\nLink Portal: http://localhost:3005`;
+                      navigator.clipboard.writeText(text);
+                      alert("Akun & password berhasil disalin!");
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-white border border-indigo-300 text-indigo-900 font-bold text-xs hover:bg-indigo-50 shadow-2xs flex items-center gap-1.5"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-indigo-600" />
+                    Salin Akun
+                  </button>
+
+                  {selectedPilgrim.phone && (
+                    <a
+                      href={`https://wa.me/${selectedPilgrim.phone.replace(/[^0-9]/g, "").replace(/^0/, "62")}?text=${encodeURIComponent(
+                        `Assalamu'alaikum Bpk/Ibu ${selectedPilgrim.name},\n\nBerikut adalah akses login akun Portal Mandiri Jamaah resmi Anda:\n\n👤 Username: ${selectedPilgrim.nik}\n🔑 Password: ${selectedPilgrim.portalPassword || "123456"}\n\nSilakan login untuk memantau kelengkapan dokumen paspor, status visa, jadwal bimbingan manasik, dan doa-doa umroh.`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 shadow-2xs flex items-center gap-1.5"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Kirim via WA
+                    </a>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Grid 3 Columns Details */}

@@ -25,6 +25,11 @@ import {
   X,
   UserCheck,
   Eye,
+  EyeOff,
+  Copy,
+  CheckCheck,
+  MessageSquare,
+  Search,
   Download,
   AlertCircle,
   Layers,
@@ -38,12 +43,25 @@ interface UserItem {
   id: string;
   name: string;
   username: string;
+  password?: string;
+  plainPassword?: string | null;
   email: string | null;
   phone: string | null;
   role: string;
   isActive: boolean;
   lastLogin: string | null;
   createdAt: string;
+  pilgrimId?: string | null;
+  pilgrim?: {
+    id: string;
+    name: string;
+    nik: string;
+    phone: string;
+    package?: {
+      name: string;
+      code: string;
+    } | null;
+  } | null;
 }
 
 interface AppRoleItem {
@@ -89,6 +107,27 @@ export default function SettingsView({ currentUser, onUpdateCurrentUser, onRefre
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+
+  // User Management Filters & Helpers
+  const [userTypeFilter, setUserTypeFilter] = useState<"ALL" | "STAFF" | "PILGRIM">("ALL");
+  const [userSearchTerm, setUserSearchTerm] = useState<string>("");
+  const [revealedPasswordIds, setRevealedPasswordIds] = useState<{ [key: string]: boolean }>({});
+  const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
+
+  const togglePasswordVisibility = (userId: string) => {
+    setRevealedPasswordIds((prev) => ({
+      ...prev,
+      [userId]: !prev[userId],
+    }));
+  };
+
+  const handleCopyCredentials = (u: UserItem) => {
+    const pass = u.plainPassword || u.password || "123456";
+    const text = `Akses Portal Sulthan Haramain:\nUsername: ${u.username}\nPassword: ${pass}\nNama: ${u.name}`;
+    navigator.clipboard.writeText(text);
+    setCopiedUserId(u.id);
+    setTimeout(() => setCopiedUserId(null), 2000);
+  };
 
   const [userFormData, setUserFormData] = useState({
     name: "",
@@ -833,29 +872,82 @@ export default function SettingsView({ currentUser, onUpdateCurrentUser, onRefre
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: MANAJEMEN PENGGUNA (USERS) */}
+      {/* TAB 2: MANAJEMEN PENGGUNA (USERS & PASSWORDS) */}
       {/* ========================================================================= */}
       {activeSubTab === "users" && (
         <div className="space-y-4">
+          {/* Top Filter and Search Bar */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setUserTypeFilter("ALL")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                  userTypeFilter === "ALL"
+                    ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                👥 Semua Akun ({users.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserTypeFilter("STAFF")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                  userTypeFilter === "STAFF"
+                    ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                👔 Staf & Admin Travel ({users.filter((u) => u.role !== "PILGRIM").length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserTypeFilter("PILGRIM")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                  userTypeFilter === "PILGRIM"
+                    ? "bg-indigo-700 text-white border-indigo-700 shadow-xs"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                🕋 Akun Jamaah Umroh ({users.filter((u) => u.role === "PILGRIM").length})
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <div className="relative flex-1 md:w-64">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Cari nama / username / NIK..."
+                  value={userSearchTerm}
+                  onChange={(e) => setUserSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <button
+                onClick={() => setIsAddUserModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                + Tambah Pengguna
+              </button>
+            </div>
+          </div>
+
+          {/* Users Table */}
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div>
                 <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
                   <Users className="w-4 h-4 text-emerald-600" />
-                  Daftar Akun Pengguna & Staf Travel
+                  Daftar Akun Pengguna & Password
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Total <strong>{users.length} akun</strong> terdaftar dalam sistem
+                  Seluruh akun staf dan akun otomatis calon jamaah untuk login ke sistem & Portal Mandiri.
                 </p>
               </div>
-
-              <button
-                onClick={() => setIsAddUserModalOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700"
-              >
-                <Plus className="w-4 h-4" />
-                + Tambah Pengguna
-              </button>
             </div>
 
             <div className="overflow-x-auto">
@@ -865,6 +957,7 @@ export default function SettingsView({ currentUser, onUpdateCurrentUser, onRefre
                     <th className="py-3 px-4 w-12 text-center">No</th>
                     <th className="py-3 px-4">Nama Lengkap & Username</th>
                     <th className="py-3 px-4">Peran (Role)</th>
+                    <th className="py-3 px-4">Password / Akses Portal</th>
                     <th className="py-3 px-4">Kontak (Email / HP)</th>
                     <th className="py-3 px-4 text-center">Status Akun</th>
                     <th className="py-3 px-4">Terakhir Login</th>
@@ -872,80 +965,179 @@ export default function SettingsView({ currentUser, onUpdateCurrentUser, onRefre
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {users.map((u, idx) => {
-                    const isMaster = u.username === "master";
-                    return (
-                      <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-3.5 px-4 text-center text-slate-400 font-bold">{idx + 1}</td>
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-                              {u.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="font-bold text-slate-900 flex items-center gap-1.5">
-                                {u.name}
-                                {isMaster && (
-                                  <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-bold px-1.5 py-0.2 rounded">
-                                    MASTER
-                                  </span>
-                                )}
-                              </p>
-                              <p className="text-[11px] font-mono text-slate-400">@{u.username}</p>
-                            </div>
-                          </div>
-                        </td>
+                  {users
+                    .filter((u) => {
+                      if (userTypeFilter === "STAFF" && u.role === "PILGRIM") return false;
+                      if (userTypeFilter === "PILGRIM" && u.role !== "PILGRIM") return false;
+                      if (userSearchTerm) {
+                        const term = userSearchTerm.toLowerCase();
+                        const matchName = u.name.toLowerCase().includes(term);
+                        const matchUsername = u.username.toLowerCase().includes(term);
+                        const matchPhone = u.phone?.toLowerCase().includes(term);
+                        const matchNik = u.pilgrim?.nik?.toLowerCase().includes(term);
+                        return matchName || matchUsername || matchPhone || matchNik;
+                      }
+                      return true;
+                    })
+                    .map((u, idx) => {
+                      const isMaster = u.username === "master";
+                      const isPilgrim = u.role === "PILGRIM";
+                      const isRevealed = Boolean(revealedPasswordIds[u.id]);
+                      const currentPass = u.plainPassword || u.password || "123456";
 
-                        <td className="py-3.5 px-4">
-                          <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
-                            {u.role}
-                          </span>
-                        </td>
-
-                        <td className="py-3.5 px-4">
-                          <p className="text-slate-800">{u.phone || "-"}</p>
-                          <p className="text-[10px] text-slate-400">{u.email || "-"}</p>
-                        </td>
-
-                        <td className="py-3.5 px-4 text-center">
-                          {u.isActive ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Aktif
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                              <XCircle className="w-3 h-3 text-slate-400" /> Nonaktif
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="py-3.5 px-4 text-slate-500">
-                          {u.lastLogin ? formatDate(u.lastLogin, "dd MMM yyyy, HH:mm") : "Belum Pernah"}
-                        </td>
-
-                        <td className="py-3.5 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              onClick={() => handleOpenEditUser(u)}
-                              className="p-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors"
-                              title="Edit Data / Ganti Password"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            {!isMaster && (
-                              <button
-                                onClick={() => handleDeleteUser(u)}
-                                className="p-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors"
-                                title="Hapus Pengguna"
+                      return (
+                        <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3.5 px-4 text-center text-slate-400 font-bold">{idx + 1}</td>
+                          
+                          {/* Nama & Username */}
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 shadow-2xs ${
+                                  isPilgrim
+                                    ? "bg-indigo-600 text-white"
+                                    : isMaster
+                                    ? "bg-amber-600 text-white"
+                                    : "bg-emerald-600 text-white"
+                                }`}
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                {u.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                                  {u.name}
+                                  {isMaster && (
+                                    <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-bold px-1.5 py-0.2 rounded">
+                                      MASTER
+                                    </span>
+                                  )}
+                                  {isPilgrim && (
+                                    <span className="text-[9px] bg-indigo-100 text-indigo-900 border border-indigo-200 font-bold px-1.5 py-0.2 rounded">
+                                      JAMAAH
+                                    </span>
+                                  )}
+                                </p>
+                                <p className="text-[11px] font-mono text-slate-500">
+                                  @{u.username}
+                                  {u.pilgrim?.package && (
+                                    <span className="text-[10px] text-slate-400 font-sans ml-1.5">
+                                      ({u.pilgrim.package.name})
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Role */}
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                                isPilgrim
+                                  ? "bg-indigo-50 text-indigo-800 border-indigo-200"
+                                  : isMaster
+                                  ? "bg-amber-50 text-amber-900 border-amber-200"
+                                  : "bg-slate-100 text-slate-800 border-slate-200"
+                              }`}
+                            >
+                              {u.role}
+                            </span>
+                          </td>
+
+                          {/* Password / Keterangan Akses */}
+                          <td className="py-3.5 px-4">
+                            <div className="inline-flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200">
+                              <Key className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              <span className="font-mono text-xs font-bold text-slate-900 min-w-[60px]">
+                                {isRevealed ? currentPass : "••••••••"}
+                              </span>
+                              
+                              <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility(u.id)}
+                                className="p-1 rounded text-slate-400 hover:text-slate-700 transition-colors"
+                                title={isRevealed ? "Sembunyikan password" : "Lihat password"}
+                              >
+                                {isRevealed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                               </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCredentials(u)}
+                                className="p-1 rounded text-slate-400 hover:text-emerald-700 transition-colors ml-0.5"
+                                title="Salin Akun & Password"
+                              >
+                                {copiedUserId === u.id ? (
+                                  <CheckCheck className="w-3 h-3 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                              </button>
+
+                              {u.phone && (
+                                <a
+                                  href={`https://wa.me/${u.phone.replace(/[^0-9]/g, "").replace(/^0/, "62")}?text=${encodeURIComponent(
+                                    `Assalamu'alaikum Bpk/Ibu ${u.name},\n\nBerikut adalah akses login akun resmi Anda pada Sistem Sulthan Haramain:\nUsername: ${u.username}\nPassword: ${currentPass}\n\nSilakan login untuk memantau status dokumen & jadwal ibadah.`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1 rounded text-slate-400 hover:text-emerald-600 transition-colors"
+                                  title="Kirim Akun & Password via WhatsApp"
+                                >
+                                  <MessageSquare className="w-3 h-3 text-emerald-600" />
+                                </a>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Kontak */}
+                          <td className="py-3.5 px-4">
+                            <p className="text-slate-800 font-mono text-[11px]">{u.phone || "-"}</p>
+                            <p className="text-[10px] text-slate-400">{u.email || "-"}</p>
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-3.5 px-4 text-center">
+                            {u.isActive ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Aktif
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                <XCircle className="w-3 h-3 text-slate-400" /> Nonaktif
+                              </span>
                             )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          </td>
+
+                          {/* Terakhir Login */}
+                          <td className="py-3.5 px-4 text-slate-500">
+                            {u.lastLogin ? formatDate(u.lastLogin, "dd MMM yyyy, HH:mm") : "Belum Pernah"}
+                          </td>
+
+                          {/* Aksi */}
+                          <td className="py-3.5 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => handleOpenEditUser(u)}
+                                className="p-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors"
+                                title="Edit Data / Ganti Password"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              {!isMaster && (
+                                <button
+                                  onClick={() => handleDeleteUser(u)}
+                                  className="p-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors"
+                                  title="Hapus Pengguna"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>

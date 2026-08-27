@@ -211,6 +211,37 @@ export async function POST(request: Request) {
       }
     }
 
+    // 6. Automatically generate User account with password for pilgrim portal
+    const initialUserPassword = body.portalPassword || "123456";
+    const cleanUsername = (pilgrim.nik || pilgrim.phone || `jamaah_${pilgrim.id.slice(0, 6)}`).toLowerCase().trim();
+
+    try {
+      await prisma.user.upsert({
+        where: { username: cleanUsername },
+        update: {
+          name: pilgrim.name,
+          phone: pilgrim.phone,
+          email: pilgrim.email || null,
+          plainPassword: initialUserPassword,
+          role: "PILGRIM",
+          pilgrimId: pilgrim.id,
+        },
+        create: {
+          name: pilgrim.name,
+          username: cleanUsername,
+          password: initialUserPassword,
+          plainPassword: initialUserPassword,
+          phone: pilgrim.phone,
+          email: pilgrim.email || null,
+          role: "PILGRIM",
+          isActive: true,
+          pilgrimId: pilgrim.id,
+        },
+      });
+    } catch (userErr) {
+      console.warn("Auto-generating user account warning:", userErr);
+    }
+
     const createdFullPilgrim = await prisma.pilgrim.findUnique({
       where: { id: pilgrim.id },
       include: {
@@ -218,6 +249,7 @@ export async function POST(request: Request) {
         invoices: true,
         requirements: true,
         handovers: { include: { items: { include: { equipment: true } } } },
+        user: true,
       },
     });
 

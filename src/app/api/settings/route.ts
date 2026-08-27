@@ -12,9 +12,9 @@ export async function GET() {
         data: {
           id: "default-settings",
           companyName: "PT BAROKAH SULTHAN HARAMAIN",
-          licenseNumber: "SK Kemenkumham No. AHU-0007388.AH.01.01.TAHUN 2026 • NIB: 1504260072814",
-          kemenhanLicense: "KBLI 79122: Aktivitas Biro Perjalanan Ibadah Umroh & Haji Khusus",
-          address: "Jl. Syekh Beringin Perumahan Griya Palm Asri Blok B, Tebing Tinggi, Sumatera Utara 20631",
+          licenseNumber: "25052200384080005",
+          kemenhanLicense: null,
+          address: "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631",
           phone: "0821-6733-9464",
           email: "barokahsulthanharamain@gmail.com",
           website: "www.sulthanharamain.com",
@@ -23,6 +23,16 @@ export async function GET() {
           bankBSI: "8888-999-123 a.n PT BAROKAH SULTHAN HARAMAIN",
           bankBCA: "731-888-9900 a.n PT BAROKAH SULTHAN HARAMAIN",
           bankMandiri: "137-00-8888999-1 a.n PT BAROKAH SULTHAN HARAMAIN",
+        },
+      });
+    } else if (setting.licenseNumber?.includes("NIB") || setting.kemenhanLicense?.includes("KBLI")) {
+      // Auto-sanitize existing database record
+      setting = await prisma.travelSetting.update({
+        where: { id: "default-settings" },
+        data: {
+          licenseNumber: "25052200384080005",
+          kemenhanLicense: null,
+          address: "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631",
         },
       });
     }
@@ -71,9 +81,9 @@ export async function PUT(request: Request) {
       create: {
         id: "default-settings",
         companyName: companyName || "PT BAROKAH SULTHAN HARAMAIN",
-        licenseNumber: licenseNumber || "SK Kemenkumham No. AHU-0007388.AH.01.01.TAHUN 2026 • NIB: 1504260072814",
-        kemenhanLicense: kemenhanLicense || "KBLI 79122: Aktivitas Biro Perjalanan Ibadah Umroh & Haji Khusus",
-        address: address || "Jl. Syekh Beringin Perumahan Griya Palm Asri Blok B, Tebing Tinggi, Sumatera Utara 20631",
+        licenseNumber: licenseNumber || "25052200384080005",
+        kemenhanLicense: kemenhanLicense || null,
+        address: address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631",
         phone: phone || "0821-6733-9464",
         email: email || "barokahsulthanharamain@gmail.com",
         website: website || "www.sulthanharamain.com",
