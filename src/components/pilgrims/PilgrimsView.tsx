@@ -273,6 +273,62 @@ export default function PilgrimsView({
     });
   };
 
+  // Helper to determine passport expiry status and recommend renewal (< 1 year or < 6 months)
+  const getPassportExpiryStatus = (expiryDateStr: string | null | undefined, departureDateStr?: string | null | undefined) => {
+    if (!expiryDateStr) return null;
+    const expDate = new Date(expiryDateStr);
+    if (isNaN(expDate.getTime())) return null;
+
+    const targetDate = departureDateStr ? new Date(departureDateStr) : new Date();
+    const diffDays = Math.ceil((expDate.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 0) {
+      return {
+        status: "EXPIRED",
+        badgeClass: "bg-rose-100 text-rose-900 border-rose-300 font-bold",
+        shortBadge: "⛔ Kadaluarsa",
+        label: "⛔ Paspor Sudah Kadaluarsa",
+        recommendation: "Paspor sudah habis masa berlaku. Wajib melakukan penggantian paspor baru di Kantor Imigrasi sebelum pendaftaran visa.",
+        isWarning: true,
+        isCritical: true,
+        diffDays,
+      };
+    } else if (diffDays <= 180) {
+      return {
+        status: "CRITICAL_6M",
+        badgeClass: "bg-rose-100 text-rose-900 border-rose-300 font-black animate-pulse",
+        shortBadge: `⛔ Exp < 6 Bln (${diffDays} hr)`,
+        label: `⛔ Kritis: Exp < 6 Bulan (${diffDays} Hari Lagi)`,
+        recommendation: "Kritis! Masa berlaku paspor kurang dari 6 bulan. Syarat Visa Umroh Saudi mensyaratkan minimal 6 bulan. Wajib perpanjang paspor segera!",
+        isWarning: true,
+        isCritical: true,
+        diffDays,
+      };
+    } else if (diffDays <= 365) {
+      return {
+        status: "WARNING_1Y",
+        badgeClass: "bg-amber-100 text-amber-950 border-amber-300 font-bold",
+        shortBadge: `⚠️ Saran Perpanjang (< 1 Thn)`,
+        label: `⚠️ Saran Perpanjang Paspor (< 1 Tahun)`,
+        recommendation: "Masa berlaku paspor kurang dari 1 tahun. Disarankan untuk segera melakukan perpanjangan paspor guna kelancaran pendaftaran dan pengurusan visa.",
+        isWarning: true,
+        isCritical: false,
+        diffDays,
+      };
+    }
+
+    return {
+      status: "VALID",
+      badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200 font-semibold",
+      shortBadge: "✓ Aktif",
+      label: "✓ Paspor Aktif (> 1 Tahun)",
+      recommendation: "Masa berlaku paspor aman dan memenuhi syarat perjalanan umroh.",
+      isWarning: false,
+      isCritical: false,
+      diffDays,
+    };
+  };
+
   const handleBatchAddKkMembers = async () => {
     if (kkMembers.length === 0) return;
     if (!confirm(`Daftarkan ${kkMembers.length} anggota keluarga dari Kartu Keluarga ini ke dalam paket yang dipilih?`)) return;
@@ -829,9 +885,7 @@ export default function PilgrimsView({
               ) : (
                 filteredPilgrims.map((p) => {
                   const badge = getStatusBadge(p.status);
-                  const isPassportExpSoon =
-                    p.passportExpiry &&
-                    new Date(p.passportExpiry).getTime() - new Date().getTime() < 180 * 24 * 60 * 60 * 1000;
+                  const expInfo = getPassportExpiryStatus(p.passportExpiry, p.package?.departureDate);
 
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
@@ -846,22 +900,25 @@ export default function PilgrimsView({
                         <div className="space-y-1">
                           {p.passportNumber ? (
                             <div>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1.5 py-0.2 rounded text-[11px]">
                                   {p.passportNumber}
                                 </span>
-                                {isPassportExpSoon && (
-                                  <span className="inline-flex items-center text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.2 rounded border border-rose-200">
-                                    &lt; 6 Bln
+                                {expInfo && expInfo.isWarning && (
+                                  <span
+                                    className={`inline-flex items-center text-[9px] px-1.5 py-0.5 rounded border shadow-2xs ${expInfo.badgeClass}`}
+                                    title={expInfo.recommendation}
+                                  >
+                                    {expInfo.shortBadge}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[10px] text-slate-400 mt-0.5">
+                              <p className="text-[10px] text-slate-500 mt-0.5">
                                 Exp: {p.passportExpiry ? formatDate(p.passportExpiry, "dd/MM/yyyy") : "-"}
                               </p>
                             </div>
                           ) : (
-                            <span className="inline-block text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                            <span className="inline-block text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 font-medium">
                               Paspor Belum Ada
                             </span>
                           )}
@@ -1137,9 +1194,33 @@ export default function PilgrimsView({
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400">Masa Berlaku Paspor:</span>
-                  <p className="text-slate-800">
-                    {selectedPilgrim.passportExpiry ? formatDate(selectedPilgrim.passportExpiry) : "-"}
-                  </p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <p className="text-slate-900 font-bold">
+                      {selectedPilgrim.passportExpiry ? formatDate(selectedPilgrim.passportExpiry) : "-"}
+                    </p>
+                    {(() => {
+                      const expInfo = getPassportExpiryStatus(selectedPilgrim.passportExpiry, selectedPilgrim.package?.departureDate);
+                      if (expInfo && expInfo.isWarning) {
+                        return (
+                          <span className={`text-[10px] px-2 py-0.5 rounded border ${expInfo.badgeClass}`}>
+                            {expInfo.label}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                  {(() => {
+                    const expInfo = getPassportExpiryStatus(selectedPilgrim.passportExpiry, selectedPilgrim.package?.departureDate);
+                    if (expInfo && expInfo.isWarning) {
+                      return (
+                        <div className="mt-1.5 p-2 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-900 leading-snug">
+                          <strong>💡 Rekomendasi PPIU:</strong> {expInfo.recommendation}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400">Mahram / Pendamping:</span>
@@ -1852,6 +1933,21 @@ export default function PilgrimsView({
                           onChange={(e) => setFormData({ ...formData, passportExpiry: e.target.value })}
                           className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
                         />
+                        {(() => {
+                          const expInfo = getPassportExpiryStatus(formData.passportExpiry);
+                          if (formData.hasPassport && expInfo && expInfo.isWarning) {
+                            return (
+                              <div className="mt-1.5 p-2 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-950 flex items-start gap-1.5 leading-snug">
+                                <span className="shrink-0 text-amber-600 font-bold">⚠️</span>
+                                <div>
+                                  <p className="font-bold">{expInfo.label}</p>
+                                  <p className="text-[10px] text-amber-800 mt-0.5">{expInfo.recommendation}</p>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </div>
                   ) : (
@@ -2772,6 +2868,21 @@ export default function PilgrimsView({
                           onChange={(e) => setEditFormData({ ...editFormData, passportExpiry: e.target.value })}
                           className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
                         />
+                        {(() => {
+                          const expInfo = getPassportExpiryStatus(editFormData.passportExpiry);
+                          if (editFormData.hasPassport && expInfo && expInfo.isWarning) {
+                            return (
+                              <div className="mt-1.5 p-2 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-950 flex items-start gap-1.5 leading-snug">
+                                <span className="shrink-0 text-amber-600 font-bold">⚠️</span>
+                                <div>
+                                  <p className="font-bold">{expInfo.label}</p>
+                                  <p className="text-[10px] text-amber-800 mt-0.5">{expInfo.recommendation}</p>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </div>
                   ) : (

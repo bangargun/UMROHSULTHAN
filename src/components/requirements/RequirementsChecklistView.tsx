@@ -59,7 +59,7 @@ export default function RequirementsChecklistView({
     if (!p.passportNumber) return true;
     if (!p.passportExpiry) return true;
     const diff = new Date(p.passportExpiry).getTime() - new Date().getTime();
-    return diff < 180 * 24 * 60 * 60 * 1000;
+    return diff < 365 * 24 * 60 * 60 * 1000;
   }).length;
 
   const filteredPilgrims = pilgrims.filter((p) => {
@@ -186,7 +186,7 @@ export default function RequirementsChecklistView({
             Perhatian Paspor / Visa
           </span>
           <p className="text-2xl font-black text-rose-950 mt-1">{passportWarnings} Pax</p>
-          <p className="text-[10px] text-rose-700 mt-0.5">Belum ada / &lt; 6 bulan</p>
+          <p className="text-[10px] text-rose-700 mt-0.5">Belum ada / Exp &lt; 1 tahun</p>
         </div>
       </div>
 
@@ -246,9 +246,9 @@ export default function RequirementsChecklistView({
             const isReady = reqs.length > 0 && verifiedCount === reqs.length;
             const progress = Math.round((verifiedCount / (reqs.length || 1)) * 100);
 
-            const isPassportExpSoon =
-              pilgrim.passportExpiry &&
-              new Date(pilgrim.passportExpiry).getTime() - new Date().getTime() < 180 * 24 * 60 * 60 * 1000;
+            const expDiffDays = pilgrim.passportExpiry
+              ? Math.ceil((new Date(pilgrim.passportExpiry).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+              : null;
 
             return (
               <div
@@ -292,9 +292,19 @@ export default function RequirementsChecklistView({
                             Belum Ada Paspor
                           </span>
                         )}
-                        {isPassportExpSoon && (
-                          <span className="ml-1 text-[10px] text-rose-600 font-bold bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
-                            ⚠️ Exp &lt; 6 Bln
+                        {expDiffDays !== null && expDiffDays <= 0 && (
+                          <span className="ml-1 text-[10px] text-rose-800 font-bold bg-rose-100 px-1.5 py-0.2 rounded border border-rose-300">
+                            ⛔ Kadaluarsa
+                          </span>
+                        )}
+                        {expDiffDays !== null && expDiffDays > 0 && expDiffDays <= 180 && (
+                          <span className="ml-1 text-[10px] text-rose-800 font-bold bg-rose-100 px-1.5 py-0.2 rounded border border-rose-300 animate-pulse">
+                            ⛔ Exp &lt; 6 Bln ({expDiffDays} hr)
+                          </span>
+                        )}
+                        {expDiffDays !== null && expDiffDays > 180 && expDiffDays <= 365 && (
+                          <span className="ml-1 text-[10px] text-amber-900 font-bold bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                            ⚠️ Saran Perpanjang (&lt; 1 Thn)
                           </span>
                         )}
                       </span>

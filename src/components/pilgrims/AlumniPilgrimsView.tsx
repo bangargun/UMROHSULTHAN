@@ -145,24 +145,33 @@ export default function AlumniPilgrimsView({
     }
   };
 
-  // Quick Seed Alumni Sample
-  const handleSeedAlumni = async () => {
-    setIsSeeding(true);
-    try {
-      const res = await fetch("/api/pilgrims/seed-alumni", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        alert("✨ Berhasil memuat 5 data contoh jamaah alumni dari musim lalu!");
-        onRefresh();
-      } else {
-        alert(data.error || "Gagal memuat data contoh");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Terjadi kesalahan saat memuat data");
-    } finally {
-      setIsSeeding(false);
+  // Helper to determine passport expiry status (< 1 year or < 6 months)
+  const getPassportExpiryStatus = (expiryDateStr: string | null | undefined) => {
+    if (!expiryDateStr) return null;
+    const expDate = new Date(expiryDateStr);
+    if (isNaN(expDate.getTime())) return null;
+
+    const targetDate = new Date();
+    const diffDays = Math.ceil((expDate.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 0) {
+      return {
+        badgeClass: "bg-rose-100 text-rose-900 border-rose-300 font-bold",
+        shortBadge: "⛔ Kadaluarsa",
+      };
+    } else if (diffDays <= 180) {
+      return {
+        badgeClass: "bg-rose-100 text-rose-900 border-rose-300 font-black animate-pulse",
+        shortBadge: `⛔ Exp < 6 Bln (${diffDays} hr)`,
+      };
+    } else if (diffDays <= 365) {
+      return {
+        badgeClass: "bg-amber-100 text-amber-950 border-amber-300 font-bold",
+        shortBadge: `⚠️ Saran Perpanjang (< 1 Thn)`,
+      };
     }
+
+    return null;
   };
 
   // Handle manual alumni submission
@@ -303,26 +312,10 @@ export default function AlumniPilgrimsView({
                     <span>Input Data Jamaah Lampau</span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-1">
-                    Klik tombol <strong>"+ Input Arsip Jamaah"</strong> di atas untuk memasukkan data alumni musim-musim sebelumnya secara manual.
+                    Gunakan tombol <strong>"+ Input Arsip Jamaah"</strong> di atas untuk memasukkan data kepulangan atau arsip jamaah alumni secara manual.
                   </p>
                 </div>
               </div>
-
-              {alumniPilgrims.length === 0 && (
-                <div className="pt-2 flex items-center gap-3">
-                  <button
-                    onClick={handleSeedAlumni}
-                    disabled={isSeeding}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 text-xs font-bold transition-all shadow-xs"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    {isSeeding ? "Memuat Data Contoh..." : "✨ Muat 5 Data Contoh Alumni Musim Lalu"}
-                  </button>
-                  <span className="text-[11px] text-slate-500 italic">
-                    (Klik untuk menguji tampilan sertifikat, manifest, dan WhatsApp silaturahmi langsung)
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -478,23 +471,15 @@ export default function AlumniPilgrimsView({
                       <div>
                         <p className="font-bold text-slate-700 text-sm">Belum Ada Data Jamaah Alumni</p>
                         <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                          Data akan otomatis terisi saat calon jamaah diberangkatkan, atau Anda dapat memuat data contoh musim lalu secara instan.
+                          Data akan otomatis terisi saat calon jamaah telah selesai melaksanakan ibadah, atau Anda dapat menginput arsip jamaah lampau secara manual.
                         </p>
                       </div>
                       <div className="flex items-center gap-2 pt-2">
                         <button
-                          onClick={handleSeedAlumni}
-                          disabled={isSeeding}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black shadow-xs transition-all"
-                        >
-                          <Sparkles className="w-3.5 h-3.5" />
-                          {isSeeding ? "Memuat..." : "Muat Data Contoh Alumni"}
-                        </button>
-                        <button
                           onClick={() => setIsAddAlumniOpen(true)}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-all"
                         >
-                          <Plus className="w-3.5 h-3.5" /> Input Manual
+                          <Plus className="w-3.5 h-3.5" /> + Input Arsip Manual
                         </button>
                       </div>
                     </div>
@@ -503,6 +488,8 @@ export default function AlumniPilgrimsView({
               ) : (
                 filteredPilgrims.map((p) => {
                   const isDeparted = p.status === "DEPARTED";
+                  const expInfo = getPassportExpiryStatus(p.passportExpiry);
+
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                       {/* 1. NAMA JAMAAH & NIK */}
@@ -545,10 +532,17 @@ export default function AlumniPilgrimsView({
                       {/* 3. PASPOR & TTL */}
                       <td className="py-3.5 px-4">
                         <div>
-                          <p className="font-mono font-bold text-slate-900">
-                            {p.passportNumber || <span className="text-slate-400">-</span>}
-                          </p>
-                          <p className="text-[10px] text-slate-500">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono font-bold text-slate-900">
+                              {p.passportNumber || <span className="text-slate-400">-</span>}
+                            </span>
+                            {expInfo && (
+                              <span className={`inline-flex items-center text-[9px] px-1.5 py-0.2 rounded border ${expInfo.badgeClass}`}>
+                                {expInfo.shortBadge}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
                             Exp: {p.passportExpiry ? formatDate(p.passportExpiry, "dd/MM/yyyy") : "-"}
                           </p>
                           <p className="text-[10px] text-slate-400 mt-0.5">
