@@ -710,8 +710,8 @@ export default function LettersGeneratorView({
 
       {/* Modal 2: Tampilan Dokumen Surat Resmi Siap Cetak (A4 Standard Print View) */}
       {selectedLetterForPrint && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[95vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto print:p-0 print:bg-transparent print:static print:block print:overflow-visible">
+          <div className="printable-modal-content bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[95vh] overflow-y-auto print:max-h-none print:max-w-none print:overflow-visible print:p-0 print:space-y-0 print:shadow-none print:rounded-none">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 no-print">
               <div>
                 <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
@@ -724,7 +724,7 @@ export default function LettersGeneratorView({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-all"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-all cursor-pointer"
                 >
                   <Printer className="w-4 h-4" /> Cetak / Unduh PDF Sekarang
                 </button>
@@ -754,7 +754,7 @@ export default function LettersGeneratorView({
             </div>
 
             {/* Official Letter A4 Template (Matching Exact Geometric PPIU Reference) */}
-            <div className="border border-slate-300 p-8 sm:p-10 rounded-2xl bg-white text-slate-900 font-sans leading-relaxed text-xs space-y-6 shadow-sm min-h-[840px] flex flex-col justify-between">
+            <div className="print-sheet border border-slate-300 p-8 sm:p-10 rounded-2xl bg-white text-slate-900 font-sans leading-relaxed text-xs space-y-6 shadow-sm min-h-[840px] flex flex-col justify-between print:border-none print:shadow-none print:p-4 print:min-h-[27cm]">
               <div>
                 {/* 1. KOP SURAT */}
                 <div className="flex items-center gap-4 pb-2">
@@ -995,10 +995,10 @@ export default function LettersGeneratorView({
 
             {/* ATTACHMENT PAGES (LAMPIRAN DOKUMEN LEGALITAS RESMI PPIU) */}
             {includeLegalAttachments && (
-              <div className="space-y-6">
+              <div className="space-y-6 print:space-y-0">
                 {/* PAGE 2: SK KEMENKUMHAM RI */}
-                <div className="print:page-break border border-slate-300 p-6 sm:p-8 rounded-2xl bg-white shadow-sm flex flex-col justify-between print:border-none print:shadow-none print:p-0">
-                  <div className="space-y-3">
+                <div className="print-attachment-page border border-slate-300 p-6 sm:p-8 rounded-2xl bg-white shadow-sm flex flex-col justify-between print:border-none print:shadow-none print:p-0">
+                  <div className="space-y-3 w-full">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-200 text-slate-800">
                       <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800">
                         LAMPIRAN I: SALINAN KEPUTUSAN MENTERI HUKUM REPUBLIK INDONESIA
@@ -1007,19 +1007,19 @@ export default function LettersGeneratorView({
                         HALAMAN 2 DARI 4
                       </span>
                     </div>
-                    <div className="p-1 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
+                    <div className="p-1 rounded-xl bg-white border border-slate-200 print:border-none overflow-hidden flex items-center justify-center">
                       <img
                         src="/legal-docs/legalitas-kemenkumham.png"
                         alt="SK Kemenkumham Pengesahan PT Barokah Sulthan Haramain"
-                        className="w-full max-h-[1050px] object-contain mx-auto"
+                        className="print-attachment-img w-full max-h-[1050px] object-contain mx-auto"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* PAGE 3: NIB HALAMAN 1 */}
-                <div className="print:page-break border border-slate-300 p-6 sm:p-8 rounded-2xl bg-white shadow-sm flex flex-col justify-between print:border-none print:shadow-none print:p-0">
-                  <div className="space-y-3">
+                <div className="print-attachment-page border border-slate-300 p-6 sm:p-8 rounded-2xl bg-white shadow-sm flex flex-col justify-between print:border-none print:shadow-none print:p-0">
+                  <div className="space-y-3 w-full">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-200 text-slate-800">
                       <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800">
                         LAMPIRAN II: NOMOR INDUK BERUSAHA (NIB) 1504260072814 - PEMERINTAH RI
@@ -1028,19 +1028,19 @@ export default function LettersGeneratorView({
                         HALAMAN 3 DARI 4
                       </span>
                     </div>
-                    <div className="p-1 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
+                    <div className="p-1 rounded-xl bg-white border border-slate-200 print:border-none overflow-hidden flex items-center justify-center">
                       <img
                         src="/legal-docs/legalitas-nib-1.png"
                         alt="NIB PT Barokah Sulthan Haramain"
-                        className="w-full max-h-[1050px] object-contain mx-auto"
+                        className="print-attachment-img w-full max-h-[1050px] object-contain mx-auto"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* PAGE 4: LAMPIRAN NIB KBLI 79122 (UMROH & HAJI KHUSUS) */}
-                <div className="print:page-break border border-slate-300 p-6 sm:p-8 rounded-2xl bg-white shadow-sm flex flex-col justify-between print:border-none print:shadow-none print:p-0">
-                  <div className="space-y-3">
+                <div className="print-attachment-page border border-slate-300 p-6 sm:p-8 rounded-2xl bg-white shadow-sm flex flex-col justify-between print:border-none print:shadow-none print:p-0">
+                  <div className="space-y-3 w-full">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-200 text-slate-800">
                       <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800">
                         LAMPIRAN III: LAMPIRAN NIB KBLI 79122 (BIRO PERJALANAN IBADAH UMROH & HAJI KHUSUS)
@@ -1049,11 +1049,11 @@ export default function LettersGeneratorView({
                         HALAMAN 4 DARI 4
                       </span>
                     </div>
-                    <div className="p-1 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
+                    <div className="p-1 rounded-xl bg-white border border-slate-200 print:border-none overflow-hidden flex items-center justify-center">
                       <img
                         src="/legal-docs/legalitas-nib-2.png"
                         alt="Lampiran NIB KBLI 79122 PPIU"
-                        className="w-full max-h-[1050px] object-contain mx-auto"
+                        className="print-attachment-img w-full max-h-[1050px] object-contain mx-auto"
                       />
                     </div>
                   </div>

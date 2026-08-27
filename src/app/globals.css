@@ -16,26 +16,105 @@
 
 /* Print styles for official letters, invoices, and checklists */
 @media print {
-  body {
+  html, body {
     background: white !important;
     color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  .no-print {
+
+  /* Hide navigation, sidebar, backdrops, and interactive buttons */
+  header, nav, aside, .no-print {
     display: none !important;
   }
+
   .print-only {
     display: block !important;
   }
+
+  /* Reset modal fixed positioning during print so multi-page flow works cleanly */
+  .fixed.inset-0 {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+
+  .printable-modal-content {
+    position: static !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+    border-radius: 0 !important;
+  }
+
+  .print-sheet {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    min-height: 27cm !important;
+    height: auto !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .print-attachment-page {
+    page-break-before: always !important;
+    break-before: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    min-height: 27.5cm !important;
+    height: auto !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin-top: 1cm !important;
+  }
+
+  .print-attachment-img {
+    max-width: 100% !important;
+    max-height: 25cm !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+    display: block !important;
+    margin: 0 auto !important;
+  }
+
   .page-break,
+  .print-page-break,
   .print\:page-break,
   .print\:break-before-page {
     break-before: page !important;
     page-break-before: always !important;
   }
+
   @page {
-    margin: 0.8cm;
+    margin: 0.6cm;
     size: A4 portrait;
   }
 }
