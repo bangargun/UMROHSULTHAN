@@ -75,10 +75,12 @@ interface PermissionItem {
 }
 
 interface SettingsViewProps {
+  currentUser?: any;
+  onUpdateCurrentUser?: (updated: any) => void;
   onRefreshAll?: () => void;
 }
 
-export default function SettingsView({ onRefreshAll }: SettingsViewProps) {
+export default function SettingsView({ currentUser, onUpdateCurrentUser, onRefreshAll }: SettingsViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<"users" | "permissions" | "company">("permissions");
 
   // State: Users
@@ -406,10 +408,26 @@ export default function SettingsView({ onRefreshAll }: SettingsViewProps) {
         body: JSON.stringify(userFormData),
       });
       if (res.ok) {
+        const updated = await res.json();
         setIsEditUserModalOpen(false);
         setEditingUser(null);
         alert("Data pengguna berhasil diperbarui!");
         fetchUsers();
+
+        // If editing the currently logged in user, immediately update session & header
+        if (currentUser && (currentUser.id === editingUser.id || currentUser.username === editingUser.username)) {
+          const fresh = {
+            ...currentUser,
+            name: updated.name || userFormData.name,
+            role: updated.role || userFormData.role,
+            email: updated.email || userFormData.email,
+            phone: updated.phone || userFormData.phone,
+          };
+          localStorage.setItem("sulthan_auth_user", JSON.stringify(fresh));
+          if (onUpdateCurrentUser) onUpdateCurrentUser(fresh);
+        }
+
+        if (onRefreshAll) onRefreshAll();
       } else {
         const err = await res.json();
         alert(err.error || "Gagal memperbarui pengguna");

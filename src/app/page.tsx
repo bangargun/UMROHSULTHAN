@@ -37,12 +37,39 @@ export default function Home() {
   const [letters, setLetters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Sync logged in user profile with database
+  const syncCurrentUser = async (currentAuth: any) => {
+    if (!currentAuth) return;
+    try {
+      const res = await fetch("/api/users");
+      if (res.ok) {
+        const userList = await res.json();
+        const found = userList.find((u: any) => u.id === currentAuth.id || u.username === currentAuth.username);
+        if (found) {
+          const fresh = {
+            ...currentAuth,
+            name: found.name,
+            role: found.role,
+            email: found.email,
+            phone: found.phone,
+          };
+          setAuthUser(fresh);
+          localStorage.setItem("sulthan_auth_user", JSON.stringify(fresh));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to sync current user:", e);
+    }
+  };
+
   // Check login session on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem("sulthan_auth_user");
       if (stored) {
-        setAuthUser(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setAuthUser(parsed);
+        syncCurrentUser(parsed);
       }
     } catch (e) {
       console.error(e);
@@ -288,6 +315,8 @@ export default function Home() {
 
           {activeTab === "settings" && (
             <SettingsView
+              currentUser={authUser}
+              onUpdateCurrentUser={setAuthUser}
               onRefreshAll={fetchAllData}
             />
           )}

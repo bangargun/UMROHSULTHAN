@@ -8,10 +8,9 @@ export async function GET() {
     });
 
     if (users.length === 0) {
-      // Auto-seed standard travel users
-      const seedUsers = [
-        {
-          name: "Ustadz Fauzi (Master Superadmin)",
+      await prisma.user.create({
+        data: {
+          name: "Coach Argun",
           username: "master",
           password: "1234",
           email: "master@sulthanharamain.com",
@@ -19,48 +18,7 @@ export async function GET() {
           role: "SUPERADMIN",
           isActive: true,
         },
-        {
-          name: "Siti Rahma (Admin Operasional & Manifest)",
-          username: "admin_ops",
-          password: "1234",
-          email: "ops@sulthanharamain.com",
-          phone: "081234567890",
-          role: "ADMIN_OPERASIONAL",
-          isActive: true,
-        },
-        {
-          name: "Bambang Tri (Admin Keuangan & Akuntansi)",
-          username: "admin_finance",
-          password: "1234",
-          email: "finance@sulthanharamain.com",
-          phone: "081398765432",
-          role: "ADMIN_FINANCE",
-          isActive: true,
-        },
-        {
-          name: "Doni Pratama (Admin Marketing & Agen)",
-          username: "admin_mkt",
-          password: "1234",
-          email: "marketing@sulthanharamain.com",
-          phone: "081987654321",
-          role: "ADMIN_MARKETING",
-          isActive: true,
-        },
-        {
-          name: "Budi Santoso (Staf Gudang & Logistik)",
-          username: "staf_logistik",
-          password: "1234",
-          email: "logistik@sulthanharamain.com",
-          phone: "081234560000",
-          role: "STAF_LOGISTIK",
-          isActive: true,
-        },
-      ];
-
-      for (const u of seedUsers) {
-        await prisma.user.create({ data: u });
-      }
-
+      });
       users = await prisma.user.findMany({ orderBy: { createdAt: "asc" } });
     }
 
