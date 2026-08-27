@@ -20,9 +20,11 @@ import {
   Settings,
   BookOpen,
   ShieldCheck,
-  Layers,
+  Smartphone,
+  Hotel,
   DollarSign,
-  Briefcase,
+  Zap,
+  MessageSquare,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -38,7 +40,6 @@ interface SidebarProps {
 
 interface MenuGroup {
   groupTitle: string;
-  groupIcon?: any;
   items: {
     id: string;
     label: string;
@@ -59,6 +60,12 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
           label: "Dashboard & Analitik",
           icon: LayoutDashboard,
           desc: "Ringkasan metrik & KPI bisnis",
+        },
+        {
+          id: "portal",
+          label: "Portal Mandiri Jamaah",
+          icon: Smartphone,
+          desc: "Doa, Audio Manasik & SOS",
         },
       ],
     },
@@ -83,7 +90,13 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
           id: "agents",
           label: "Jaringan Cabang & Agen",
           icon: Building2,
-          desc: "Kantor cabang & komisi referral",
+          desc: "Kantor cabang & mitra referral",
+        },
+        {
+          id: "agent-payouts",
+          label: "Komisi & Leaderboard Mitra",
+          icon: Award,
+          desc: "Pencairan komisi & ranking",
         },
       ],
     },
@@ -95,6 +108,18 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
           label: "Database Calon Jamaah",
           icon: UserCheck,
           desc: "Manifest & manifes kamar hotel",
+        },
+        {
+          id: "compliance",
+          label: "SISKOPATUH & ID Card QR",
+          icon: ShieldCheck,
+          desc: "Standar Kemenag & Gelang QR",
+        },
+        {
+          id: "ground",
+          label: "Ground Handling Saudi",
+          icon: Hotel,
+          desc: "Rooming list, Bus & Absensi",
         },
         {
           id: "requirements",
@@ -136,6 +161,12 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
           badgeColor: "bg-amber-100 text-amber-900",
         },
         {
+          id: "payment-gateway",
+          label: "Virtual Account & Webhook",
+          icon: Zap,
+          desc: "Auto-reconcile & SAR converter",
+        },
+        {
           id: "profit-loss",
           label: "Laba Rugi & Jurnal Umum",
           icon: TrendingUp,
@@ -160,6 +191,12 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
       groupTitle: "Sistem & Konfigurasi",
       items: [
         {
+          id: "wa-gateway",
+          label: "WhatsApp Automation",
+          icon: MessageSquare,
+          desc: "Otomasi notifikasi & reminder",
+        },
+        {
           id: "master",
           label: "Pusat Data Master",
           icon: Database,
@@ -177,8 +214,8 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
 
   return (
     <aside className="w-68 flex-shrink-0 border-r border-slate-200 bg-white p-3.5 hidden md:flex flex-col justify-between min-h-[calc(100vh-65px)] no-print overflow-y-auto">
-      <div className="space-y-5">
-        <nav className="space-y-4">
+      <div className="space-y-4">
+        <nav className="space-y-3.5">
           {menuGroups.map((group, gIdx) => (
             <div key={gIdx} className="space-y-1">
               <div className="flex items-center justify-between px-2.5 py-1">
@@ -244,7 +281,7 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
         </nav>
       </div>
 
-      {/* Footer Status Box (Clean System PPIU Verified Badge) */}
+      {/* Footer Status Box */}
       <div className="mt-4 pt-3 border-t border-slate-100">
         <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 space-y-1 text-left">
           <div className="flex items-center gap-1.5 text-emerald-700 font-bold text-xs">

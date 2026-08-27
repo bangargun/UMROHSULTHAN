@@ -434,3 +434,85 @@ model SalesFaq {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model RoomAllocation {
+  id          String   @id @default(uuid())
+  packageId   String
+  hotelCity   String   // "MAKKAH" or "MADINAH"
+  hotelName   String?
+  roomNumber  String   // e.g. "1204"
+  roomType    String   @default("QUAD") // QUAD, TRIPLE, DOUBLE, SINGLE
+  floor       String?  // e.g. "Lantai 12"
+  pilgrimIds  String   // JSON array of pilgrim IDs
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model BusAllocation {
+  id              String   @id @default(uuid())
+  packageId       String
+  busNumber       String   // e.g. "BUS-01", "BUS-02"
+  busName         String?  // e.g. "Dallah VIP Coach"
+  capacity        Int      @default(45)
+  driverName      String?
+  driverPhone     String?
+  tourLeaderName  String?
+  muthawwifName   String?
+  pilgrimIds      String   // JSON array of pilgrim IDs
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model GroundAttendance {
+  id                 String   @id @default(uuid())
+  packageId          String
+  eventName          String   // e.g. "Keberangkatan CGK", "Check-in Hotel Madinah", "Ziarah Raudhah", "Tawaf & Sai", "City Tour Makkah", "Kepulangan Jeddah"
+  eventDate          DateTime @default(now())
+  checkedPilgrimIds  String   // JSON array of pilgrim IDs who are present
+  notes              String?
+  conductedBy        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model WhatsappConfig {
+  id                    String   @id @default("default-wa")
+  provider              String   @default("FONNTE") // FONNTE, WABA, CUSTOM
+  apiKey                String?
+  senderPhone           String?
+  isConnected           Boolean  @default(false)
+  autoRemindersEnabled  Boolean  @default(true)
+  templatesJson         String?  // JSON customized templates
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model PaymentGatewayConfig {
+  id                 String   @id @default("default-pg")
+  provider           String   @default("MIDTRANS") // MIDTRANS, XENDIT, DUITKU
+  merchantId         String?
+  clientKey          String?
+  serverKey          String?
+  isSandbox          Boolean  @default(true)
+  activeChannelsJson String?  // JSON array e.g. ["BSI_VA", "MANDIRI_VA", "BCA_VA", "QRIS"]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model AgentCommissionPayout {
+  id             String    @id @default(uuid())
+  agentId        String
+  packageId      String?
+  pilgrimId      String?
+  amount         Float
+  status         String    @default("PENDING_DEPARTURE") // PENDING_DEPARTURE, APPROVED, PAID, REJECTED
+  payoutDate     DateTime?
+  paymentProof   String?   // URL or receipt note
+  journalEntryId String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+

@@ -14,7 +14,13 @@ import HandoverChecklistView from "@/components/handovers/HandoverChecklistView"
 import RequirementsChecklistView from "@/components/requirements/RequirementsChecklistView";
 import LettersGeneratorView from "@/components/letters/LettersGeneratorView";
 import BranchAgentView from "@/components/agents/BranchAgentView";
+import AgentPayoutView from "@/components/agents/AgentPayoutView";
 import SalesFaqView from "@/components/faq/SalesFaqView";
+import ComplianceView from "@/components/compliance/ComplianceView";
+import GroundHandlingView from "@/components/ground/GroundHandlingView";
+import WhatsAppGatewayView from "@/components/wa/WhatsAppGatewayView";
+import PaymentGatewayView from "@/components/payment/PaymentGatewayView";
+import PilgrimPortalView from "@/components/portal/PilgrimPortalView";
 import MasterDataView from "@/components/master/MasterDataView";
 import SettingsView from "@/components/settings/SettingsView";
 import LoginView from "@/components/auth/LoginView";
@@ -36,6 +42,7 @@ export default function Home() {
   const [equipment, setEquipment] = useState<any[]>([]);
   const [handovers, setHandovers] = useState<any[]>([]);
   const [letters, setLetters] = useState<any[]>([]);
+  const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Sync logged in user profile with database
@@ -90,6 +97,7 @@ export default function Home() {
         equipmentRes,
         handoversRes,
         lettersRes,
+        agentsRes,
       ] = await Promise.all([
         fetch("/api/dashboard"),
         fetch("/api/leads"),
@@ -99,6 +107,7 @@ export default function Home() {
         fetch("/api/equipment"),
         fetch("/api/handovers"),
         fetch("/api/letters"),
+        fetch("/api/agents"),
       ]);
 
       const [
@@ -110,6 +119,7 @@ export default function Home() {
         equipmentData,
         handoversData,
         lettersData,
+        agentsData,
       ] = await Promise.all([
         dashRes.json(),
         leadsRes.json(),
@@ -119,84 +129,88 @@ export default function Home() {
         equipmentRes.json(),
         handoversRes.json(),
         lettersRes.json(),
+        agentsRes.json(),
       ]);
 
       setDashboardData(dashData);
-      setLeads(leadsData);
-      setPilgrims(pilgrimsData);
-      setPackages(packagesData);
-      setInvoices(invoicesData);
-      setEquipment(equipmentData);
-      setHandovers(handoversData);
-      setLetters(lettersData);
+      setLeads(Array.isArray(leadsData) ? leadsData : []);
+      setPilgrims(Array.isArray(pilgrimsData) ? pilgrimsData : []);
+      setPackages(Array.isArray(packagesData) ? packagesData : []);
+      setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
+      setEquipment(Array.isArray(equipmentData) ? equipmentData : []);
+      setHandovers(Array.isArray(handoversData) ? handoversData : []);
+      setLetters(Array.isArray(lettersData) ? lettersData : []);
+      setAgents(Array.isArray(agentsData) ? agentsData : []);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching ERP data:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleNavigateTab = (tab: string, searchFilter?: string, pilgrim?: any) => {
-    setActiveSearchFilter(searchFilter || "");
-    if (pilgrim) setActiveLetterPilgrim(pilgrim);
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  const handleNavigateTab = (tab: string, filterTerm: string = "", extraData: any = null) => {
     setActiveTab(tab);
+    setActiveSearchFilter(filterTerm);
+    if (tab === "letters" && extraData) {
+      setActiveLetterPilgrim(extraData);
+    } else if (tab !== "letters") {
+      setActiveLetterPilgrim(null);
+    }
   };
 
   const handleLogout = () => {
     localStorage.removeItem("sulthan_auth_user");
     setAuthUser(null);
+    setActiveTab("dashboard");
   };
-
-  useEffect(() => {
-    if (authUser) {
-      fetchAllData();
-    }
-  }, [authUser]);
-
-  const pendingInvoicesCount = invoices.filter((i) => i.status === "PENDING" || i.status === "OVERDUE").length;
-  const pendingDocsCount = pilgrims.reduce((acc, p) => {
-    const unverified = p.requirements?.filter((r: any) => !r.isVerified).length || 0;
-    return acc + (unverified > 0 ? 1 : 0);
-  }, 0);
-  const lowStockCount = dashboardData?.summary?.lowStockCount || 0;
 
   if (!authChecked) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-950">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-900 text-white">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
+          <p className="text-sm font-semibold tracking-wider">Memuat Sistem ERP Sulthan Haramain...</p>
+        </div>
       </div>
     );
   }
 
-  // If not logged in, render Papan Login
+  // If not logged in, show Login Screen
   if (!authUser) {
     return <LoginView onLoginSuccess={(user) => setAuthUser(user)} />;
   }
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50 text-slate-900">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-9 w-9 animate-spin text-emerald-600" />
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            Menyinkronkan Sistem Terpadu Umroh...
-          </p>
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+          <p className="text-sm font-bold tracking-wider">Menghubungkan Database Travel Umroh...</p>
         </div>
       </div>
     );
   }
 
+  // Calculate badge counts
+  const pendingInvoicesCount = invoices.filter((i) => i.status === "PENDING" || i.status === "OVERDUE").length;
+  const pendingDocsCount = pilgrims.filter((p) => p.status === "REGISTERED" || p.status === "DP_PAID").length;
+  const lowStockCount = equipment.filter((e) => e.availableStock <= e.minStockAlert).length;
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Top Navbar with user profile & logout */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+      {/* Top Navbar */}
       <Navbar
-        activeTab={activeTab}
         currentUser={authUser}
         onLogout={handleLogout}
       />
 
-      <div className="flex flex-1">
-        {/* Admin Sidebar */}
+      {/* Main Container Layout */}
+      <div className="flex flex-1 min-h-[calc(100vh-65px)]">
+        {/* Sidebar */}
         <Sidebar
           activeTab={activeTab}
           onSelectTab={(tab) => {
@@ -217,6 +231,13 @@ export default function Home() {
             <DashboardView
               data={dashboardData}
               onNavigate={(tab) => handleNavigateTab(tab)}
+            />
+          )}
+
+          {activeTab === "portal" && (
+            <PilgrimPortalView
+              pilgrims={pilgrims}
+              packages={packages}
             />
           )}
 
@@ -244,6 +265,20 @@ export default function Home() {
             />
           )}
 
+          {activeTab === "compliance" && (
+            <ComplianceView
+              packages={packages}
+              pilgrims={pilgrims}
+            />
+          )}
+
+          {activeTab === "ground" && (
+            <GroundHandlingView
+              packages={packages}
+              pilgrims={pilgrims}
+            />
+          )}
+
           {activeTab === "alumni" && (
             <AlumniPilgrimsView
               pilgrims={pilgrims}
@@ -262,6 +297,13 @@ export default function Home() {
             />
           )}
 
+          {activeTab === "payment-gateway" && (
+            <PaymentGatewayView
+              invoices={invoices}
+              onRefresh={fetchAllData}
+            />
+          )}
+
           {activeTab === "profit-loss" && (
             <ProfitLossView
               packages={packages}
@@ -269,7 +311,7 @@ export default function Home() {
             />
           )}
 
-          {activeTab === "inventory" && (
+          {activeTab === "logistics" && (
             <LogisticsView
               equipment={equipment}
               onRefresh={fetchAllData}
@@ -308,6 +350,21 @@ export default function Home() {
             <BranchAgentView
               packages={packages}
               onRefreshAll={fetchAllData}
+            />
+          )}
+
+          {activeTab === "agent-payouts" && (
+            <AgentPayoutView
+              agents={agents}
+              packages={packages}
+              onRefreshAll={fetchAllData}
+            />
+          )}
+
+          {activeTab === "wa-gateway" && (
+            <WhatsAppGatewayView
+              pilgrims={pilgrims}
+              packages={packages}
             />
           )}
 
