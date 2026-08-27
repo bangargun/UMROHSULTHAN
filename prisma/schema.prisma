@@ -134,7 +134,9 @@ model Pilgrim {
   city                  String?
   province              String?
   
-  // Kontak Darurat & Mahram
+  // Orang Tua Kandung & Mahram
+  fatherName            String?   // Nama Ayah Kandung (untuk endorsement 3 kata & paspor)
+  motherName            String?   // Nama Ibu Kandung
   emergencyContactName  String?
   emergencyContactPhone String?
   mahramName            String?

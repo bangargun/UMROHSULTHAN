@@ -151,6 +151,7 @@ export default function PilgrimsView({
           if (members.length > 0) {
             const first = members[0];
             const addressFull = [d.address, d.rtRw ? `RT/RW ${d.rtRw}` : "", d.village, d.district].filter(Boolean).join(", ");
+            const inferredFather = first.relation === "ANAK" ? d.headOfFamily : "";
             if (isEdit) {
               setEditFormData((prev) => ({
                 ...prev,
@@ -162,6 +163,7 @@ export default function PilgrimsView({
                 address: addressFull || prev.address,
                 city: d.city || prev.city,
                 province: d.province || prev.province,
+                fatherName: inferredFather || prev.fatherName,
                 mahramName: d.headOfFamily || prev.mahramName,
                 mahramRelation: first.relation || prev.mahramRelation,
               }));
@@ -176,6 +178,7 @@ export default function PilgrimsView({
                 address: addressFull || prev.address,
                 city: d.city || prev.city,
                 province: d.province || prev.province,
+                fatherName: inferredFather || prev.fatherName,
                 mahramName: d.headOfFamily || prev.mahramName,
                 mahramRelation: first.relation || prev.mahramRelation,
               }));
@@ -197,6 +200,7 @@ export default function PilgrimsView({
 
   const handleSelectKkMember = (member: any, isEdit = false) => {
     const addressFull = kkParsedData ? [kkParsedData.address, kkParsedData.rtRw ? `RT/RW ${kkParsedData.rtRw}` : "", kkParsedData.village, kkParsedData.district].filter(Boolean).join(", ") : "";
+    const inferredFather = member.relation === "ANAK" ? (kkParsedData?.headOfFamily || "") : "";
     if (isEdit) {
       setEditFormData((prev) => ({
         ...prev,
@@ -208,6 +212,7 @@ export default function PilgrimsView({
         address: addressFull || prev.address,
         city: kkParsedData?.city || prev.city,
         province: kkParsedData?.province || prev.province,
+        fatherName: inferredFather || prev.fatherName,
         mahramName: kkParsedData?.headOfFamily || prev.mahramName,
         mahramRelation: member.relation || prev.mahramRelation,
       }));
@@ -222,6 +227,7 @@ export default function PilgrimsView({
         address: addressFull || prev.address,
         city: kkParsedData?.city || prev.city,
         province: kkParsedData?.province || prev.province,
+        fatherName: inferredFather || prev.fatherName,
         mahramName: kkParsedData?.headOfFamily || prev.mahramName,
         mahramRelation: member.relation || prev.mahramRelation,
       }));
@@ -263,6 +269,8 @@ export default function PilgrimsView({
           address: addressFull || "-",
           city: kkParsedData?.city || "Jakarta",
           province: kkParsedData?.province || "Sumatera Utara",
+          fatherName: m.relation === "ANAK" ? (kkParsedData?.headOfFamily || null) : null,
+          motherName: null,
           mahramName: kkParsedData?.headOfFamily || null,
           mahramRelation: m.relation || null,
           roomType: formData.roomType || "QUAD",
@@ -311,6 +319,8 @@ export default function PilgrimsView({
     address: "",
     city: "",
     province: "",
+    fatherName: "",
+    motherName: "",
     emergencyContactName: "",
     emergencyContactPhone: "",
     mahramName: "",
@@ -345,6 +355,8 @@ export default function PilgrimsView({
     address: "",
     city: "",
     province: "",
+    fatherName: "",
+    motherName: "",
     emergencyContactName: "",
     emergencyContactPhone: "",
     mahramName: "",
@@ -382,6 +394,8 @@ export default function PilgrimsView({
       address: p.address || "",
       city: p.city || "",
       province: p.province || "",
+      fatherName: p.fatherName || "",
+      motherName: p.motherName || "",
       emergencyContactName: p.emergencyContactName || "",
       emergencyContactPhone: p.emergencyContactPhone || "",
       mahramName: p.mahramName || "",
@@ -564,6 +578,8 @@ export default function PilgrimsView({
           address: "",
           city: "",
           province: "",
+          fatherName: "",
+          motherName: "",
           emergencyContactName: "",
           emergencyContactPhone: "",
           mahramName: "",
@@ -1538,6 +1554,41 @@ export default function PilgrimsView({
                     className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
                   />
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
+                  <div>
+                    <label className="font-bold text-slate-800 flex items-center justify-between">
+                      <span>Nama Ayah Kandung (Pria) *</span>
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                        Otomatis Saran Endos 3 Kata
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. H. Ahmad Dahlan"
+                      value={formData.fatherName}
+                      onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Digunakan sistem untuk rekomendasi otomatis penambahan 3 kata di paspor / surat endos.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-800">Nama Ibu Kandung (Wanita)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Hj. Siti Aminah"
+                      value={formData.motherName}
+                      onChange={(e) => setFormData({ ...formData, motherName: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold text-slate-800"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Kelengkapan data keluarga untuk manifes SISKOPATUH Kemenag RI.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* SEKSI 2: PROGRAM PAKET & TANGGAL */}
@@ -2098,6 +2149,41 @@ export default function PilgrimsView({
                     onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
                     className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
                   />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
+                  <div>
+                    <label className="font-bold text-slate-800 flex items-center justify-between">
+                      <span>Nama Ayah Kandung (Pria) *</span>
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                        Otomatis Saran Endos 3 Kata
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. H. Ahmad Dahlan"
+                      value={editFormData.fatherName}
+                      onChange={(e) => setEditFormData({ ...editFormData, fatherName: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Digunakan sistem untuk rekomendasi otomatis penambahan 3 kata di paspor / surat endos.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-800">Nama Ibu Kandung (Wanita)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Hj. Siti Aminah"
+                      value={editFormData.motherName}
+                      onChange={(e) => setEditFormData({ ...editFormData, motherName: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold text-slate-800"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Kelengkapan data keluarga untuk manifes SISKOPATUH Kemenag RI.
+                    </p>
+                  </div>
                 </div>
               </div>
 

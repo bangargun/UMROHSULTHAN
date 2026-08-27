@@ -83,26 +83,54 @@ export default function LettersGeneratorView({
 
   const [loading, setLoading] = useState(false);
 
-  // Auto-sync selected pilgrim details when pilgrimId changes
+  // Helper to compute suggested 3-word endorsement name from [Nama Jamaah] + [Nama Ayah Kandung]
+  const computeSuggested3WordName = (p: any) => {
+    if (!p) return "";
+    const name = (p.name || "").trim().replace(/\s+/g, " ");
+    const words = name.split(" ").filter(Boolean);
+    if (words.length >= 3) return name.toUpperCase();
+
+    // Look for fatherName first, then mahramName
+    const father = (p.fatherName || p.mahramName || "").trim().replace(/\s+/g, " ");
+    if (father) {
+      const fWords = father.split(" ").filter(Boolean);
+      if (words.length === 1) {
+        if (fWords.length >= 2) {
+          return `${words[0]} ${fWords[0]} ${fWords[1]}`.toUpperCase();
+        } else {
+          return `${words[0]} BINTI ${fWords[0]}`.toUpperCase();
+        }
+      } else if (words.length === 2) {
+        return `${words[0]} ${words[1]} ${fWords[0]}`.toUpperCase();
+      }
+    }
+
+    return name.toUpperCase();
+  };
+
+  // Helper to extract clean endorsed name from letter record
+  const getEndorsedName = (letter: any) => {
+    if (!letter) return "";
+    const p = letter.pilgrim;
+    if (letter.customTitle && letter.customTitle !== "Surat Permohonan Endorsement Nama Paspor" && letter.customTitle !== "SURAT_ENDORSEMENT_PASPOR") {
+      return letter.customTitle.toUpperCase();
+    }
+    if (letter.customNotes) {
+      const match = letter.customNotes.match(/Target Nama Endorsement \(3 Kata\):\s*([^.\n]+)/i);
+      if (match) return match[1].trim().toUpperCase();
+    }
+    return computeSuggested3WordName(p);
+  };
+
+  // Auto-sync selected pilgrim details & suggested endorsement name
   useEffect(() => {
     const p = pilgrims.find((item) => item.id === formData.pilgrimId) || initialPilgrim;
-    if (p) {
-      if (formData.type === "SURAT_ENDORSEMENT_PASPOR" && !formData.endorsedTargetName) {
-        // Suggest 3-word name if mahram/father name available
-        const currentName = p.name || "";
-        const words = currentName.split(" ");
-        if (words.length < 3 && p.mahramName) {
-          setFormData((prev) => ({
-            ...prev,
-            endorsedTargetName: `${currentName} ${p.mahramName}`.toUpperCase(),
-          }));
-        } else {
-          setFormData((prev) => ({
-            ...prev,
-            endorsedTargetName: currentName.toUpperCase(),
-          }));
-        }
-      }
+    if (p && formData.type === "SURAT_ENDORSEMENT_PASPOR") {
+      const suggested = computeSuggested3WordName(p);
+      setFormData((prev) => ({
+        ...prev,
+        endorsedTargetName: suggested,
+      }));
     }
   }, [formData.pilgrimId, formData.type, pilgrims, initialPilgrim]);
 
@@ -526,26 +554,37 @@ export default function LettersGeneratorView({
 
               {/* SPECIFIC FIELDS FOR ENDORSEMENT PASPOR */}
               {formData.type === "SURAT_ENDORSEMENT_PASPOR" && (
-                <div className="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200 space-y-2.5">
-                  <div className="flex items-center gap-1.5 text-amber-900 font-bold text-[11px]">
-                    <Sparkles className="w-4 h-4 text-amber-600" />
-                    Detail Endorsement Nama (Syarat Visa Saudi Min. 3 Suku Kata)
+                <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-300 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-amber-950 font-bold text-xs">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
+                      Saran Rekomendasi Nama Endorsement (3 Suku Kata)
+                    </div>
+                    <span className="text-[10px] bg-amber-200/80 text-amber-900 font-bold px-2 py-0.5 rounded-md">
+                      Syarat Visa Umroh
+                    </span>
                   </div>
+
                   <div>
-                    <label className="font-bold text-slate-800">
-                      Target Nama Lengkap 3 Kata yang Diajukan di Halaman Endorsement *
+                    <label className="font-bold text-slate-800 flex items-center justify-between">
+                      <span>Target Nama 3 Kata Resmi di Paspor *</span>
+                      <span className="text-[10px] text-emerald-800 font-bold">
+                        {pilgrims.find((p) => p.id === formData.pilgrimId)?.fatherName
+                          ? `Ayah: ${pilgrims.find((p) => p.id === formData.pilgrimId)?.fatherName}`
+                          : "Nama Ayah Kandung"}
+                      </span>
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. SULTHAN SYARIF ABDULLAH"
+                      placeholder="e.g. LINA AHMAD DAHLAN"
                       value={formData.endorsedTargetName}
                       onChange={(e) => setFormData({ ...formData, endorsedTargetName: e.target.value.toUpperCase() })}
-                      className="mt-1 w-full rounded-xl border border-amber-300 p-2.5 bg-white font-bold text-slate-900 uppercase"
+                      className="mt-1 w-full rounded-xl border border-amber-400 p-2.5 bg-white font-bold text-slate-950 uppercase text-sm tracking-wide focus:ring-2 focus:ring-amber-500/20 shadow-xs"
                     />
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">
-                      Format umum Imigrasi: [Nama Depan] [Nama Tengah] [Nama Ayah Kandung / Bin ...]
-                    </span>
+                    <p className="text-[10px] text-slate-600 mt-1">
+                      💡 <strong>Saran Otomatis:</strong> Menggabungkan <code>[Nama Jamaah]</code> + <code>[Nama Ayah Kandung]</code>. Anda dapat mengedit nama rekomendasi ini jika ada variasi ejaan.
+                    </p>
                   </div>
                 </div>
               )}
@@ -806,13 +845,13 @@ export default function LettersGeneratorView({
                           </td>
                         </tr>
 
-                        {selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" && selectedLetterForPrint.customNotes && (
-                          <tr className="bg-amber-50/50">
-                            <td className="border border-slate-900 py-2 px-3 font-bold text-slate-900">
+                        {selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" && (
+                          <tr className="bg-amber-50/70">
+                            <td className="border border-slate-900 py-2.5 px-3 font-bold text-slate-900">
                               Nama Pengajuan Endorsement (3 Kata)
                             </td>
-                            <td className="border border-slate-900 py-2 px-3 font-black text-slate-950 underline uppercase">
-                              {selectedLetterForPrint.customNotes.replace(/.*Nama 3 Kata:\s*/i, "").split("\n")[0] || selectedLetterForPrint.pilgrim?.name}
+                            <td className="border border-slate-900 py-2.5 px-3 font-black text-slate-950 underline uppercase text-sm tracking-wide">
+                              {getEndorsedName(selectedLetterForPrint)}
                             </td>
                           </tr>
                         )}
@@ -869,7 +908,9 @@ export default function LettersGeneratorView({
                     </table>
                   </div>
 
-                  {selectedLetterForPrint.customNotes && !selectedLetterForPrint.customNotes.startsWith("Permohonan penambahan nama") && (
+                  {selectedLetterForPrint.customNotes &&
+                    !selectedLetterForPrint.customNotes.startsWith("Permohonan penambahan nama") &&
+                    !selectedLetterForPrint.customNotes.startsWith("Target Nama Endorsement") && (
                     <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] leading-normal">
                       <strong>Keterangan Tambahan:</strong>
                       <p className="mt-0.5 text-slate-800">{selectedLetterForPrint.customNotes}</p>
@@ -881,16 +922,14 @@ export default function LettersGeneratorView({
                   </p>
                 </div>
 
-                {/* 6. SIGNATURE AREA (Clean without fake stamp) */}
+                {/* 6. SIGNATURE AREA (Clean blank for physical signature and stamp) */}
                 <div className="pt-8 flex flex-col items-start text-xs">
                   <p>Hormat Kami,</p>
                   <p className="font-bold text-slate-900">{travelSettings.companyName}</p>
-                  <div className="my-3 h-14 w-40 flex items-center justify-center">
-                    <span className="font-serif italic text-blue-900 font-bold text-base rotate-[-3deg]">
-                      {selectedLetterForPrint.generatedBy || travelSettings.directorName}
-                    </span>
+                  <div className="my-6 h-16 w-44">
+                    {/* Ruang Bersih untuk Tanda Tangan Fisik & Stempel Resmi Perusahaan */}
                   </div>
-                  <p className="font-bold text-slate-950 underline text-xs">
+                  <p className="font-bold text-slate-950 underline text-xs uppercase">
                     {selectedLetterForPrint.generatedBy || travelSettings.directorName}
                   </p>
                   <p className="text-[11px] text-slate-700">{travelSettings.directorTitle || "Direktur Utama"}</p>
