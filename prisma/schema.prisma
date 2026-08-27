@@ -283,6 +283,7 @@ model OfficialLetter {
   customBody             String?   // Custom body paragraph
   destinationInstitution String    // Kantor Imigrasi / PT ABC / Kemenag Kota
   applicantJobTitle      String?   // Jabatan untuk surat cuti (e.g., Guru, Karyawan, PNS)
+  letterCity             String?   @default("Tebing Tinggi") // Kota Tempat Diterbitkan Surat
   customNotes            String?
   issueDate              DateTime  @default(now())
   generatedBy            String    @default("Admin Travel")

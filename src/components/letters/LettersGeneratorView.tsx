@@ -80,6 +80,7 @@ export default function LettersGeneratorView({
     customBody: "",
     destinationInstitution: "Kepala Kantor Imigrasi Kelas I Khusus",
     applicantJobTitle: "Karyawan Swasta",
+    letterCity: "Tebing Tinggi",
     fatherName: initialPilgrim?.fatherName || "",
     endorsedTargetName: "",
     customNotes: "Permohonan penambahan nama pada halaman pengesahan paspor untuk syarat Visa Umroh.",
@@ -94,6 +95,7 @@ export default function LettersGeneratorView({
     customBody: "",
     destinationInstitution: "",
     applicantJobTitle: "Karyawan Swasta",
+    letterCity: "Tebing Tinggi",
     fatherName: "",
     endorsedTargetName: "",
     customNotes: "",
@@ -282,6 +284,7 @@ export default function LettersGeneratorView({
       customBody: letter.customBody || "",
       destinationInstitution: letter.destinationInstitution || "",
       applicantJobTitle: letter.applicantJobTitle || "Karyawan Swasta",
+      letterCity: letter.letterCity || "Tebing Tinggi",
       fatherName: p?.fatherName || "",
       endorsedTargetName: getEndorsedName(letter),
       customNotes: letter.customNotes || "",
@@ -730,17 +733,45 @@ export default function LettersGeneratorView({
                 </div>
               )}
 
-              {/* DESTINATION INSTITUTION */}
-              <div>
-                <label className="font-bold text-slate-700">Tujuan Surat / Nama Instansi & Pejabat *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Kepala Kantor Imigrasi Kelas I TPI Jakarta Selatan"
-                  value={formData.destinationInstitution}
-                  onChange={(e) => setFormData({ ...formData, destinationInstitution: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
-                />
+              {/* CITY & DESTINATION INSTITUTION */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700">Kota Diterbitkan Surat *</label>
+                  <div className="relative mt-1">
+                    <input
+                      type="text"
+                      required
+                      list="add-letter-cities"
+                      placeholder="e.g. Tebing Tinggi / Medan / Jakarta"
+                      value={formData.letterCity}
+                      onChange={(e) => setFormData({ ...formData, letterCity: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                    <datalist id="add-letter-cities">
+                      <option value="Tebing Tinggi" />
+                      <option value="Medan" />
+                      <option value="Pematang Siantar" />
+                      <option value="Jakarta" />
+                      <option value="Surabaya" />
+                      <option value="Bandung" />
+                      <option value="Makassar" />
+                    </datalist>
+                  </div>
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">Pilih dari list atau ketik kota lain</span>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700">Tujuan Surat / Instansi *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Kepala Kantor Imigrasi Tebing Tinggi"
+                    value={formData.destinationInstitution}
+                    onChange={(e) => setFormData({ ...formData, destinationInstitution: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">Nama kantor imigrasi / instansi</span>
+                </div>
               </div>
 
               {formData.type === "SURAT_IZIN_CUTI" && (
@@ -961,17 +992,45 @@ export default function LettersGeneratorView({
                 </div>
               )}
 
-              {/* DESTINATION INSTITUTION */}
-              <div>
-                <label className="font-bold text-slate-700">Tujuan Surat / Nama Instansi & Pejabat *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Kepala Kantor Imigrasi Kelas I TPI Jakarta Selatan"
-                  value={editFormData.destinationInstitution}
-                  onChange={(e) => setEditFormData({ ...editFormData, destinationInstitution: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
-                />
+              {/* CITY & DESTINATION INSTITUTION */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700">Kota Diterbitkan Surat *</label>
+                  <div className="relative mt-1">
+                    <input
+                      type="text"
+                      required
+                      list="edit-letter-cities"
+                      placeholder="e.g. Tebing Tinggi / Medan / Jakarta"
+                      value={editFormData.letterCity}
+                      onChange={(e) => setEditFormData({ ...editFormData, letterCity: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold focus:ring-2 focus:ring-amber-500/20"
+                    />
+                    <datalist id="edit-letter-cities">
+                      <option value="Tebing Tinggi" />
+                      <option value="Medan" />
+                      <option value="Pematang Siantar" />
+                      <option value="Jakarta" />
+                      <option value="Surabaya" />
+                      <option value="Bandung" />
+                      <option value="Makassar" />
+                    </datalist>
+                  </div>
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">Pilih dari list atau ketik kota lain</span>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700">Tujuan Surat / Instansi *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Kepala Kantor Imigrasi Tebing Tinggi"
+                    value={editFormData.destinationInstitution}
+                    onChange={(e) => setEditFormData({ ...editFormData, destinationInstitution: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold focus:ring-2 focus:ring-amber-500/20"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">Nama kantor imigrasi / instansi</span>
+                </div>
               </div>
 
               {editFormData.type === "SURAT_IZIN_CUTI" && (
@@ -1132,8 +1191,8 @@ export default function LettersGeneratorView({
                       </span>
                     </p>
                   </div>
-                  <p className="text-slate-900">
-                    Jakarta, {formatDate(selectedLetterForPrint.issueDate, "dd MMMM yyyy")}
+                  <p className="text-slate-900 font-semibold">
+                    {selectedLetterForPrint.letterCity || "Tebing Tinggi"}, {formatDate(selectedLetterForPrint.issueDate || selectedLetterForPrint.createdAt, "dd MMMM yyyy")}
                   </p>
                 </div>
 
