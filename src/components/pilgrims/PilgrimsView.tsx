@@ -55,9 +55,13 @@ export default function PilgrimsView({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPilgrimId, setEditingPilgrimId] = useState<string | null>(null);
 
-  // KTP OCR states
+  // KTP & KK OCR states
   const [isScanningKtp, setIsScanningKtp] = useState(false);
   const [ktpPreviewUrl, setKtpPreviewUrl] = useState<string | null>(null);
+  const [isScanningKk, setIsScanningKk] = useState(false);
+  const [kkPreviewUrl, setKkPreviewUrl] = useState<string | null>(null);
+  const [kkParsedData, setKkParsedData] = useState<any | null>(null);
+  const [kkMembers, setKkMembers] = useState<any[]>([]);
   const [ocrSuccessMsg, setOcrSuccessMsg] = useState<string | null>(null);
 
   const handleKtpFileChange = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
@@ -116,6 +120,172 @@ export default function PilgrimsView({
     } finally {
       setIsScanningKtp(false);
     }
+  };
+
+  const handleKkFileChange = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const preview = URL.createObjectURL(file);
+    setKkPreviewUrl(preview);
+    setIsScanningKk(true);
+    setOcrSuccessMsg(null);
+
+    try {
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+
+      const res = await fetch("/api/ocr/kk", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          const d = json.data;
+          setKkParsedData(d);
+          const members = Array.isArray(d.members) ? d.members : [];
+          setKkMembers(members);
+
+          if (members.length > 0) {
+            const first = members[0];
+            const addressFull = [d.address, d.rtRw ? `RT/RW ${d.rtRw}` : "", d.village, d.district].filter(Boolean).join(", ");
+            if (isEdit) {
+              setEditFormData((prev) => ({
+                ...prev,
+                nik: first.nik || prev.nik,
+                name: first.name || prev.name,
+                placeOfBirth: first.birthPlace || d.city || prev.placeOfBirth,
+                dateOfBirth: first.birthDate || prev.dateOfBirth,
+                gender: first.gender || prev.gender,
+                address: addressFull || prev.address,
+                city: d.city || prev.city,
+                province: d.province || prev.province,
+                mahramName: d.headOfFamily || prev.mahramName,
+                mahramRelation: first.relation || prev.mahramRelation,
+              }));
+            } else {
+              setFormData((prev) => ({
+                ...prev,
+                nik: first.nik || prev.nik,
+                name: first.name || prev.name,
+                placeOfBirth: first.birthPlace || d.city || prev.placeOfBirth,
+                dateOfBirth: first.birthDate || prev.dateOfBirth,
+                gender: first.gender || prev.gender,
+                address: addressFull || prev.address,
+                city: d.city || prev.city,
+                province: d.province || prev.province,
+                mahramName: d.headOfFamily || prev.mahramName,
+                mahramRelation: first.relation || prev.mahramRelation,
+              }));
+            }
+          }
+
+          setOcrSuccessMsg(`✨ Kartu Keluarga Berhasil Dibaca! Terdeteksi ${members.length} anggota keluarga. Silakan tinjau dan edit data anggota di tabel bawah.`);
+        }
+      } else {
+        alert("Peringatan: Pastikan foto Kartu Keluarga tajam, jelas, dan tabel anggota terbaca.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Gagal membaca Kartu Keluarga. Anda tetap dapat mengisi data secara manual.");
+    } finally {
+      setIsScanningKk(false);
+    }
+  };
+
+  const handleSelectKkMember = (member: any, isEdit = false) => {
+    const addressFull = kkParsedData ? [kkParsedData.address, kkParsedData.rtRw ? `RT/RW ${kkParsedData.rtRw}` : "", kkParsedData.village, kkParsedData.district].filter(Boolean).join(", ") : "";
+    if (isEdit) {
+      setEditFormData((prev) => ({
+        ...prev,
+        nik: member.nik || prev.nik,
+        name: member.name || prev.name,
+        placeOfBirth: member.birthPlace || kkParsedData?.city || prev.placeOfBirth,
+        dateOfBirth: member.birthDate || prev.dateOfBirth,
+        gender: member.gender || prev.gender,
+        address: addressFull || prev.address,
+        city: kkParsedData?.city || prev.city,
+        province: kkParsedData?.province || prev.province,
+        mahramName: kkParsedData?.headOfFamily || prev.mahramName,
+        mahramRelation: member.relation || prev.mahramRelation,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        nik: member.nik || prev.nik,
+        name: member.name || prev.name,
+        placeOfBirth: member.birthPlace || kkParsedData?.city || prev.placeOfBirth,
+        dateOfBirth: member.birthDate || prev.dateOfBirth,
+        gender: member.gender || prev.gender,
+        address: addressFull || prev.address,
+        city: kkParsedData?.city || prev.city,
+        province: kkParsedData?.province || prev.province,
+        mahramName: kkParsedData?.headOfFamily || prev.mahramName,
+        mahramRelation: member.relation || prev.mahramRelation,
+      }));
+    }
+    alert(`Data anggota "${member.name}" berhasil diterapkan ke form.`);
+  };
+
+  const handleUpdateKkMember = (index: number, field: string, value: any) => {
+    setKkMembers((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleBatchAddKkMembers = async () => {
+    if (kkMembers.length === 0) return;
+    if (!confirm(`Daftarkan ${kkMembers.length} anggota keluarga dari Kartu Keluarga ini ke dalam paket yang dipilih?`)) return;
+
+    setLoading(true);
+    let successCount = 0;
+    const addressFull = kkParsedData ? [kkParsedData.address, kkParsedData.rtRw ? `RT/RW ${kkParsedData.rtRw}` : "", kkParsedData.village, kkParsedData.district].filter(Boolean).join(", ") : "";
+
+    for (const m of kkMembers) {
+      try {
+        const payload = {
+          packageId: formData.packageId || packages[0]?.id,
+          name: m.name,
+          nik: m.nik,
+          hasPassport: false,
+          passportNumber: null,
+          passportExpiry: null,
+          hasVisa: false,
+          visaNumber: null,
+          placeOfBirth: m.birthPlace || kkParsedData?.city || "Jakarta",
+          dateOfBirth: m.birthDate ? new Date(m.birthDate).toISOString() : new Date("1990-01-01").toISOString(),
+          gender: m.gender || "MALE",
+          phone: formData.phone || "-",
+          address: addressFull || "-",
+          city: kkParsedData?.city || "Jakarta",
+          province: kkParsedData?.province || "Sumatera Utara",
+          mahramName: kkParsedData?.headOfFamily || null,
+          mahramRelation: m.relation || null,
+          roomType: formData.roomType || "QUAD",
+          uniformSize: "L",
+          bloodType: "O",
+          initialDpAmount: formData.initialDpAmount || "10000000",
+        };
+
+        const res = await fetch("/api/pilgrims", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) successCount++;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    setLoading(false);
+    setIsAddModalOpen(false);
+    alert(`Alhamdulillah! Berhasil mendaftarkan ${successCount} dari ${kkMembers.length} anggota keluarga.`);
+    onRefresh();
   };
 
   // Form input data jamaah baru
@@ -1052,27 +1222,28 @@ export default function PilgrimsView({
               </button>
             </div>
 
-            {/* KTP AI / OCR SCANNER DROPZONE */}
+            {/* KTP & KK AI / OCR SCANNER DROPZONE */}
             <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-dashed border-emerald-300 rounded-2xl p-4 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
                     <Scan className="w-5 h-5" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      📷 Scan Foto e-KTP Otomatis
+                      📷 Scan e-KTP & 📄 Kartu Keluarga (KK) Otomatis
                       <span className="text-[9px] font-extrabold bg-emerald-600 text-white px-1.5 py-0.2 rounded-md">
-                        AUTO-FILL
+                        AUTO-FILL & EDIT
                       </span>
                     </h4>
                     <p className="text-[11px] text-slate-500">
-                      Unggah foto KTP jamaah, sistem akan otomatis membaca NIK, Nama, TTL, Jenis Kelamin & Alamat (tetap bisa diedit).
+                      Unggah foto KTP atau Kartu Keluarga (KK). Sistem akan mengekstrak NIK, Nama, TTL, Jenis Kelamin, Mahram & seluruh anggota keluarga (dapat diedit).
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Upload KTP Button */}
                   <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 shadow-xs transition-all">
                     {isScanningKtp ? (
                       <>
@@ -1086,8 +1257,28 @@ export default function PilgrimsView({
                     <input
                       type="file"
                       accept="image/*"
-                      disabled={isScanningKtp}
+                      disabled={isScanningKtp || isScanningKk}
                       onChange={(e) => handleKtpFileChange(e, false)}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* Upload KK Button */}
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-700 text-white text-xs font-bold hover:bg-teal-800 shadow-xs transition-all">
+                    {isScanningKk ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Membaca KK...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-3.5 h-3.5" /> Upload Kartu Keluarga (KK)
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isScanningKtp || isScanningKk}
+                      onChange={(e) => handleKkFileChange(e, false)}
                       className="hidden"
                     />
                   </label>
@@ -1095,10 +1286,14 @@ export default function PilgrimsView({
               </div>
 
               {/* Status & Preview Banner */}
-              {isScanningKtp && (
+              {(isScanningKtp || isScanningKk) && (
                 <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white border border-emerald-200 text-emerald-800 text-xs font-semibold animate-pulse">
                   <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
-                  <span>Sedang memproses OCR & mengekstrak data dari foto e-KTP...</span>
+                  <span>
+                    {isScanningKk
+                      ? "Sedang memproses OCR & membaca tabel anggota Kartu Keluarga (KK)..."
+                      : "Sedang memproses OCR & mengekstrak data dari foto e-KTP..."}
+                  </span>
                 </div>
               )}
 
@@ -1108,35 +1303,158 @@ export default function PilgrimsView({
                   <div>
                     <p className="font-bold">{ocrSuccessMsg}</p>
                     <p className="text-[10px] text-emerald-800 mt-0.5">
-                      Periksa kembali data yang terisi di bawah dan ubah bila diperlukan sebelum menyimpan.
+                      Periksa kembali data di bawah. Anda dapat mengedit nama/NIK sebelum menyimpan atau mendaftar.
                     </p>
                   </div>
                 </div>
               )}
 
-              {ktpPreviewUrl && (
-                <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-emerald-200">
-                  <img
-                    src={ktpPreviewUrl}
-                    alt="Preview KTP"
-                    className="w-20 h-12 object-cover rounded-lg border border-slate-200 shadow-2xs"
-                  />
-                  <div className="text-[11px] text-slate-600 flex-1">
-                    <p className="font-bold text-slate-900">Foto KTP Terpilih</p>
-                    <p className="text-[10px] text-slate-400">Gambar berhasil dimuat untuk referensi pengisian data.</p>
+              {/* KK Parsed Members Table (Editable) */}
+              {kkMembers.length > 0 && (
+                <div className="bg-white p-3.5 rounded-2xl border border-teal-200 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div>
+                      <h5 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-teal-600" />
+                        Tabel Anggota Kartu Keluarga ({kkMembers.length} Orang Terbaca)
+                      </h5>
+                      <p className="text-[10px] text-slate-500">
+                        No. KK: <span className="font-mono font-bold text-slate-800">{kkParsedData?.noKk || "-"}</span> | Kepala Keluarga: <span className="font-bold text-slate-800">{kkParsedData?.headOfFamily || "-"}</span>
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleBatchAddKkMembers}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-xs shadow-xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" /> Daftarkan Semua ({kkMembers.length} Anggota) Sekaligus
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setKtpPreviewUrl(null);
-                      setOcrSuccessMsg(null);
-                    }}
-                    className="text-xs text-rose-600 font-bold hover:underline"
-                  >
-                    Ganti Foto
-                  </button>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold text-[11px]">
+                          <th className="py-2 px-2.5">No</th>
+                          <th className="py-2 px-2.5">Nama Lengkap (Bisa Diedit)</th>
+                          <th className="py-2 px-2.5">NIK (Bisa Diedit)</th>
+                          <th className="py-2 px-2.5">Hubungan</th>
+                          <th className="py-2 px-2.5">L/P</th>
+                          <th className="py-2 px-2.5 text-right">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-800">
+                        {kkMembers.map((m, mIdx) => (
+                          <tr key={mIdx} className="hover:bg-slate-50/70">
+                            <td className="py-2 px-2.5 font-bold text-slate-400">{mIdx + 1}</td>
+                            <td className="py-2 px-2.5">
+                              <input
+                                type="text"
+                                value={m.name}
+                                onChange={(e) => handleUpdateKkMember(mIdx, "name", e.target.value)}
+                                className="w-full font-bold text-slate-900 border border-slate-200 rounded-lg px-2 py-1 text-xs bg-slate-50 focus:bg-white"
+                              />
+                            </td>
+                            <td className="py-2 px-2.5">
+                              <input
+                                type="text"
+                                maxLength={16}
+                                value={m.nik}
+                                onChange={(e) => handleUpdateKkMember(mIdx, "nik", e.target.value)}
+                                className="w-36 font-mono font-bold text-slate-800 border border-slate-200 rounded-lg px-2 py-1 text-xs bg-slate-50 focus:bg-white"
+                              />
+                            </td>
+                            <td className="py-2 px-2.5">
+                              <select
+                                value={m.relation}
+                                onChange={(e) => handleUpdateKkMember(mIdx, "relation", e.target.value)}
+                                className="border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-semibold bg-slate-50"
+                              >
+                                <option value="KEPALA KELUARGA">Kepala Keluarga</option>
+                                <option value="ISTRI">Istri</option>
+                                <option value="ANAK">Anak</option>
+                                <option value="ORANG TUA">Orang Tua / Ayah / Ibu</option>
+                                <option value="FAMILI LAIN">Famili Lain</option>
+                              </select>
+                            </td>
+                            <td className="py-2 px-2.5">
+                              <select
+                                value={m.gender}
+                                onChange={(e) => handleUpdateKkMember(mIdx, "gender", e.target.value)}
+                                className="border border-slate-200 rounded-lg px-1.5 py-1 text-[11px] font-semibold bg-slate-50"
+                              >
+                                <option value="MALE">Laki-laki</option>
+                                <option value="FEMALE">Perempuan</option>
+                              </select>
+                            </td>
+                            <td className="py-2 px-2.5 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleSelectKkMember(m, false)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-[11px] border border-teal-200 transition-all"
+                              >
+                                ⬇️ Pakai di Form
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
+
+              {/* Photo Previews */}
+              <div className="flex flex-wrap items-center gap-3">
+                {ktpPreviewUrl && (
+                  <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-emerald-200">
+                    <img
+                      src={ktpPreviewUrl}
+                      alt="Preview KTP"
+                      className="w-16 h-10 object-cover rounded-lg border border-slate-200 shadow-2xs"
+                    />
+                    <div className="text-[11px] text-slate-600">
+                      <p className="font-bold text-slate-900">Foto e-KTP</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setKtpPreviewUrl(null);
+                          setOcrSuccessMsg(null);
+                        }}
+                        className="text-[10px] text-rose-600 font-bold hover:underline"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {kkPreviewUrl && (
+                  <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-teal-200">
+                    <img
+                      src={kkPreviewUrl}
+                      alt="Preview KK"
+                      className="w-16 h-10 object-cover rounded-lg border border-slate-200 shadow-2xs"
+                    />
+                    <div className="text-[11px] text-slate-600">
+                      <p className="font-bold text-slate-900">Foto Kartu Keluarga</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setKkPreviewUrl(null);
+                          setKkParsedData(null);
+                          setKkMembers([]);
+                          setOcrSuccessMsg(null);
+                        }}
+                        className="text-[10px] text-rose-600 font-bold hover:underline"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <form onSubmit={handleAddPilgrim} className="space-y-4 text-xs">
@@ -1635,7 +1953,7 @@ export default function PilgrimsView({
               </button>
             </div>
 
-            {/* KTP AI / OCR SCANNER IN EDIT MODAL */}
+            {/* KTP & KK AI / OCR SCANNER IN EDIT MODAL */}
             <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-2 border-dashed border-amber-300 rounded-2xl p-3.5 space-y-2.5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -1644,32 +1962,53 @@ export default function PilgrimsView({
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      📷 Update Data dari Foto e-KTP
+                      📷 Update Data dari e-KTP / 📄 Kartu Keluarga
                     </h4>
                     <p className="text-[10px] text-slate-500">
-                      Scan foto KTP baru untuk memperbarui NIK, Nama, TTL, dan Alamat secara instan.
+                      Scan foto KTP atau KK untuk memperbarui NIK, Nama, TTL, Mahram & Alamat secara instan.
                     </p>
                   </div>
                 </div>
 
-                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 shadow-xs transition-all">
-                  {isScanningKtp ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Membaca KTP...
-                    </>
-                  ) : (
-                    <>
-                      <UploadCloud className="w-3.5 h-3.5" /> Upload Foto KTP
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={isScanningKtp}
-                    onChange={(e) => handleKtpFileChange(e, true)}
-                    className="hidden"
-                  />
-                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 shadow-xs transition-all">
+                    {isScanningKtp ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Membaca KTP...
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-3.5 h-3.5" /> Upload e-KTP
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isScanningKtp || isScanningKk}
+                      onChange={(e) => handleKtpFileChange(e, true)}
+                      className="hidden"
+                    />
+                  </label>
+
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-700 text-white text-xs font-bold hover:bg-teal-800 shadow-xs transition-all">
+                    {isScanningKk ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Membaca KK...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-3.5 h-3.5" /> Upload KK
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isScanningKtp || isScanningKk}
+                      onChange={(e) => handleKkFileChange(e, true)}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
 
               {ocrSuccessMsg && (
