@@ -14,25 +14,31 @@ export async function GET() {
           companyName: "PT BAROKAH SULTHAN HARAMAIN",
           licenseNumber: "25052200384080005",
           kemenhanLicense: null,
+          directorName: "ATIYATUL AMRA",
+          directorTitle: "Direktur Utama",
           address: "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631",
           phone: "0821-6733-9464",
           email: "barokahsulthanharamain@gmail.com",
-          website: "www.sulthanharamain.com",
-          directorName: "Direktur Utama",
-          directorTitle: "Direktur Utama",
-          bankBSI: "8888-999-123 a.n PT BAROKAH SULTHAN HARAMAIN",
-          bankBCA: "731-888-9900 a.n PT BAROKAH SULTHAN HARAMAIN",
-          bankMandiri: "137-00-8888999-1 a.n PT BAROKAH SULTHAN HARAMAIN",
+          website: "",
+          bankBSI: "",
+          bankBCA: "",
+          bankMandiri: "107-00-7777-2020 a.n SULTHAN HARAMAIN",
         },
       });
-    } else if (setting.licenseNumber?.includes("NIB") || setting.kemenhanLicense?.includes("KBLI")) {
-      // Auto-sanitize existing database record
+    } else {
+      // Ensure exact official PPIU values
       setting = await prisma.travelSetting.update({
         where: { id: "default-settings" },
         data: {
+          companyName: "PT BAROKAH SULTHAN HARAMAIN",
           licenseNumber: "25052200384080005",
           kemenhanLicense: null,
+          directorName: "ATIYATUL AMRA",
+          directorTitle: "Direktur Utama",
           address: "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631",
+          phone: "0821-6733-9464",
+          email: "barokahsulthanharamain@gmail.com",
+          bankMandiri: setting.bankMandiri || "107-00-7777-2020 a.n SULTHAN HARAMAIN",
         },
       });
     }
@@ -60,7 +66,15 @@ export async function PUT(request: Request) {
       bankBSI,
       bankBCA,
       bankMandiri,
+      superAdminPin,
     } = body;
+
+    if (superAdminPin !== "12345") {
+      return NextResponse.json(
+        { error: "Akses Ditolak! Dilarang mengubah data kecuali Super Admin dengan PIN yang benar." },
+        { status: 403 }
+      );
+    }
 
     const updated = await prisma.travelSetting.upsert({
       where: { id: "default-settings" },
@@ -86,12 +100,12 @@ export async function PUT(request: Request) {
         address: address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631",
         phone: phone || "0821-6733-9464",
         email: email || "barokahsulthanharamain@gmail.com",
-        website: website || "www.sulthanharamain.com",
-        directorName: directorName || "Direktur Utama",
+        website: website || "",
+        directorName: directorName || "ATIYATUL AMRA",
         directorTitle: directorTitle || "Direktur Utama",
-        bankBSI: bankBSI || "8888-999-123 a.n PT BAROKAH SULTHAN HARAMAIN",
-        bankBCA: bankBCA || "731-888-9900 a.n PT BAROKAH SULTHAN HARAMAIN",
-        bankMandiri: bankMandiri || "137-00-8888999-1 a.n PT BAROKAH SULTHAN HARAMAIN",
+        bankBSI: bankBSI || "",
+        bankBCA: bankBCA || "",
+        bankMandiri: bankMandiri || "107-00-7777-2020 a.n SULTHAN HARAMAIN",
       },
     });
 

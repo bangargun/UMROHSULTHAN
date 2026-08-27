@@ -154,20 +154,24 @@ export default function SettingsView({ currentUser, onUpdateCurrentUser, onRefre
     badgeColor: "bg-indigo-100 text-indigo-800 border-indigo-200",
   });
 
-  // State: Travel Settings
+  // State: Travel Settings (Protected for Super Admin)
+  const [isCompanySettingsUnlocked, setIsCompanySettingsUnlocked] = useState(false);
+  const [adminPinInput, setAdminPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
+
   const [travelSettings, setTravelSettings] = useState({
-    companyName: "PT SULTHAN HARAMAIN TOUR & TRAVEL",
-    licenseNumber: "PPIU Kemenag RI No. U.412 Tahun 2022",
-    kemenhanLicense: "Izin Khusus Kemenhan RI No. B/108/M/XII/2023",
-    directorName: "H. Sulthan Syarif, Lc., M.A.",
+    companyName: "PT BAROKAH SULTHAN HARAMAIN",
+    licenseNumber: "25052200384080005",
+    kemenhanLicense: "",
+    directorName: "ATIYATUL AMRA",
     directorTitle: "Direktur Utama",
-    address: "Sulthan Haramain Tower, Jl. Prof. Dr. Satrio No. 88, Kuningan, Jakarta Selatan 12940",
-    phone: "(021) 5290-8888 / 0811-9876-5432",
-    email: "salam@sulthanharamain.com",
-    website: "www.sulthanharamain.com",
-    bankBSI: "8888-999-123 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL",
-    bankBCA: "731-888-9900 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL",
-    bankMandiri: "137-00-8888999-1 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL",
+    address: "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631",
+    phone: "0821-6733-9464",
+    email: "barokahsulthanharamain@gmail.com",
+    website: "",
+    bankBSI: "",
+    bankBCA: "",
+    bankMandiri: "107-00-7777-2020 a.n SULTHAN HARAMAIN",
   });
   const [savingSettings, setSavingSettings] = useState(false);
 
@@ -502,13 +506,14 @@ export default function SettingsView({ currentUser, onUpdateCurrentUser, onRefre
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(travelSettings),
+        body: JSON.stringify({ ...travelSettings, superAdminPin: "12345" }),
       });
       if (res.ok) {
         alert("Profil Biro Travel & Pengaturan PPIU berhasil disimpan!");
         if (onRefreshAll) onRefreshAll();
       } else {
-        alert("Gagal menyimpan profil travel.");
+        const data = await res.json();
+        alert(data.error || "Gagal menyimpan profil travel.");
       }
     } catch (err) {
       console.error(err);
@@ -1146,158 +1151,254 @@ export default function SettingsView({ currentUser, onUpdateCurrentUser, onRefre
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: PROFIL BIRO TRAVEL & PPIU */}
+      {/* TAB 3: PROFIL BIRO TRAVEL & PPIU (DIKUNCI SUPER ADMIN - PIN 12345) */}
       {/* ========================================================================= */}
       {activeSubTab === "company" && (
-        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 max-w-4xl space-y-5">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-emerald-600" />
-              Identitas Biro Perjalanan Ibadah Umrah (PPIU)
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Data resmi biro travel yang dicetak otomatis pada Invoice, Surat Resmi Kemenag, Manifest, dan Sertifikat Jamaah.
-            </p>
-          </div>
-
-          <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="font-bold text-slate-700">Nama Resmi Perusahaan / Travel *</label>
-                <input
-                  type="text"
-                  required
-                  value={travelSettings.companyName}
-                  onChange={(e) => setTravelSettings({ ...travelSettings, companyName: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold text-slate-900"
-                />
+        <>
+          {!isCompanySettingsUnlocked ? (
+            /* LOCK SCREEN VIEW */
+            <div className="bg-white rounded-3xl border border-rose-200/80 shadow-sm p-8 max-w-xl mx-auto space-y-6 text-center my-6">
+              <div className="mx-auto w-16 h-16 rounded-3xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shadow-2xs">
+                <ShieldAlert className="w-8 h-8" />
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700">Nomor SK Izin PPIU Kemenag RI *</label>
-                <input
-                  type="text"
-                  required
-                  value={travelSettings.licenseNumber}
-                  onChange={(e) => setTravelSettings({ ...travelSettings, licenseNumber: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-semibold text-emerald-800"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="font-bold text-slate-700">Nama Direktur Utama / Penanggung Jawab *</label>
-                <input
-                  type="text"
-                  required
-                  value={travelSettings.directorName}
-                  onChange={(e) => setTravelSettings({ ...travelSettings, directorName: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold"
-                />
+              <div className="space-y-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-rose-100 text-rose-800 border border-rose-300 uppercase tracking-wider">
+                  🔒 Akses Dibatasi Super Admin
+                </span>
+                <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                  DILARANG DIBUKA KECUALI SUPER ADMIN
+                </h3>
+                <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+                  Halaman Identitas Legalitas Biro Perjalanan Ibadah Umrah (PPIU) dan Rekening Resmi ini dilindungi secara ketat. Masukkan Password Super Admin untuk membuka akses.
+                </p>
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700">Jabatan Penandatangan *</label>
-                <input
-                  type="text"
-                  required
-                  value={travelSettings.directorTitle}
-                  onChange={(e) => setTravelSettings({ ...travelSettings, directorTitle: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="font-bold text-slate-700">Alamat Kantor Pusat Travel</label>
-              <textarea
-                rows={2}
-                value={travelSettings.address}
-                onChange={(e) => setTravelSettings({ ...travelSettings, address: e.target.value })}
-                className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="font-bold text-slate-700">Nomor Telepon & WhatsApp</label>
-                <input
-                  type="text"
-                  value={travelSettings.phone}
-                  onChange={(e) => setTravelSettings({ ...travelSettings, phone: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
-                />
-              </div>
-              <div>
-                <label className="font-bold text-slate-700">Email Resmi</label>
-                <input
-                  type="email"
-                  value={travelSettings.email}
-                  onChange={(e) => setTravelSettings({ ...travelSettings, email: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
-                />
-              </div>
-              <div>
-                <label className="font-bold text-slate-700">Website</label>
-                <input
-                  type="text"
-                  value={travelSettings.website}
-                  onChange={(e) => setTravelSettings({ ...travelSettings, website: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
-                />
-              </div>
-            </div>
-
-            {/* Rekening Bank Resmi */}
-            <div className="p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-3">
-              <p className="font-bold text-emerald-950 flex items-center gap-1.5 border-b border-emerald-200 pb-2">
-                <CreditCard className="w-4 h-4 text-emerald-600" />
-                Rekening Resmi Pembayaran Jamaah (Dicetak di Invoice & Pesan WhatsApp)
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700">Bank BSI Syariah</label>
-                  <input
-                    type="text"
-                    value={travelSettings.bankBSI}
-                    onChange={(e) => setTravelSettings({ ...travelSettings, bankBSI: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2 bg-white font-mono text-[11px]"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700">Bank BCA</label>
-                  <input
-                    type="text"
-                    value={travelSettings.bankBCA}
-                    onChange={(e) => setTravelSettings({ ...travelSettings, bankBCA: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2 bg-white font-mono text-[11px]"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700">Bank Mandiri</label>
-                  <input
-                    type="text"
-                    value={travelSettings.bankMandiri}
-                    onChange={(e) => setTravelSettings({ ...travelSettings, bankMandiri: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2 bg-white font-mono text-[11px]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-3 flex justify-end">
-              <button
-                type="submit"
-                disabled={savingSettings}
-                className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 shadow-sm flex items-center gap-1.5"
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (adminPinInput === "12345") {
+                    setIsCompanySettingsUnlocked(true);
+                    setPinError("");
+                    setAdminPinInput("");
+                  } else {
+                    setPinError("Password salah! Dilarang dibuka kecuali Super Admin.");
+                  }
+                }}
+                className="max-w-xs mx-auto space-y-3 pt-2"
               >
-                <Save className="w-4 h-4" />
-                {savingSettings ? "Menyimpan..." : "Simpan Profil Travel"}
-              </button>
+                <div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <input
+                      type="password"
+                      required
+                      autoFocus
+                      placeholder="Masukkan Password (12345)..."
+                      value={adminPinInput}
+                      onChange={(e) => {
+                        setAdminPinInput(e.target.value);
+                        if (pinError) setPinError("");
+                      }}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 font-mono text-center text-sm font-bold tracking-widest focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                    />
+                  </div>
+                  {pinError && (
+                    <p className="text-xs font-bold text-rose-600 mt-2 flex items-center justify-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      {pinError}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2"
+                >
+                  <Key className="w-4 h-4 text-amber-400" />
+                  Buka Kunci Halaman PPIU
+                </button>
+              </form>
             </div>
-          </form>
-        </div>
+          ) : (
+            /* UNLOCKED CONTENT */
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 max-w-4xl space-y-5">
+              {/* Unlocked Super Admin Status Banner */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-2xs shrink-0">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-emerald-950">
+                      Akses Terbuka: Hak Super Admin Terverifikasi (PIN 12345 Valid)
+                    </p>
+                    <p className="text-[11px] text-emerald-700">
+                      Data resmi identitas biro travel & PPIU siap diproteksi dari perubahan tidak sah.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCompanySettingsUnlocked(false)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-rose-200 text-rose-700 text-xs font-bold hover:bg-rose-50 shadow-2xs shrink-0"
+                >
+                  <Lock className="w-3.5 h-3.5 text-rose-600" />
+                  Kunci Kembali Halaman
+                </button>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-emerald-600" />
+                  Identitas Biro Perjalanan Ibadah Umrah (PPIU)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Data resmi biro travel yang dicetak otomatis pada Invoice, Surat Resmi Kemenag, Manifest, dan Sertifikat Jamaah.
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="font-bold text-slate-700">Nama Resmi Perusahaan / Travel *</label>
+                    <input
+                      type="text"
+                      required
+                      value={travelSettings.companyName}
+                      onChange={(e) => setTravelSettings({ ...travelSettings, companyName: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold text-slate-900 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700">Nomor SK Izin PPIU Kemenag RI *</label>
+                    <input
+                      type="text"
+                      required
+                      value={travelSettings.licenseNumber}
+                      onChange={(e) => setTravelSettings({ ...travelSettings, licenseNumber: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold text-emerald-800 bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="font-bold text-slate-700">Nama Direktur Utama / Penanggung Jawab *</label>
+                    <input
+                      type="text"
+                      required
+                      value={travelSettings.directorName}
+                      onChange={(e) => setTravelSettings({ ...travelSettings, directorName: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700">Jabatan Penandatangan *</label>
+                    <input
+                      type="text"
+                      required
+                      value={travelSettings.directorTitle}
+                      onChange={(e) => setTravelSettings({ ...travelSettings, directorTitle: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700">Alamat Kantor Pusat Travel</label>
+                  <textarea
+                    rows={2}
+                    value={travelSettings.address}
+                    onChange={(e) => setTravelSettings({ ...travelSettings, address: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="font-bold text-slate-700">Nomor Telepon & WhatsApp</label>
+                    <input
+                      type="text"
+                      value={travelSettings.phone}
+                      onChange={(e) => setTravelSettings({ ...travelSettings, phone: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Email Resmi</label>
+                    <input
+                      type="email"
+                      value={travelSettings.email}
+                      onChange={(e) => setTravelSettings({ ...travelSettings, email: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Website</label>
+                    <input
+                      type="text"
+                      value={travelSettings.website}
+                      onChange={(e) => setTravelSettings({ ...travelSettings, website: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Rekening Bank Resmi */}
+                <div className="p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-3">
+                  <p className="font-bold text-emerald-950 flex items-center gap-1.5 border-b border-emerald-200 pb-2">
+                    <CreditCard className="w-4 h-4 text-emerald-600" />
+                    Rekening Resmi Pembayaran Jamaah (Dicetak di Invoice & Pesan WhatsApp)
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-700">Bank BSI Syariah</label>
+                      <input
+                        type="text"
+                        value={travelSettings.bankBSI}
+                        onChange={(e) => setTravelSettings({ ...travelSettings, bankBSI: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2 bg-white font-mono text-[11px]"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700">Bank BCA</label>
+                      <input
+                        type="text"
+                        value={travelSettings.bankBCA}
+                        onChange={(e) => setTravelSettings({ ...travelSettings, bankBCA: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2 bg-white font-mono text-[11px]"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700">Bank Mandiri</label>
+                      <input
+                        type="text"
+                        value={travelSettings.bankMandiri}
+                        onChange={(e) => setTravelSettings({ ...travelSettings, bankMandiri: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2 bg-white font-mono text-[11px]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={savingSettings}
+                    className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 shadow-sm flex items-center gap-1.5"
+                  >
+                    <Save className="w-4 h-4" />
+                    {savingSettings ? "Menyimpan..." : "Simpan Profil Travel"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+        </>
       )}
 
       {/* ========================================================================= */}
