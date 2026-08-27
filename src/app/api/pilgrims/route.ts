@@ -213,11 +213,21 @@ export async function POST(request: Request) {
 
     // 6. Automatically generate User account with password for pilgrim portal
     const initialUserPassword = body.portalPassword || "123456";
-    const cleanUsername = (pilgrim.nik || pilgrim.phone || `jamaah_${pilgrim.id.slice(0, 6)}`).toLowerCase().trim();
+    const targetUsername = (pilgrim.name || "jamaah")
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/g, "");
 
     try {
+      let existingUser = await prisma.user.findUnique({ where: { username: targetUsername } });
+      let finalUsername = targetUsername;
+      if (existingUser && existingUser.pilgrimId !== pilgrim.id) {
+        finalUsername = `${targetUsername}_${pilgrim.nik?.slice(-4) || pilgrim.id.slice(0, 4)}`;
+      }
+
       await prisma.user.upsert({
-        where: { username: cleanUsername },
+        where: { username: finalUsername },
         update: {
           name: pilgrim.name,
           phone: pilgrim.phone,
@@ -228,7 +238,7 @@ export async function POST(request: Request) {
         },
         create: {
           name: pilgrim.name,
-          username: cleanUsername,
+          username: finalUsername,
           password: initialUserPassword,
           plainPassword: initialUserPassword,
           phone: pilgrim.phone,

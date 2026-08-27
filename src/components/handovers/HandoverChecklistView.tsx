@@ -495,13 +495,20 @@ export default function HandoverChecklistView({
                 </div>
                 <div className="flex-1 text-left">
                   <h1 className="text-base font-black tracking-tight text-slate-950 uppercase">
-                    {travelSettings.companyName || "PT. SULTHAN HARAMAIN TOUR & TRAVEL"}
+                    {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
                   </h1>
                   <p className="text-[10px] font-bold text-slate-800 tracking-wide mt-0.5">
-                    {travelSettings.licenseNumber || "PPIU Kemenag RI No. U.412 Tahun 2022"}
+                    NO. IZIN PPIU : {(travelSettings.licenseNumber || "25052200384080005")
+                      .replace(/•?\s*NIB[\s\S]*/i, "")
+                      .replace(/•?\s*KBLI[\s\S]*/i, "")
+                      .replace(/NO\.\s*IZIN\s*PPIU\s*:\s*/i, "")
+                      .trim()}
                   </p>
                   <p className="text-[9px] text-slate-600 leading-tight">
-                    {travelSettings.address} | Telp: {travelSettings.phone}
+                    {travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}
+                  </p>
+                  <p className="text-[9px] font-semibold text-slate-700 leading-tight mt-0.5">
+                    Telp / WhatsApp: {travelSettings.phone || "0821-6733-9464"} {travelSettings.email && ` • Email: ${travelSettings.email}`}
                   </p>
                 </div>
               </div>

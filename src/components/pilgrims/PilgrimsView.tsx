@@ -1035,7 +1035,12 @@ export default function PilgrimsView({
                 <div>
                   <span className="text-[10px] text-slate-500 block">Username Login:</span>
                   <span className="font-mono font-bold text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-slate-200 inline-block mt-0.5">
-                    {selectedPilgrim.nik}
+                    {selectedPilgrim.user?.username ||
+                      (selectedPilgrim.name || "jamaah")
+                        .toLowerCase()
+                        .trim()
+                        .replace(/\s+/g, "_")
+                        .replace(/[^a-z0-9_]/g, "")}
                   </span>
                 </div>
 
@@ -1050,7 +1055,14 @@ export default function PilgrimsView({
                   <button
                     type="button"
                     onClick={() => {
-                      const text = `Akses Portal Jamaah Sulthan Haramain:\nNama: ${selectedPilgrim.name}\nUsername: ${selectedPilgrim.nik}\nPassword: ${selectedPilgrim.portalPassword || "123456"}\nLink Portal: http://localhost:3005`;
+                      const usernameVal =
+                        selectedPilgrim.user?.username ||
+                        (selectedPilgrim.name || "jamaah")
+                          .toLowerCase()
+                          .trim()
+                          .replace(/\s+/g, "_")
+                          .replace(/[^a-z0-9_]/g, "");
+                      const text = `Akses Portal Jamaah Sulthan Haramain:\nNama: ${selectedPilgrim.name}\nUsername: ${usernameVal}\nPassword: ${selectedPilgrim.portalPassword || "123456"}\nLink Portal: http://localhost:3005`;
                       navigator.clipboard.writeText(text);
                       alert("Akun & password berhasil disalin!");
                     }}
@@ -1063,7 +1075,14 @@ export default function PilgrimsView({
                   {selectedPilgrim.phone && (
                     <a
                       href={`https://wa.me/${selectedPilgrim.phone.replace(/[^0-9]/g, "").replace(/^0/, "62")}?text=${encodeURIComponent(
-                        `Assalamu'alaikum Bpk/Ibu ${selectedPilgrim.name},\n\nBerikut adalah akses login akun Portal Mandiri Jamaah resmi Anda:\n\n👤 Username: ${selectedPilgrim.nik}\n🔑 Password: ${selectedPilgrim.portalPassword || "123456"}\n\nSilakan login untuk memantau kelengkapan dokumen paspor, status visa, jadwal bimbingan manasik, dan doa-doa umroh.`
+                        `Assalamu'alaikum Bpk/Ibu ${selectedPilgrim.name},\n\nBerikut adalah akses login akun Portal Mandiri Jamaah resmi Anda:\n\n👤 Username: ${
+                          selectedPilgrim.user?.username ||
+                          (selectedPilgrim.name || "jamaah")
+                            .toLowerCase()
+                            .trim()
+                            .replace(/\s+/g, "_")
+                            .replace(/[^a-z0-9_]/g, "")
+                        }\n🔑 Password: ${selectedPilgrim.portalPassword || "123456"}\n\nSilakan login untuk memantau kelengkapan dokumen paspor, status visa, jadwal bimbingan manasik, dan doa-doa umroh.`
                       )}`}
                       target="_blank"
                       rel="noreferrer"

@@ -20,38 +20,59 @@ export async function GET() {
       });
     }
 
-    // 2. Auto-sync: Make sure every registered pilgrim has an active User account with password
+    // Helper to generate clean username from pilgrim name
+    const generatePilgrimUsername = (name: string) => {
+      return (name || "jamaah")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, "");
+    };
+
+    // 2. Auto-sync: Make sure every registered pilgrim has an active User account with name-based username
     const allPilgrims = await prisma.pilgrim.findMany({
       include: { user: true },
     });
 
     for (const p of allPilgrims) {
+      const targetUsername = generatePilgrimUsername(p.name);
+      const pPassword = p.portalPassword || "123456";
+
       if (!p.user) {
-        const cleanUsername = (p.nik || p.phone || `jamaah_${p.id.slice(0, 6)}`).toLowerCase().trim();
-        const pPassword = p.portalPassword || "123456";
-        
-        // Find if user with this username already exists
-        let existingUser = await prisma.user.findUnique({ where: { username: cleanUsername } });
-        if (!existingUser) {
-          await prisma.user.create({
-            data: {
-              name: p.name,
-              username: cleanUsername,
-              password: pPassword,
-              plainPassword: pPassword,
-              email: p.email || null,
-              phone: p.phone || null,
-              role: "PILGRIM",
-              isActive: true,
-              pilgrimId: p.id,
-            },
-          });
-        } else {
+        // Check if username is taken by another record
+        let existingUser = await prisma.user.findUnique({ where: { username: targetUsername } });
+        let finalUsername = targetUsername;
+        if (existingUser && existingUser.pilgrimId !== p.id) {
+          finalUsername = `${targetUsername}_${p.nik?.slice(-4) || p.id.slice(0, 4)}`;
+        }
+
+        await prisma.user.create({
+          data: {
+            name: p.name,
+            username: finalUsername,
+            password: pPassword,
+            plainPassword: pPassword,
+            email: p.email || null,
+            phone: p.phone || null,
+            role: "PILGRIM",
+            isActive: true,
+            pilgrimId: p.id,
+          },
+        });
+      } else {
+        // If user already exists but username is NIK or numbers, migrate to name-based username
+        if (p.user.username === p.nik || /^\d{10,20}$/.test(p.user.username)) {
+          let existingUser = await prisma.user.findUnique({ where: { username: targetUsername } });
+          let finalUsername = targetUsername;
+          if (existingUser && existingUser.id !== p.user.id) {
+            finalUsername = `${targetUsername}_${p.nik?.slice(-4) || p.id.slice(0, 4)}`;
+          }
           await prisma.user.update({
-            where: { id: existingUser.id },
+            where: { id: p.user.id },
             data: {
-              pilgrimId: p.id,
-              plainPassword: existingUser.plainPassword || pPassword,
+              username: finalUsername,
+              name: p.name,
+              plainPassword: p.user.plainPassword || pPassword,
             },
           });
         }

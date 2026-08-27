@@ -107,11 +107,21 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     // Sync linked User account
     try {
-      const cleanUsername = (updated.nik || updated.phone || `jamaah_${updated.id.slice(0, 6)}`).toLowerCase().trim();
+      const targetUsername = (updated.name || "jamaah")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, "");
       const finalPass = body.portalPassword || updated.portalPassword || "123456";
 
+      let existingUser = await prisma.user.findUnique({ where: { username: targetUsername } });
+      let finalUsername = targetUsername;
+      if (existingUser && existingUser.pilgrimId !== updated.id) {
+        finalUsername = `${targetUsername}_${updated.nik?.slice(-4) || updated.id.slice(0, 4)}`;
+      }
+
       await prisma.user.upsert({
-        where: { username: cleanUsername },
+        where: { username: finalUsername },
         update: {
           name: updated.name,
           phone: updated.phone,
@@ -122,7 +132,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         },
         create: {
           name: updated.name,
-          username: cleanUsername,
+          username: finalUsername,
           password: finalPass,
           plainPassword: finalPass,
           phone: updated.phone,

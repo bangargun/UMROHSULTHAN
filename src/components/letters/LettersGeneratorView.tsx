@@ -779,6 +779,9 @@ export default function LettersGeneratorView({
                     <p className="text-[10px] text-slate-600 leading-tight mt-0.5">
                       {travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}
                     </p>
+                    <p className="text-[10px] font-semibold text-slate-700 leading-tight mt-0.5">
+                      Telp / WhatsApp: {travelSettings.phone || "0821-6733-9464"} {travelSettings.email && ` • Email: ${travelSettings.email}`}
+                    </p>
                   </div>
                 </div>
 
