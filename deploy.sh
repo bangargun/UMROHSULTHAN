@@ -6,6 +6,7 @@ echo "  DEPLOYSULTHAN - HOSTINGER PRODUCTION DEPLOYMENT SCRIPT "
 echo "========================================================="
 
 echo "[1/5] Pulling Latest Updates from GitHub..."
+git stash || true
 git pull origin main
 
 echo "[2/5] Installing Dependencies..."
