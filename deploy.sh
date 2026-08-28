@@ -9,7 +9,7 @@ echo "[1/5] Pulling Latest Updates from GitHub..."
 git pull origin main
 
 echo "[2/5] Installing Dependencies..."
-npm install --production=false
+npm install --include=dev
 
 echo "[3/5] Generating Database Client & Syncing Schema..."
 npx prisma generate
