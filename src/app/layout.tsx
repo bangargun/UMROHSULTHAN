@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
 
 export const metadata: Metadata = {
   title: "Sulthan Haramain - Portal Mandiri & Aplikasi Umroh",
@@ -36,6 +37,7 @@ export default function RootLayout({
       </head>
       <body className="bg-slate-50 text-slate-900 min-h-screen">
         {children}
+        <PwaInstallPrompt />
       </body>
     </html>
   );
