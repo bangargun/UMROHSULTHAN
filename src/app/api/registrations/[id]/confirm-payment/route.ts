@@ -25,8 +25,16 @@ export async function POST(
     });
 
     if (!pilgrim) {
+      const healthInfo = [
+        reg.chronicDiseases ? `Penyakit Kronis: ${reg.chronicDiseases}` : null,
+        reg.wheelchairAssistance ? `Butuh Kursi Roda: ${reg.wheelchairNotes || "Ya"}` : null,
+      ]
+        .filter(Boolean)
+        .join(" | ");
+
       pilgrim = await prisma.pilgrim.create({
         data: {
+          leadId: reg.leadId || null,
           packageId: reg.packageId,
           name: reg.fullName,
           nik: reg.nik,
@@ -41,6 +49,8 @@ export async function POST(
           city: reg.city || null,
           province: reg.province || null,
           roomType: reg.roomType || "QUAD",
+          uniformSize: reg.uniformSize || "L",
+          healthNotes: healthInfo || null,
           status: "DP_PAID",
         },
       });

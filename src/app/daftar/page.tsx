@@ -49,6 +49,11 @@ export default function PublicRegistrationPage() {
     address: "",
     city: "",
     province: "",
+    uniformSize: "L", // S, M, L, XL, XXL, XXXL, Custom
+    chronicDiseases: [] as string[],
+    customChronicDisease: "",
+    wheelchairAssistance: false,
+    wheelchairNotes: "Bawa kursi roda sendiri",
     channel: "DIRECT", // DIRECT or AGENT
     agentId: "",
     agentName: "",
@@ -195,10 +200,20 @@ export default function PublicRegistrationPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const selectedDiseases = formData.chronicDiseases.includes("LAINNYA") && formData.customChronicDisease
+        ? [...formData.chronicDiseases.filter((d) => d !== "LAINNYA"), formData.customChronicDisease]
+        : formData.chronicDiseases;
+
+      const payload = {
+        ...formData,
+        chronicDiseases: selectedDiseases.length > 0 ? selectedDiseases.join(", ") : "Tidak Ada (Sehat)",
+        wheelchairNotes: formData.wheelchairAssistance ? formData.wheelchairNotes : null,
+      };
+
       const res = await fetch("/api/registrations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -632,6 +647,180 @@ export default function PublicRegistrationPage() {
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs bg-white"
                 />
+              </div>
+
+              {/* SEKSI: UKURAN BAJU SERAGAM */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div>
+                  <label className="text-xs font-black text-slate-900 block">
+                    👕 Ukuran Baju Seragam & Batik Travel Resmi *
+                  </label>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Digunakan untuk pembuatan batik seragam resmi, mukena/kain ihram, dan kelengkapan koper.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
+                  {["S", "M", "L", "XL", "XXL", "XXXL", "CUSTOM"].map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, uniformSize: size })}
+                      className={`py-2 px-3 rounded-xl font-black text-xs transition-all ${
+                        formData.uniformSize === size
+                          ? "bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-600/30"
+                          : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      {size === "CUSTOM" ? "Khusus" : size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* SEKSI: RIWAYAT PENYAKIT KRONIS */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div>
+                  <label className="text-xs font-black text-slate-900 block">
+                    🩺 Riwayat Kesehatan & Penyakit Kronis
+                  </label>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Penting untuk keselamatan & kesiapan tim medis/handling bandara di Arab Saudi.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { id: "TIDAK_ADA", label: "✅ Tidak Ada (Sehat)" },
+                    { id: "HIPERTENSI", label: "Hipertensi (Darah Tinggi)" },
+                    { id: "DIABETES", label: "Diabetes Melitus (Gula)" },
+                    { id: "JANTUNG", label: "Kelainan Jantung / Pasang Ring" },
+                    { id: "STROKE", label: "Stroke Ringan / Riwayat Stroke" },
+                    { id: "GINJAL", label: "Gangguan Ginjal" },
+                    { id: "ASMA", label: "Asma / Sesak Napas" },
+                    { id: "DEMENSIA", label: "Kesadaran Diri Rendah / Demensia" },
+                    { id: "LAINNYA", label: "Lainnya (Tuliskan)" },
+                  ].map((disease) => {
+                    const isSelected =
+                      disease.id === "TIDAK_ADA"
+                        ? formData.chronicDiseases.length === 0 || formData.chronicDiseases.includes("Tidak Ada (Sehat)")
+                        : formData.chronicDiseases.includes(disease.label);
+
+                    return (
+                      <button
+                        key={disease.id}
+                        type="button"
+                        onClick={() => {
+                          if (disease.id === "TIDAK_ADA") {
+                            setFormData({
+                              ...formData,
+                              chronicDiseases: ["Tidak Ada (Sehat)"],
+                              customChronicDisease: "",
+                            });
+                          } else {
+                            const withoutHealthy = formData.chronicDiseases.filter(
+                              (d) => d !== "Tidak Ada (Sehat)"
+                            );
+                            if (isSelected) {
+                              setFormData({
+                                ...formData,
+                                chronicDiseases: withoutHealthy.filter((d) => d !== disease.label),
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                chronicDiseases: [...withoutHealthy, disease.label],
+                              });
+                            }
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                          isSelected
+                            ? "bg-emerald-700 text-white shadow-2xs"
+                            : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        {disease.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {formData.chronicDiseases.includes("Lainnya (Tuliskan)") && (
+                  <div className="pt-1">
+                    <input
+                      type="text"
+                      placeholder="Tuliskan nama riwayat penyakit lainnya..."
+                      value={formData.customChronicDisease}
+                      onChange={(e) => setFormData({ ...formData, customChronicDisease: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* SEKSI: KEBUTUHAN KURSI RODA */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div>
+                  <label className="text-xs font-black text-slate-900 block">
+                    ♿ Apakah Membutuhkan Alat Bantu Kursi Roda (Wheelchair)?
+                  </label>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Bantuan mobilitas saat prosesi Tawaf, Sa'i, maupun perpindahan hotel di Tanah Suci.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, wheelchairAssistance: false })}
+                    className={`py-2.5 px-4 rounded-xl font-bold text-xs transition-all ${
+                      !formData.wheelchairAssistance
+                        ? "bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-600/30"
+                        : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    ❌ Tidak Memerlukan
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, wheelchairAssistance: true })}
+                    className={`py-2.5 px-4 rounded-xl font-bold text-xs transition-all ${
+                      formData.wheelchairAssistance
+                        ? "bg-amber-500 text-slate-950 font-black shadow-xs ring-2 ring-amber-500/30"
+                        : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    ✅ Ya, Memerlukan
+                  </button>
+                </div>
+
+                {formData.wheelchairAssistance && (
+                  <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200 space-y-2">
+                    <label className="text-[11px] font-bold text-amber-950 block">
+                      Opsi Kursi Roda:
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {[
+                        "Bawa kursi roda sendiri dari Indonesia",
+                        "Perlu sewa pendorong resmi di Masjidil Haram & Nabawi",
+                      ].map((opt) => (
+                        <div
+                          key={opt}
+                          onClick={() => setFormData({ ...formData, wheelchairNotes: opt })}
+                          className={`p-2.5 rounded-lg border cursor-pointer font-bold ${
+                            formData.wheelchairNotes === opt
+                              ? "bg-amber-400 text-slate-950 border-amber-500"
+                              : "bg-white text-slate-700 border-slate-200"
+                          }`}
+                        >
+                          {opt}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Data Paspor (Opsional) */}

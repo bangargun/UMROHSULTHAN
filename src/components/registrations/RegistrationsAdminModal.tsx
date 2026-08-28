@@ -411,13 +411,29 @@ export default function RegistrationsAdminModal({
                 </div>
 
                 {/* Info Paket & Kamar */}
-                <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1">
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1.5">
                   <p className="font-bold text-slate-900">{selectedReg.package?.name}</p>
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <span>Kamar: <strong>{selectedReg.roomType}</strong></span>
+                    <span>•</span>
+                    <span>Baju: <strong className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[10px]">Size {selectedReg.uniformSize || "L"}</strong></span>
+                  </div>
                   <p className="text-slate-600">
-                    Kamar: {selectedReg.roomType} • Tagihan DP: {formatCurrency(selectedReg.dpAmount)}
+                    Tagihan DP: <strong>{formatCurrency(selectedReg.dpAmount)}</strong> • Invoice: <strong>{selectedReg.invoiceNumber || "-"}</strong>
+                  </p>
+                </div>
+
+                {/* Info Riwayat Kesehatan & Kursi Roda */}
+                <div className="bg-slate-100/80 p-3 rounded-xl border border-slate-200 space-y-1 text-[11px]">
+                  <p className="font-bold text-slate-800">Catatan Medis & Kebutuhan Khusus:</p>
+                  <p className="text-slate-600">
+                    🩺 Penyakit Kronis: <strong className="text-slate-900">{selectedReg.chronicDiseases || "Tidak Ada (Sehat)"}</strong>
                   </p>
                   <p className="text-slate-600">
-                    Invoice: <strong>{selectedReg.invoiceNumber || "-"}</strong>
+                    ♿ Kursi Roda:{" "}
+                    <strong className={selectedReg.wheelchairAssistance ? "text-amber-800" : "text-slate-700"}>
+                      {selectedReg.wheelchairAssistance ? `Ya (${selectedReg.wheelchairNotes || "Perlu Bantuan"})` : "Tidak"}
+                    </strong>
                   </p>
                 </div>
 

@@ -572,12 +572,19 @@ model Registration {
   pricePackage        Float     @default(0)
   dpAmount            Float     @default(5000000)
   
+  // Ukuran Baju & Kesehatan
+  uniformSize          String    @default("L") // S, M, L, XL, XXL, XXXL, Custom
+  chronicDiseases      String?   // e.g. "Hipertensi, Diabetes Melitus, Stroke Ringan"
+  wheelchairAssistance Boolean   @default(false)
+  wheelchairNotes      String?   // e.g. "Bawa sendiri" / "Perlu sewa pendorong di Mekkah"
+
   // Jalur Pendaftaran & Referral
   channel             String    @default("DIRECT") // DIRECT, AGENT, REFERRAL
   agentId             String?
   agentName           String?
   referralName        String?
-  
+  leadId              String?   // Terkoneksi ke Leads CRM
+
   // Dokumen & Bukti Google Drive
   ktpFileUrl          String?
   passportFileUrl     String?

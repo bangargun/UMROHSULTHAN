@@ -64,6 +64,10 @@ export async function POST(request: Request) {
       province,
       packageId,
       roomType = "QUAD",
+      uniformSize = "L",
+      chronicDiseases,
+      wheelchairAssistance = false,
+      wheelchairNotes,
       channel = "DIRECT",
       agentId,
       agentName,
@@ -120,6 +124,36 @@ export async function POST(request: Request) {
     const regNumber = `REG-${dateStr}-${seq}`;
     const idJamaah = `JAM-${dateStr}-${seq}`;
 
+    // 1. Catat Otomatis ke Prospek Marketing & Pencarian Jamaah (Leads CRM)
+    let leadId: string | null = null;
+    try {
+      const createdLead = await prisma.lead.create({
+        data: {
+          name: fullName.trim().toUpperCase(),
+          phone: phone.trim(),
+          email: email ? email.trim() : null,
+          city: city ? city.trim() : "Tebing Tinggi",
+          source: channel === "AGENT" ? "AGENT" : "WEBSITE",
+          agentName: agentName || null,
+          referralPilgrimName: referralName || null,
+          packageId: packageId,
+          status: "CLOSING_DP", // Status prospek siap bayar DP
+          budget: pricePackage,
+          estimatedPax: 1,
+          notes: `[Pendaftaran Online ${regNumber}] ID Jamaah: ${idJamaah} | Paket: ${pkg.name} | Kamar: ${roomType} | Baju: ${uniformSize} | Riwayat Penyakit: ${chronicDiseases || "Tidak Ada"} ${wheelchairAssistance ? `| Kursi Roda: ${wheelchairNotes || "Ya"}` : ""}`.trim(),
+          interactions: {
+            create: {
+              type: "WHATSAPP",
+              summary: `Calon jamaah mendaftar online melalui Landing Page resmi (No. Reg: ${regNumber}). Menunggu verifikasi DP.`,
+            },
+          },
+        },
+      });
+      leadId = createdLead.id;
+    } catch (leadErr) {
+      console.error("Gagal sinkronisasi Lead CRM:", leadErr);
+    }
+
     // Upload KTP jika ada
     let ktpFileUrl: string | null = null;
     if (ktpBase64) {
@@ -171,10 +205,15 @@ export async function POST(request: Request) {
         roomType,
         pricePackage,
         dpAmount: 5000000,
+        uniformSize: uniformSize || "L",
+        chronicDiseases: chronicDiseases || null,
+        wheelchairAssistance: Boolean(wheelchairAssistance),
+        wheelchairNotes: wheelchairNotes || null,
         channel,
         agentId: agentId || null,
         agentName: agentName || null,
         referralName: referralName || null,
+        leadId,
         ktpFileUrl,
         passportFileUrl,
         googleDriveFolderId: GOOGLE_DRIVE_MAIN_FOLDER_ID,
