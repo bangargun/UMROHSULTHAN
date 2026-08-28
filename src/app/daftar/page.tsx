@@ -72,7 +72,23 @@ export default function PublicRegistrationPage() {
 
         if (pkgRes.ok) {
           const pkgData = await pkgRes.json();
-          const activePkgs = pkgData.filter((p: any) => p.status === "ACTIVE");
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+          const activePkgs = pkgData
+            .map((p: any) => {
+              const depDate = new Date(p.departureDate);
+              const diffTime = depDate.getTime() - today.getTime();
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              return {
+                ...p,
+                daysUntilDeparture: diffDays,
+                daysUntilCutoff: diffDays - 10,
+                registrationOpen: diffDays >= 10,
+              };
+            })
+            .filter((p: any) => p.status === "ACTIVE" && p.registrationOpen);
+
           setPackages(activePkgs);
           if (activePkgs.length > 0) {
             setFormData((prev) => ({ ...prev, packageId: activePkgs[0].id }));
@@ -373,65 +389,89 @@ export default function PublicRegistrationPage() {
               </div>
 
               {/* Package Selection Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {packages.map((pkg) => {
-                  const isSelected = formData.packageId === pkg.id;
-                  return (
-                    <div
-                      key={pkg.id}
-                      onClick={() => setFormData({ ...formData, packageId: pkg.id })}
-                      className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
-                        isSelected
-                          ? "border-emerald-600 bg-emerald-50/50 shadow-md ring-2 ring-emerald-600/20"
-                          : "border-slate-200 hover:border-slate-300 bg-white"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="text-[10px] font-mono font-bold bg-slate-900 text-white px-2 py-0.5 rounded">
-                            {pkg.code}
-                          </span>
-                          <h4 className="text-base font-black text-slate-900 mt-1.5">{pkg.name}</h4>
-                          <p className="text-xs text-slate-600">
-                            Durasi: <strong>{pkg.durationDays} Hari</strong> • ✈️ {pkg.airline}
+              {packages.length === 0 ? (
+                <div className="text-center py-12 px-4 rounded-2xl bg-amber-50/60 border border-amber-200 text-amber-900 space-y-2">
+                  <Clock className="w-8 h-8 text-amber-600 mx-auto opacity-70" />
+                  <p className="text-sm font-black">Pendaftaran Online Sedang Ditutup</p>
+                  <p className="text-xs text-amber-800/80 max-w-md mx-auto">
+                    Saat ini belum ada paket umroh dengan masa pendaftaran aktif (minimal H-10 sebelum jadwal keberangkatan). Silakan hubungi CS kami untuk info pembukaan jadwal program berikutnya.
+                  </p>
+                  <a
+                    href="https://wa.me/6282167339464?text=Assalamu%27alaikum%20Admin%20Sulthan%20Haramain,%20saya%20ingin%20info%20jadwal%20paket%20umroh%20berikutnya."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 mt-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-all"
+                  >
+                    <Phone className="w-3.5 h-3.5" /> Tanya Jadwal ke WhatsApp CS
+                  </a>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {packages.map((pkg) => {
+                    const isSelected = formData.packageId === pkg.id;
+                    return (
+                      <div
+                        key={pkg.id}
+                        onClick={() => setFormData({ ...formData, packageId: pkg.id })}
+                        className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
+                          isSelected
+                            ? "border-emerald-600 bg-emerald-50/50 shadow-md ring-2 ring-emerald-600/20"
+                            : "border-slate-200 hover:border-slate-300 bg-white"
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-mono font-bold bg-slate-900 text-white px-2 py-0.5 rounded">
+                                {pkg.code}
+                              </span>
+                              <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300">
+                                ⏳ Sisa {pkg.daysUntilCutoff} Hari Lagi
+                              </span>
+                            </div>
+                            <h4 className="text-base font-black text-slate-900 mt-1.5">{pkg.name}</h4>
+                            <p className="text-xs text-slate-600">
+                              Durasi: <strong>{pkg.durationDays} Hari</strong> • ✈️ {pkg.airline}
+                            </p>
+                          </div>
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                              isSelected ? "border-emerald-600 bg-emerald-600" : "border-slate-300"
+                            }`}
+                          >
+                            {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                          </div>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-slate-200/80 space-y-1 text-xs text-slate-600">
+                          <p className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                            Berangkat: <strong>{formatDate(pkg.departureDate, "dd MMM yyyy")}</strong>
+                            <span className="text-[10px] text-slate-400">({pkg.daysUntilDeparture} hari lagi)</span>
+                          </p>
+                          <p className="flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+                            Hotel: {pkg.hotelMakkah} & {pkg.hotelMadinah}
                           </p>
                         </div>
-                        <div
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            isSelected ? "border-emerald-600 bg-emerald-600" : "border-slate-300"
-                          }`}
-                        >
-                          {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                        </div>
-                      </div>
 
-                      <div className="mt-4 pt-3 border-t border-slate-200/80 space-y-1 text-xs text-slate-600">
-                        <p className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                          Berangkat: <strong>{formatDate(pkg.departureDate, "dd MMM yyyy")}</strong>
-                        </p>
-                        <p className="flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-                          Hotel: {pkg.hotelMakkah} & {pkg.hotelMadinah}
-                        </p>
-                      </div>
-
-                      <div className="mt-4 flex justify-between items-end bg-white p-3 rounded-xl border border-slate-200">
-                        <div>
-                          <span className="text-[10px] text-slate-400 block font-bold">Mulai dari:</span>
-                          <span className="text-sm font-black text-emerald-700">
-                            {formatCurrency(pkg.priceQuad)}
+                        <div className="mt-4 flex justify-between items-end bg-white p-3 rounded-xl border border-slate-200">
+                          <div>
+                            <span className="text-[10px] text-slate-400 block font-bold">Mulai dari:</span>
+                            <span className="text-sm font-black text-emerald-700">
+                              {formatCurrency(pkg.priceQuad)}
+                            </span>
+                            <span className="text-[10px] text-slate-500"> /pax (Quad)</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                            Sisa {pkg.quota - pkg.bookedCount} Seat
                           </span>
-                          <span className="text-[10px] text-slate-500"> /pax (Quad)</span>
                         </div>
-                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                          Sisa {pkg.quota - pkg.bookedCount} Seat
-                        </span>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Room Type Selector */}
               {selectedPackage && (

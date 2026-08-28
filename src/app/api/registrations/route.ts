@@ -92,6 +92,22 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validasi Cutoff Pendaftaran: Maksimal H-10 sebelum keberangkatan
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const depDate = new Date(pkg.departureDate);
+    const diffTime = depDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 10) {
+      return NextResponse.json(
+        {
+          error: `Pendaftaran untuk paket "${pkg.name}" telah ditutup karena batas akhir pendaftaran adalah H-10 sebelum keberangkatan (Keberangkatan: ${depDate.toISOString().split("T")[0]}, sisa ${diffDays} hari).`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Tentukan harga berdasarkan tipe kamar
     let pricePackage = pkg.priceQuad;
     if (roomType === "TRIPLE") pricePackage = pkg.priceTriple;
