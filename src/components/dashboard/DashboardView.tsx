@@ -58,6 +58,13 @@ export default function DashboardView({ data, onNavigate }: DashboardViewProps) 
 
           <div className="flex flex-wrap gap-2.5">
             <button
+              onClick={() => onNavigate("pilgrims")}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 px-4 py-2.5 text-xs font-black text-slate-950 shadow-sm transition-all"
+            >
+              <Sparkles className="h-4 w-4" />
+              📥 Pendaftaran Online
+            </button>
+            <button
               onClick={() => onNavigate("leads")}
               className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-emerald-900 shadow-sm transition-all hover:bg-emerald-50 hover:shadow"
             >

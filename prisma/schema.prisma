@@ -26,20 +26,21 @@ model User {
 }
 
 model TravelSetting {
-  id               String   @id @default("default-settings")
-  companyName      String   @default("PT SULTHAN HARAMAIN TOUR & TRAVEL")
-  licenseNumber    String   @default("PPIU Kemenag RI No. U.412 Tahun 2022")
-  kemenhanLicense  String?  @default("Izin Khusus Kemenhan RI No. B/108/M/XII/2023")
-  address          String   @default("Sulthan Haramain Tower, Jl. Prof. Dr. Satrio No. 88, Kuningan, Jakarta Selatan 12940")
-  phone            String   @default("(021) 5290-8888 / 0811-9876-5432")
-  email            String   @default("salam@sulthanharamain.com")
-  website          String   @default("www.sulthanharamain.com")
-  directorName     String   @default("H. Sulthan Syarif, Lc., M.A.")
-  directorTitle    String   @default("Direktur Utama")
-  bankBSI          String   @default("8888-999-123 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL")
-  bankBCA          String   @default("731-888-9900 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL")
-  bankMandiri      String   @default("137-00-8888999-1 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL")
-  updatedAt        DateTime @updatedAt
+  id                  String   @id @default("default-settings")
+  companyName         String   @default("PT SULTHAN HARAMAIN TOUR & TRAVEL")
+  licenseNumber       String   @default("PPIU Kemenag RI No. U.412 Tahun 2022")
+  kemenhanLicense     String?  @default("Izin Khusus Kemenhan RI No. B/108/M/XII/2023")
+  address             String   @default("Sulthan Haramain Tower, Jl. Prof. Dr. Satrio No. 88, Kuningan, Jakarta Selatan 12940")
+  phone               String   @default("(021) 5290-8888 / 0811-9876-5432")
+  email               String   @default("salam@sulthanharamain.com")
+  website             String   @default("www.sulthanharamain.com")
+  directorName        String   @default("H. Sulthan Syarif, Lc., M.A.")
+  directorTitle       String   @default("Direktur Utama")
+  bankBSI             String   @default("8888-999-123 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL")
+  bankBCA             String   @default("731-888-9900 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL")
+  bankMandiri         String   @default("137-00-8888999-1 a.n PT SULTHAN HARAMAIN TOUR & TRAVEL")
+  googleDriveFolderId String?  @default("161j-oTJ8WgbCYRKsxXCST3wE7CAHU3XY")
+  updatedAt           DateTime @updatedAt
 }
 
 model RequirementTemplate {
@@ -53,13 +54,13 @@ model RequirementTemplate {
 }
 
 model Package {
-  id                 String    @id @default(uuid())
-  code               String    @unique
+  id                 String         @id @default(uuid())
+  code               String         @unique
   name               String
   description        String?
   departureDate      DateTime
   returnDate         DateTime
-  durationDays       Int       @default(9)
+  durationDays       Int            @default(9)
   hotelMakkah        String
   hotelMadinah       String
   airline            String
@@ -67,16 +68,17 @@ model Package {
   priceTriple        Float
   priceDouble        Float
   quota              Int
-  bookedCount        Int       @default(0)
-  commissionAgent    Float     @default(1500000) // Komisi Mitra / Agen per Pax
-  commissionReferral Float     @default(500000)  // Komisi Referral Alumni per Pax
-  status             String    @default("ACTIVE") // ACTIVE, FULL, COMPLETED, DRAFT
+  bookedCount        Int            @default(0)
+  commissionAgent    Float          @default(1500000) // Komisi Mitra / Agen per Pax
+  commissionReferral Float          @default(500000)  // Komisi Referral Alumni per Pax
+  status             String         @default("ACTIVE") // ACTIVE, FULL, COMPLETED, DRAFT
   pilgrims           Pilgrim[]
   leads              Lead[]
   expenses           Expense[]
   itineraries        ItineraryDay[]
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  registrations      Registration[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 }
 
 model Lead {
@@ -544,6 +546,57 @@ model ItineraryDay {
   updatedAt   DateTime  @updatedAt
 
   @@unique([packageId, dayNumber])
+}
+
+model Registration {
+  id                  String    @id @default(uuid())
+  regNumber           String    @unique // REG-2608-0001
+  idJamaah            String    // JAM-2608-0001
+  fullName            String
+  phone               String
+  email               String?
+  nik                 String
+  passportNumber      String?
+  passportExpiry      DateTime?
+  placeOfBirth        String?
+  dateOfBirth         DateTime?
+  gender              String    @default("MALE") // MALE, FEMALE
+  address             String?
+  city                String?
+  province            String?
+  
+  // Paket & Kamar
+  packageId           String
+  package             Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  roomType            String    @default("QUAD") // QUAD, TRIPLE, DOUBLE
+  pricePackage        Float     @default(0)
+  dpAmount            Float     @default(5000000)
+  
+  // Jalur Pendaftaran & Referral
+  channel             String    @default("DIRECT") // DIRECT, AGENT, REFERRAL
+  agentId             String?
+  agentName           String?
+  referralName        String?
+  
+  // Dokumen & Bukti Google Drive
+  ktpFileUrl          String?
+  passportFileUrl     String?
+  transferProofUrl    String?
+  googleDriveFolderId String?
+  
+  // Lifecycle Status
+  status              String    @default("NEW") // NEW, VERIFIED, PAYMENT_PENDING, PAID, REJECTED
+  rejectionReason     String?
+  verifiedAt          DateTime?
+  paidAt              DateTime?
+  
+  // Relasi Pilgrim & Invoice
+  pilgrimId           String?   @unique
+  invoiceNumber       String?
+  
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }
 
 

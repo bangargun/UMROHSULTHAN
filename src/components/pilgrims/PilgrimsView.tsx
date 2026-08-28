@@ -35,6 +35,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { formatCurrency, formatDate, getStatusBadge } from "@/lib/utils";
+import RegistrationsAdminModal from "@/components/registrations/RegistrationsAdminModal";
 
 interface PilgrimsViewProps {
   pilgrims: any[];
@@ -57,6 +58,7 @@ export default function PilgrimsView({
   const [selectedPilgrim, setSelectedPilgrim] = useState<any | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isRegistrationsModalOpen, setIsRegistrationsModalOpen] = useState(false);
   const [editingPilgrimId, setEditingPilgrimId] = useState<string | null>(null);
 
   // Helper to calculate age from birth date string
@@ -728,6 +730,13 @@ export default function PilgrimsView({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsRegistrationsModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs font-black text-amber-900 shadow-2xs hover:bg-amber-100 transition-all cursor-pointer"
+          >
+            <Sparkles className="h-4 w-4 text-amber-600" />
+            📥 Antrean Pendaftaran Online
+          </button>
           <button
             onClick={handleExportCSV}
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
@@ -3450,6 +3459,13 @@ export default function PilgrimsView({
           </div>
         </div>
       )}
+
+      {/* Registrations Management Modal */}
+      <RegistrationsAdminModal
+        isOpen={isRegistrationsModalOpen}
+        onClose={() => setIsRegistrationsModalOpen(false)}
+        onRefreshPilgrims={onRefresh}
+      />
     </div>
   );
 }
