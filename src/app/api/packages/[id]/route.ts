@@ -42,6 +42,16 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       status,
     } = body;
 
+    let calculatedReturnDate: Date | undefined = returnDate ? new Date(returnDate) : undefined;
+    if (departureDate && durationDays) {
+      const dep = new Date(departureDate);
+      const days = parseInt(durationDays) || 9;
+      if (!calculatedReturnDate || isNaN(calculatedReturnDate.getTime()) || calculatedReturnDate <= dep) {
+        calculatedReturnDate = new Date(dep);
+        calculatedReturnDate.setDate(dep.getDate() + (days - 1));
+      }
+    }
+
     const updated = await prisma.package.update({
       where: { id: params.id },
       data: {
@@ -49,7 +59,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         name,
         description,
         departureDate: departureDate ? new Date(departureDate) : undefined,
-        returnDate: returnDate ? new Date(returnDate) : undefined,
+        returnDate: calculatedReturnDate,
         durationDays: durationDays ? parseInt(durationDays) : undefined,
         hotelMakkah,
         hotelMadinah,

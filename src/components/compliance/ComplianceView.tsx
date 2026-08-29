@@ -94,9 +94,15 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
   // Export to CSV formatted for SISKOPATUH
   const handleExportCsv = () => {
     if (filteredData.length === 0) {
-      alert("Tidak ada data untuk diekspor.");
+      alert("Tidak ada data jamaah untuk program paket yang dipilih.");
       return;
     }
+
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    const pkgCode = selectedPkg ? selectedPkg.code : "SEMUA_PAKET";
+    const pkgNameClean = selectedPkg
+      ? selectedPkg.name.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase()
+      : "SEMUA_PROGRAM";
 
     const headers = [
       "NO_URUT",
@@ -166,11 +172,13 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `SISKOPATUH_MANIFEST_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `SISKOPATUH_MANIFEST_${pkgCode}_${pkgNameClean}_${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
+
+  const currentSelectedPkg = packages.find((p) => p.id === selectedPackageId);
 
   return (
     <div className="space-y-6">
@@ -187,23 +195,44 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
               Regulasi SISKOPATUH & Generator ID Card QR
             </h2>
             <p className="mt-1 text-sm text-emerald-100/90 max-w-2xl">
-              Ekspor manifest data jamaah sesuai format resmi SISKOPATUH Kementerian Agama RI serta cetak ID Card & Gelang Jamaah ber-QR Code verifikasi instan.
+              Ekspor manifest data jamaah sesuai format resmi SISKOPATUH Kementerian Agama RI per program paket keberangkatan.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Pilihan Program Paket Keberangkatan di Header */}
+            <div className="bg-emerald-950/80 p-1 rounded-xl border border-emerald-400/30 flex items-center">
+              <select
+                value={selectedPackageId}
+                onChange={(e) => setSelectedPackageId(e.target.value)}
+                className="bg-transparent text-xs font-bold text-white px-2 py-1.5 focus:outline-none cursor-pointer"
+              >
+                <option value="ALL" className="bg-slate-900 text-white">
+                  📂 Semua Program Paket ({pilgrims.length} Jamaah)
+                </option>
+                {packages.map((pkg) => {
+                  const pkgPilgrimCount = pilgrims.filter((p) => p.packageId === pkg.id).length;
+                  return (
+                    <option key={pkg.id} value={pkg.id} className="bg-slate-900 text-white">
+                      🛫 {pkg.name} ({pkgPilgrimCount} Jamaah)
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
             {activeSubTab === "SISKOPATUH" ? (
               <button
                 onClick={handleExportCsv}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-emerald-900 shadow-sm transition-all hover:bg-emerald-50 hover:shadow"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 px-4 py-2.5 text-xs font-black text-slate-950 shadow-sm transition-all cursor-pointer"
               >
-                <Download className="h-4 w-4 text-emerald-600" />
-                Ekspor Format SISKOPATUH (.CSV)
+                <Download className="h-4 w-4" />
+                Ekspor SISKOPATUH {currentSelectedPkg ? `(${currentSelectedPkg.code})` : "Semua"} (.CSV)
               </button>
             ) : (
               <button
                 onClick={() => window.print()}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-emerald-900 shadow-sm transition-all hover:bg-emerald-50 hover:shadow"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-emerald-900 shadow-sm transition-all hover:bg-emerald-50 hover:shadow cursor-pointer"
               >
                 <Printer className="h-4 w-4 text-emerald-600" />
                 Cetak Semua ID Card

@@ -62,7 +62,16 @@ export async function GET(request: Request) {
         kodePaket: p.package?.code || "-",
         namaPaket: p.package?.name || "-",
         tanggalKeberangkatan: p.package?.departureDate ? new Date(p.package.departureDate).toISOString().split("T")[0] : "-",
-        tanggalKepulangan: p.package?.returnDate ? new Date(p.package.returnDate).toISOString().split("T")[0] : "-",
+        tanggalKepulangan: (() => {
+          if (!p.package?.departureDate) return "-";
+          const dep = new Date(p.package.departureDate);
+          let ret = p.package.returnDate ? new Date(p.package.returnDate) : null;
+          if (!ret || ret <= dep) {
+            ret = new Date(dep);
+            ret.setDate(dep.getDate() + ((p.package.durationDays || 9) - 1));
+          }
+          return ret.toISOString().split("T")[0];
+        })(),
         maskapai: p.package?.airline || "-",
         hotelMakkah: p.package?.hotelMakkah || "-",
         hotelMadinah: p.package?.hotelMadinah || "-",

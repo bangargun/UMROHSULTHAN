@@ -43,7 +43,13 @@ export async function POST(request: Request) {
 
     const daysCount = parseInt(durationDays) || 9;
     const depDate = new Date(departureDate);
-    const retDate = new Date(returnDate);
+    let retDate = returnDate ? new Date(returnDate) : new Date(depDate);
+
+    // Pastikan tanggal kepulangan valid dan selalu setelah tanggal keberangkatan
+    if (!returnDate || isNaN(retDate.getTime()) || retDate <= depDate) {
+      retDate = new Date(depDate);
+      retDate.setDate(depDate.getDate() + (daysCount - 1));
+    }
 
     const pkg = await prisma.package.create({
       data: {

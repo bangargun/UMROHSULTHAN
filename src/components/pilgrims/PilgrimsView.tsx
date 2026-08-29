@@ -698,18 +698,37 @@ export default function PilgrimsView({
   };
 
   const handleExportCSV = () => {
-    const headers = "No,Nama Jamaah,NIK,No Paspor,Masa Berlaku,No HP,Paket,Kamar,Status\n";
+    if (filteredPilgrims.length === 0) {
+      alert("Tidak ada data jamaah untuk diekspor.");
+      return;
+    }
+
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    const pkgCode = selectedPkg ? selectedPkg.code : "SEMUA_PAKET";
+    const pkgNameClean = selectedPkg
+      ? selectedPkg.name.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase()
+      : "SEMUA_PROGRAM";
+
+    const headers = "No,Nama Jamaah,NIK,No Paspor,Masa Berlaku Paspor,No WhatsApp,Paket Umroh,Tgl Berangkat,Tgl Pulang,Kamar,Ukuran Baju,Catatan Medis,Status\n";
     const rows = filteredPilgrims
-      .map(
-        (p, idx) =>
-          `"${idx + 1}","${p.name}","${p.nik}","${p.passportNumber || "-"}","${p.passportExpiry ? formatDate(p.passportExpiry, "yyyy-MM-dd") : "-"}","${p.phone}","${p.package?.name}","${p.roomType}","${p.status}"`
-      )
+      .map((p, idx) => {
+        const dep = p.package?.departureDate ? formatDate(p.package.departureDate, "yyyy-MM-dd") : "-";
+        let ret = p.package?.returnDate ? formatDate(p.package.returnDate, "yyyy-MM-dd") : "-";
+        if (p.package?.departureDate && (!p.package?.returnDate || new Date(p.package.returnDate) <= new Date(p.package.departureDate))) {
+          const d = new Date(p.package.departureDate);
+          d.setDate(d.getDate() + ((p.package.durationDays || 9) - 1));
+          ret = formatDate(d, "yyyy-MM-dd");
+        }
+        const health = (p.healthNotes || "-").replace(/"/g, '""');
+        return `"${idx + 1}","${p.name}","${p.nik}","${p.passportNumber || "-"}","${p.passportExpiry ? formatDate(p.passportExpiry, "yyyy-MM-dd") : "-"}","${p.phone}","${p.package?.name}","${dep}","${ret}","${p.roomType}","${p.uniformSize || "L"}","${health}","${p.status}"`;
+      })
       .join("\n");
+
     const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `Manifest_Jamaah_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `Manifest_Jamaah_${pkgCode}_${pkgNameClean}_${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
