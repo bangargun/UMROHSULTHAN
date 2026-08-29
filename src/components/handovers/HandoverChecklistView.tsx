@@ -19,6 +19,7 @@ interface HandoverChecklistViewProps {
   handovers: any[];
   pilgrims: any[];
   equipment: any[];
+  packages?: any[];
   onRefresh: () => void;
   initialSearchTerm?: string;
 }
@@ -27,10 +28,13 @@ export default function HandoverChecklistView({
   handovers,
   pilgrims,
   equipment,
+  packages = [],
   onRefresh,
   initialSearchTerm = "",
 }: HandoverChecklistViewProps) {
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
+  const [selectedPackageId, setSelectedPackageId] = useState("ALL");
+  const [modalPackageFilter, setModalPackageFilter] = useState("ALL");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedHandoverForPrint, setSelectedHandoverForPrint] = useState<any | null>(null);
 
@@ -83,10 +87,18 @@ export default function HandoverChecklistView({
     }
   }, [selectedPilgrimId, pilgrims]);
 
-  const filteredHandovers = handovers.filter((h) =>
-    h.recipientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    h.officerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    h.pilgrim?.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredHandovers = handovers.filter((h) => {
+    const matchSearch =
+      h.recipientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      h.officerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      h.pilgrim?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      h.pilgrim?.package?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchPkg = selectedPackageId === "ALL" || h.pilgrim?.packageId === selectedPackageId;
+    return matchSearch && matchPkg;
+  });
+
+  const modalPilgrims = pilgrims.filter(
+    (p) => modalPackageFilter === "ALL" || p.packageId === modalPackageFilter
   );
 
   // Canvas drawing handlers
@@ -215,17 +227,35 @@ export default function HandoverChecklistView({
         </button>
       </div>
 
-      {/* Search */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs no-print">
-        <div className="relative">
+      {/* Search & Package Filter */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs no-print flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Cari nama penerima, jamaah, atau petugas logistik..."
+            placeholder="Cari nama penerima, jamaah, paket, atau petugas logistik..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           />
+        </div>
+
+        <div className="w-full sm:w-auto">
+          <select
+            value={selectedPackageId}
+            onChange={(e) => setSelectedPackageId(e.target.value)}
+            className="w-full sm:w-auto px-3 py-2 text-xs font-bold text-slate-700 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
+          >
+            <option value="ALL">📂 Semua Paket Keberangkatan ({handovers.length} BAST)</option>
+            {packages.map((pkg) => {
+              const count = handovers.filter((h) => h.pilgrim?.packageId === pkg.id).length;
+              return (
+                <option key={pkg.id} value={pkg.id}>
+                  🛫 {pkg.name} ({count} BAST)
+                </option>
+              );
+            })}
+          </select>
         </div>
       </div>
 
@@ -328,20 +358,49 @@ export default function HandoverChecklistView({
             </div>
 
             <form onSubmit={handleSubmitHandover} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700">Filter Paket Keberangkatan</label>
+                  <select
+                    value={modalPackageFilter}
+                    onChange={(e) => {
+                      const nextPkg = e.target.value;
+                      setModalPackageFilter(nextPkg);
+                      const filtered = pilgrims.filter(
+                        (p) => nextPkg === "ALL" || p.packageId === nextPkg
+                      );
+                      if (filtered.length > 0) {
+                        setSelectedPilgrimId(filtered[0].id);
+                      }
+                    }}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-slate-50 font-semibold"
+                  >
+                    <option value="ALL">📂 Semua Paket Keberangkatan</option>
+                    {packages.map((pkg) => (
+                      <option key={pkg.id} value={pkg.id}>
+                        🛫 {pkg.name} ({formatDate(pkg.departureDate, "dd MMM yyyy")})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div>
                   <label className="font-bold text-slate-700">Pilih Jamaah Penerima *</label>
                   <select
                     required
                     value={selectedPilgrimId}
                     onChange={(e) => setSelectedPilgrimId(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white focus:ring-2 focus:ring-emerald-500/20"
+                    className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
                   >
-                    {pilgrims.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} - ({p.package?.name})
-                      </option>
-                    ))}
+                    {modalPilgrims.length === 0 ? (
+                      <option value="">Tidak ada jamaah di paket ini</option>
+                    ) : (
+                      modalPilgrims.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} - ({p.package?.name})
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 

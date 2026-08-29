@@ -342,6 +342,7 @@ export default function Home() {
               handovers={handovers}
               pilgrims={pilgrims}
               equipment={equipment}
+              packages={packages}
               onRefresh={fetchAllData}
             />
           )}
