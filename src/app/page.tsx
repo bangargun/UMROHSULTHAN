@@ -13,6 +13,7 @@ import LogisticsView from "@/components/logistics/LogisticsView";
 import HandoverChecklistView from "@/components/handovers/HandoverChecklistView";
 import RequirementsChecklistView from "@/components/requirements/RequirementsChecklistView";
 import LettersGeneratorView from "@/components/letters/LettersGeneratorView";
+import SavingsManagementView from "@/components/savings/SavingsManagementView";
 import BranchAgentView from "@/components/agents/BranchAgentView";
 import AgentPayoutView from "@/components/agents/AgentPayoutView";
 import SalesFaqView from "@/components/faq/SalesFaqView";
@@ -266,6 +267,13 @@ export default function Home() {
               onRefresh={fetchAllData}
               onNavigateToPilgrim={() => handleNavigateTab("pilgrims")}
               onNavigateToFaq={() => handleNavigateTab("faq")}
+            />
+          )}
+
+          {activeTab === "savings" && (
+            <SavingsManagementView
+              packages={packages}
+              onRefresh={fetchAllData}
             />
           )}
 

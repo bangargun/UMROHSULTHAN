@@ -25,6 +25,7 @@ import {
   DollarSign,
   Zap,
   MessageSquare,
+  Coins,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -79,6 +80,12 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
           desc: "CRM prospek calon jamaah",
           badge: badgeCounts?.leads,
           badgeColor: "bg-blue-100 text-blue-800",
+        },
+        {
+          id: "savings",
+          label: "Tabungan Umroh (DP 2 Jt)",
+          icon: Coins,
+          desc: "Nabung fleksibel & koper awal",
         },
         {
           id: "faq",

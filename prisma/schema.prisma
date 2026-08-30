@@ -77,6 +77,7 @@ model Package {
   expenses           Expense[]
   itineraries        ItineraryDay[]
   registrations      Registration[]
+  savingsAccounts    SavingsAccount[]
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 }
@@ -609,6 +610,69 @@ model Registration {
   notes               String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+}
+
+model SavingsAccount {
+  id                    String               @id @default(uuid())
+  accountNumber         String               @unique // e.g. TAB-2608-0001
+  fullName              String
+  phone                 String
+  email                 String?
+  nik                   String
+  gender                String               @default("MALE") // MALE, FEMALE
+  address               String?
+  city                  String?
+  province              String?
+  uniformSize           String               @default("L") // S, M, L, XL, XXL, XXXL, Custom
+  
+  // Program Paket Target
+  targetPackageId       String?
+  targetPackage         Package?             @relation(fields: [targetPackageId], references: [id], onDelete: SetNull)
+  targetPackageName     String               // e.g. "UMROH REGULER SEPTEMBER 2026 (QUAD)"
+  targetAmount          Float                // Total target biaya paket, e.g. 31500000
+  
+  // Saldo & Status Perlengkapan Koper
+  initialDeposit        Float                @default(2000000) // DP Awal Rp 2.000.000
+  totalBalance          Float                @default(2000000) // Total saldo saat ini
+  equipmentReceived     Boolean              @default(true)    // Koper & perlengkapan sudah diterima
+  equipmentHandoverDate DateTime?            @default(now())
+  
+  // Lifecycle Status
+  status                String               @default("ACTIVE") // ACTIVE, TARGET_REACHED, CONVERTED_TO_PILGRIM, CANCELLED
+  convertedAt           DateTime?
+  pilgrimId             String?              @unique
+  
+  channel               String               @default("DIRECT") // DIRECT, AGENT, REFERRAL
+  agentId               String?
+  agentName             String?
+  referralName          String?
+  
+  // Dokumen & Bukti Google Drive
+  ktpFileUrl            String?
+  transferProofUrl      String?
+  googleDriveFolderId   String?
+  
+  notes                 String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  
+  transactions          SavingsTransaction[]
+}
+
+model SavingsTransaction {
+  id                   String               @id @default(uuid())
+  savingsAccountId     String
+  savingsAccount       SavingsAccount       @relation(fields: [savingsAccountId], references: [id], onDelete: Cascade)
+  receiptNumber        String               @unique // e.g. KWT-TAB-2608-0001
+  amount               Float                // Nominal setoran saat ini, e.g. 1000000
+  currentBalance       Float                // Total saldo setelah setoran ini
+  remainingAmount      Float                // Sisa kekurangan dana menuju target
+  paymentMethod        String               @default("BANK_TRANSFER") // BANK_TRANSFER, CASH, QRIS
+  transactionDate      DateTime             @default(now())
+  proofUrl             String?
+  notes                String?
+  officerName          String?              @default("Admin Keuangan")
+  createdAt            DateTime             @default(now())
 }
 
 
