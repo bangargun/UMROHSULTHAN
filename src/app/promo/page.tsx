@@ -40,7 +40,8 @@ export default function PromoSeptemberPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<any | null>(null);
 
-  // Form State
+  // Form State: Skema Pembayaran & Data Jamaah
+  const [paymentScheme, setPaymentScheme] = useState<"FULL_PAYMENT" | "DP_FLEXIBLE">("FULL_PAYMENT");
   const [formData, setFormData] = useState({
     fullName: "",
     phone: "",
@@ -120,26 +121,40 @@ export default function PromoSeptemberPage() {
     reader.readAsDataURL(file);
   };
 
-  // Pricing Matrix Promo vs Normal (100% Dinamis dari Database)
+  // Pricing Matrix (Dinamis Sesuai Database)
+  // Harga Promo Lunas (Cash Diskon 4 Juta)
   const promoPriceQuad = septemberPackage?.priceQuad || 28700000;
-  const normalPriceQuad = promoPriceQuad + 4000000;
-
   const promoPriceTriple = septemberPackage?.priceTriple || 32700000;
-  const normalPriceTriple = promoPriceTriple + 4000000;
-
   const promoPriceDouble = septemberPackage?.priceDouble || 37700000;
-  const normalPriceDouble = promoPriceDouble + 4000000;
 
-  const getSelectedPromoPrice = () => {
-    if (formData.roomType === "TRIPLE") return promoPriceTriple;
-    if (formData.roomType === "DOUBLE") return promoPriceDouble;
-    return promoPriceQuad;
+  // Harga Normal Reguler (Jika DP 5 Juta & Pelunasan Saat/Setelah Umroh)
+  const normalPriceQuad = promoPriceQuad + 4000000; // Rp 32.700.000
+  const normalPriceTriple = promoPriceTriple + 4000000; // Rp 36.700.000
+  const normalPriceDouble = promoPriceDouble + 4000000; // Rp 41.700.000
+
+  // Nominal Total Paket & Tagihan Awal
+  const getPackagePriceByScheme = () => {
+    if (paymentScheme === "FULL_PAYMENT") {
+      if (formData.roomType === "TRIPLE") return promoPriceTriple;
+      if (formData.roomType === "DOUBLE") return promoPriceDouble;
+      return promoPriceQuad;
+    } else {
+      if (formData.roomType === "TRIPLE") return normalPriceTriple;
+      if (formData.roomType === "DOUBLE") return normalPriceDouble;
+      return normalPriceQuad;
+    }
   };
 
-  const getSelectedNormalPrice = () => {
-    if (formData.roomType === "TRIPLE") return normalPriceTriple;
-    if (formData.roomType === "DOUBLE") return normalPriceDouble;
-    return normalPriceQuad;
+  const getInitialPaymentAmount = () => {
+    if (paymentScheme === "FULL_PAYMENT") {
+      return getPackagePriceByScheme(); // Bayar Lunas Langsung
+    }
+    return 5000000; // DP Rp 5.000.000
+  };
+
+  const getRemainingSettlementAmount = () => {
+    if (paymentScheme === "FULL_PAYMENT") return 0;
+    return getPackagePriceByScheme() - 5000000; // Rp 32.700.000 - 5.000.000 = Rp 27.700.000
   };
 
   const remainingQuota = septemberPackage
@@ -159,6 +174,15 @@ export default function PromoSeptemberPage() {
           ? formData.previousPackageName
           : null;
 
+      const finalPrice = getPackagePriceByScheme();
+      const initialPay = getInitialPaymentAmount();
+      const remainingPay = getRemainingSettlementAmount();
+
+      const schemeText =
+        paymentScheme === "FULL_PAYMENT"
+          ? `[SKEMA LUNAS LANGSUNG PROMO] Bayar Lunas ${formatCurrency(finalPrice)} (Hemat Diskon Rp 4 Juta).`
+          : `[SKEMA DP 5 JUTA] DP Awal: Rp 5.000.000,- | Total Paket: ${formatCurrency(finalPrice)} | Sisa Pelunasan: ${formatCurrency(remainingPay)} (Dilunasi Saat/Setelah Umroh).`;
+
       const payload = {
         fullName: formData.fullName,
         phone: formData.phone,
@@ -169,8 +193,8 @@ export default function PromoSeptemberPage() {
         address: formData.address,
         packageId: septemberPackage?.id,
         roomType: formData.roomType,
-        pricePackage: getSelectedPromoPrice(),
-        dpAmount: 5000000,
+        pricePackage: finalPrice,
+        dpAmount: initialPay,
         uniformSize: formData.uniformSize,
         chronicDiseases: selectedDiseases.length > 0 ? selectedDiseases.join(", ") : "Tidak Ada (Sehat)",
         wheelchairAssistance: formData.wheelchairAssistance,
@@ -180,7 +204,7 @@ export default function PromoSeptemberPage() {
         previousPackageName: previousPkg,
         channel: "PROMO_CAMPAIGN",
         ktpBase64: formData.ktpBase64,
-        notes: `[PROMO SPESIAL SEPTEMBER 2026 - DISKON RP 4 JUTA] Harga Promo: ${formatCurrency(getSelectedPromoPrice())} (Normal: ${formatCurrency(getSelectedNormalPrice())}). DP Kunci Seat Rp 5.000.000,-. Sisa pelunasan saat keberangkatan.`,
+        notes: `${schemeText} Ukuran Seragam: ${formData.uniformSize}`.trim(),
       };
 
       const res = await fetch("/api/registrations", {
@@ -191,12 +215,16 @@ export default function PromoSeptemberPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Gagal mengirim formulir pendaftaran promo");
+        alert(data.error || "Gagal mengirim formulir pendaftaran");
         setSubmitting(false);
         return;
       }
 
-      setSubmitSuccess(data.registration);
+      setSubmitSuccess({
+        ...data.registration,
+        paymentScheme,
+        remainingPay,
+      });
     } catch (err) {
       console.error(err);
       alert("Terjadi kesalahan koneksi saat mengirim formulir");
@@ -210,13 +238,13 @@ export default function PromoSeptemberPage() {
       {/* 1. TOP URGENT RIBBON */}
       <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 py-2.5 px-4 text-center font-black text-xs tracking-wide shadow-md flex items-center justify-center gap-2 sticky top-0 z-50">
         <Flame className="w-4 h-4 text-red-600 animate-bounce shrink-0" />
-        <span>PROMO SPESIAL AKBAR SEPTEMBER 2026 • SISA {remainingQuota} SEAT LAGI!</span>
-        <span className="hidden sm:inline bg-slate-950 text-amber-400 text-[10px] px-2 py-0.5 rounded-full font-mono">
-          DISKON RP 4.000.000,-
+        <span>PROMO AKBAR SEPTEMBER 2026 • LUNAS RP 28.7 JT ATAU DP 5 JT SISA SAAT/SETELAH UMROH!</span>
+        <span className="hidden sm:inline bg-slate-950 text-amber-400 text-[10px] px-2.5 py-0.5 rounded-full font-mono font-bold">
+          SISA {remainingQuota} SEAT
         </span>
       </div>
 
-      {/* 2. HERO SECTION (EMOTIONAL & EXCLUSIVE OFFER) */}
+      {/* 2. HERO SECTION (EMOTIONAL & DUA SKEMA PILIHAN JELAS) */}
       <div className="relative bg-gradient-to-b from-slate-900 via-emerald-950 to-slate-950 text-white py-16 px-4 border-b border-emerald-800/30 overflow-hidden">
         {/* Glow Effects */}
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -242,47 +270,61 @@ export default function PromoSeptemberPage() {
           </h1>
 
           <p className="text-sm sm:text-base text-emerald-100/90 max-w-2xl mx-auto leading-relaxed">
-            Kini saatnya menjawab panggilan Baitullah tanpa rasa cemas. Nikmati <strong>Promo Spesial Akbar September 2026</strong> dengan diskon langsung <strong>Rp 4.000.000,-</strong> dan kemudahan bayar yang sangat ringan!
+            Kini saatnya menjawab panggilan Baitullah tanpa beban. Nikmati <strong>Promo Akbar September 2026</strong> dengan 2 kemudahan skema pembayaran yang sangat fleksibel:
           </p>
 
-          {/* Pricing Highlight Card */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-amber-400/50 shadow-2xl text-center">
+          {/* Dual Payment Scheme Cards (Hero) */}
+          <div className="pt-2 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto text-left">
+            {/* OPSI 1: LUNAS LANGSUNG */}
+            <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border-2 border-amber-400 shadow-2xl space-y-3 relative overflow-hidden">
+              <div className="inline-block px-3 py-1 bg-amber-400 text-slate-950 font-black text-[10px] rounded-full uppercase">
+                🌟 Opsi 1: Bayar Lunas Langsung
+              </div>
               <span className="text-xs text-slate-400 block line-through font-mono font-bold">
                 Harga Normal: {formatCurrency(normalPriceQuad)}
               </span>
-              <div className="flex items-baseline justify-center gap-2 mt-1">
-                <span className="text-xs font-bold text-amber-300">Promo Menjadi:</span>
-                <span className="text-3xl sm:text-4xl font-black text-amber-400 font-mono tracking-tight">
+              <div>
+                <span className="text-[11px] text-amber-300 font-bold block">Biaya Promo Lunas (Quad):</span>
+                <span className="text-3xl sm:text-4xl font-black text-amber-400 font-mono tracking-tight block">
                   {formatCurrency(promoPriceQuad)}
                 </span>
               </div>
-              <span className="inline-block mt-2 px-3 py-1 bg-red-600 text-white font-black text-xs rounded-full uppercase shadow-xs">
-                🔥 Hemat Rp 4.000.000,- / Pax
-              </span>
+              <p className="text-xs text-slate-200 border-t border-white/10 pt-2">
+                🔥 <strong>Diskon Tunai Rp 4.000.000,-</strong> khusus bagi jamaah yang membayar lunas di awal. Bebas hutang & tanggungan!
+              </p>
             </div>
 
-            {/* Skema DP Hook */}
-            <div className="bg-emerald-900/70 backdrop-blur-md p-6 rounded-3xl border border-emerald-400/30 text-left space-y-2 max-w-sm">
-              <div className="flex items-center gap-2 text-emerald-300 font-black text-xs">
-                <ShieldCheck className="w-4 h-4 text-amber-400" />
-                KEMUDAHAN SKEMA PEMBAYARAN:
+            {/* OPSI 2: DP 5 JUTA & PELUNASAN SAAT/SETELAH UMROH */}
+            <div className="bg-emerald-900/70 backdrop-blur-md p-6 rounded-3xl border-2 border-emerald-400/50 shadow-2xl space-y-3 relative overflow-hidden">
+              <div className="inline-block px-3 py-1 bg-emerald-400 text-slate-950 font-black text-[10px] rounded-full uppercase">
+                🎟️ Opsi 2: DP 5 Juta Dulu
               </div>
-              <p className="text-xs text-slate-200">
-                ✅ <strong>Cukup DP Rp 5.000.000,-</strong> untuk mengunci seat pesawat & harga promo diskon 4 juta hari ini.
-              </p>
-              <p className="text-xs text-amber-300 font-bold">
-                ✅ <strong>Sisa Pelunasan ({formatCurrency(promoPriceQuad - 5000000)})</strong> dapat dilunasi menjelang keberangkatan umroh!
-              </p>
+              <span className="text-xs text-emerald-200 block font-bold">
+                Harga Paket Reguler: {formatCurrency(normalPriceQuad)}
+              </span>
+              <div>
+                <span className="text-[11px] text-emerald-300 font-bold block">Cukup Bayar DP Hari Ini:</span>
+                <span className="text-3xl sm:text-4xl font-black text-white font-mono tracking-tight block">
+                  Rp 5.000.000,-
+                </span>
+              </div>
+              <div className="border-t border-emerald-500/30 pt-2 text-xs space-y-1">
+                <p className="text-amber-300 font-bold">
+                  ✅ Sisa Pelunasan: <strong>{formatCurrency(normalPriceQuad - 5000000)}</strong>
+                </p>
+                <p className="text-[11px] text-slate-200">
+                  Pelunasan dapat dibayarkan santai pada saat menjelang, saat di Saudi, atau <strong>setelah kepulangan umroh</strong>!
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-3">
             <a
               href="#form-daftar"
-              className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm shadow-xl transition-all hover:scale-105"
+              className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm shadow-xl transition-all hover:scale-105 cursor-pointer"
             >
-              <Sparkles className="w-5 h-5" /> Amankan Kursi Promo {formatCurrency(promoPriceQuad)} Sekarang
+              <Sparkles className="w-5 h-5" /> Pilih Skema & Amankan Kursi Anda Sekarang
             </a>
           </div>
         </div>
@@ -328,7 +370,7 @@ export default function PromoSeptemberPage() {
               </div>
               <h3 className="font-black text-slate-900 text-sm">Khawatir Fasilitas & Jadwal</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Takut hotel terlalu jauh dari masjid, penerbangan transit melelahkan, atau pembimbing ibadah yang kurang ramah dan tidak membimbing dengan sabar.
+                Takut hotel terlalu jauh dari masjid, penerbangan transit melelahkan, atau pembimbing ibadah yang kurang ramah dan tidak sabar.
               </p>
             </div>
           </div>
@@ -354,9 +396,9 @@ export default function PromoSeptemberPage() {
               <div className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center font-black text-sm">
                 1
               </div>
-              <h3 className="font-black text-amber-300 text-sm">Potongan Nyata Rp 4 Juta</h3>
+              <h3 className="font-black text-amber-300 text-sm">Opsi Lunas: Hemat 4 Juta</h3>
               <p className="text-xs text-slate-200 leading-relaxed">
-                Harga terbaik <strong>{formatCurrency(promoPriceQuad)}</strong> tanpa mengurangi kenyamanan hotel, maskapai, maupun konsumsi makanan khas Indonesia.
+                Bagi yang bayar lunas langsung, nikmati harga super hemat <strong>{formatCurrency(promoPriceQuad)}</strong> tanpa mengurangi fasilitas premium.
               </p>
             </div>
 
@@ -364,9 +406,9 @@ export default function PromoSeptemberPage() {
               <div className="w-8 h-8 rounded-lg bg-emerald-400 text-slate-950 flex items-center justify-center font-black text-sm">
                 2
               </div>
-              <h3 className="font-black text-emerald-300 text-sm">Cukup DP 5 Juta Dulu</h3>
+              <h3 className="font-black text-emerald-300 text-sm">Opsi DP 5 Juta: Sisa Saat Umroh</h3>
               <p className="text-xs text-slate-200 leading-relaxed">
-                Seat pesawat dan hotel Anda sudah terkunci aman. Sisa pelunasan bisa dibayarkan santai menjelang jadwal keberangkatan.
+                Seat & tiket pesawat Anda sudah terkunci aman. Sisa pelunasan bisa dibayarkan saat di Tanah Suci atau setelah umroh!
               </p>
             </div>
 
@@ -409,7 +451,7 @@ export default function PromoSeptemberPage() {
               <span className="text-2xl sm:text-3xl font-black text-emerald-700 font-mono">
                 {formatCurrency(promoPriceQuad)}
               </span>
-              <span className="text-[11px] text-slate-500 block">Kamar Quad (Sekamar Ber-4)</span>
+              <span className="text-[11px] text-slate-500 block">Kamar Quad (Promo Lunas)</span>
             </div>
           </div>
 
@@ -469,7 +511,7 @@ export default function PromoSeptemberPage() {
           </div>
         </div>
 
-        {/* 6. FORMULIR PENDAFTARAN PROMO */}
+        {/* 6. FORMULIR PENDAFTARAN RESMI */}
         <div id="form-daftar" className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6">
           {submitSuccess ? (
             <div className="text-center py-10 px-4 space-y-4">
@@ -477,23 +519,38 @@ export default function PromoSeptemberPage() {
                 <CheckCircle2 className="w-10 h-10" />
               </div>
               <h3 className="text-2xl font-black text-slate-900">
-                Alhamdulillah! Pendaftaran Promo Berhasil Diterima
+                Alhamdulillah! Pendaftaran Berhasil Diterima
               </h3>
               <p className="text-xs text-slate-600 max-w-md mx-auto">
-                Selamat <strong>{submitSuccess.fullName}</strong>! Anda telah berhasil mengamankan <strong>Harga Promo Diskon Rp 4 Juta</strong> untuk Program Keberangkatan September 2026.
+                Terima kasih <strong>{submitSuccess.fullName}</strong>! Pendaftaran Program Keberangkatan September 2026 Anda telah tercatat di sistem antrean resmi kami.
               </p>
 
               <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 inline-block font-mono text-xl font-black text-amber-950 tracking-wider">
                 {submitSuccess.regNumber}
               </div>
 
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-left max-w-md mx-auto space-y-1.5 font-sans">
-                <p className="font-bold text-slate-900">Rincian Paket & Pembayaran:</p>
+              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-left max-w-md mx-auto space-y-2 font-sans">
+                <p className="font-black text-slate-900 border-b border-slate-200 pb-1.5 flex items-center justify-between">
+                  <span>Rincian Pembayaran Jamaah:</span>
+                  <span className="text-[10px] bg-slate-900 text-amber-300 px-2 py-0.5 rounded font-mono">
+                    {submitSuccess.paymentScheme === "FULL_PAYMENT" ? "BAYAR LUNAS (DISKON 4 JT)" : "SKEMA DP 5 JUTA"}
+                  </span>
+                </p>
                 <p className="text-slate-600">• Program: <strong>{submitSuccess.package?.name}</strong></p>
                 <p className="text-slate-600">• Tipe Kamar: <strong>{submitSuccess.roomType}</strong></p>
-                <p className="text-slate-600">• Harga Promo: <strong>{formatCurrency(submitSuccess.pricePackage)}</strong> (Diskon 4 Jt)</p>
-                <p className="text-slate-600">• Tagihan DP Kunci Seat: <strong>Rp 5.000.000,-</strong></p>
-                <p className="text-slate-600">• Sisa Pelunasan: <strong>{formatCurrency(submitSuccess.pricePackage - 5000000)} (Saat Keberangkatan)</strong></p>
+                <p className="text-slate-600">• Total Biaya Paket: <strong>{formatCurrency(submitSuccess.pricePackage)}</strong></p>
+                <p className="text-slate-900 font-bold text-sm bg-emerald-100/70 p-2 rounded-lg text-emerald-950">
+                  • Tagihan Pembayaran Hari Ini: <strong>{formatCurrency(submitSuccess.dpAmount)}</strong>
+                </p>
+                {submitSuccess.paymentScheme === "DP_FLEXIBLE" ? (
+                  <p className="text-amber-900 bg-amber-100/70 p-2 rounded-lg font-bold">
+                    • Sisa Pelunasan: <strong>{formatCurrency(submitSuccess.remainingPay)}</strong> (Dibayar pada saat atau setelah kepulangan umroh).
+                  </p>
+                ) : (
+                  <p className="text-emerald-800 font-bold">
+                    • Status Sisa: <strong>LUNAS (Bebas Tanggungan Sisa)</strong>
+                  </p>
+                )}
               </div>
 
               <div className="pt-4 flex flex-wrap justify-center gap-3">
@@ -501,7 +558,7 @@ export default function PromoSeptemberPage() {
                   href={`/daftar/status?reg=${submitSuccess.regNumber}`}
                   className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-md"
                 >
-                  Lihat Status & Konfirmasi DP <ArrowRight className="w-4 h-4" />
+                  Lihat Status & Bukti Pembayaran <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             </div>
@@ -509,28 +566,83 @@ export default function PromoSeptemberPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px] mb-2">
-                  <Tag className="w-3.5 h-3.5" /> Formulir Registrasi Khusus Promo September 2026
+                  <Tag className="w-3.5 h-3.5" /> Formulir Registrasi Resmi September 2026
                 </div>
-                <h3 className="text-xl font-black text-slate-900">
-                  Kunci Kursi Promo {formatCurrency(promoPriceQuad)} Anda Hari Ini
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900">
+                  Pilih Skema Pembayaran & Kunci Seat Anda
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Lengkapi data di bawah ini untuk penguncian kuota seat dan penerbitan invoice resmi.
+                  Lengkapi data di bawah ini untuk penguncian kuota seat penerbangan dan invoice resmi.
                 </p>
               </div>
 
-              {/* SEKSI 1: PILIHAN TIPE KAMAR PROMO */}
+              {/* SEKSI 1: PILIHAN SKEMA PEMBAYARAN */}
               <div className="space-y-3">
                 <label className="text-xs font-black text-slate-900 block">
-                  1. Pilih Tipe Kamar (Semua Diskon Rp 4.000.000,-) *
+                  1. Pilih Skema Pembayaran yang Anda Inginkan *
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* Opsi Full Payment */}
+                  <div
+                    onClick={() => setPaymentScheme("FULL_PAYMENT")}
+                    className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
+                      paymentScheme === "FULL_PAYMENT"
+                        ? "border-amber-500 bg-amber-50/60 shadow-md ring-2 ring-amber-500/20"
+                        : "border-slate-200 hover:border-slate-300 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-slate-900">🌟 Opsi A: Bayar Lunas Langsung</span>
+                      <span className="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+                        Diskon 4 Jt
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Harga Promo Spesial: <strong className="text-emerald-700 font-mono text-sm">{formatCurrency(promoPriceQuad)}</strong> (Quad)
+                    </p>
+                    <p className="text-[11px] text-slate-600 mt-2 border-t border-slate-200/60 pt-2">
+                      ✅ Diskon tunai langsung Rp 4.000.000,-. Bayar lunas di muka tanpa ada sisa tagihan lagi.
+                    </p>
+                  </div>
+
+                  {/* Opsi DP 5 Juta */}
+                  <div
+                    onClick={() => setPaymentScheme("DP_FLEXIBLE")}
+                    className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
+                      paymentScheme === "DP_FLEXIBLE"
+                        ? "border-emerald-600 bg-emerald-50/60 shadow-md ring-2 ring-emerald-600/20"
+                        : "border-slate-200 hover:border-slate-300 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-slate-900">🎟️ Opsi B: DP Rp 5 Juta Dulu</span>
+                      <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+                        Sangat Ringan
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Cukup Bayar DP: <strong className="text-emerald-700 font-mono text-sm">Rp 5.000.000,-</strong> Hari Ini
+                    </p>
+                    <p className="text-[11px] text-slate-600 mt-2 border-t border-slate-200/60 pt-2">
+                      ✅ Total Paket {formatCurrency(normalPriceQuad)} (Quad). Sisa <strong className="text-amber-900 font-bold">{formatCurrency(normalPriceQuad - 5000000)}</strong> dilunasi pada saat atau setelah umroh!
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* SEKSI 2: PILIHAN TIPE KAMAR SESUAI SKEMA */}
+              <div className="space-y-3">
+                <label className="text-xs font-black text-slate-900 block">
+                  2. Pilih Tipe Kamar Hotel *
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
-                    { key: "QUAD", label: "Quad (Sekamar Ber-4)", normal: normalPriceQuad, promo: promoPriceQuad },
-                    { key: "TRIPLE", label: "Triple (Sekamar Ber-3)", normal: normalPriceTriple, promo: promoPriceTriple },
-                    { key: "DOUBLE", label: "Double (Sekamar Ber-2)", normal: normalPriceDouble, promo: promoPriceDouble },
+                    { key: "QUAD", label: "Quad (Sekamar Ber-4)", fullPrice: promoPriceQuad, regPrice: normalPriceQuad },
+                    { key: "TRIPLE", label: "Triple (Sekamar Ber-3)", fullPrice: promoPriceTriple, regPrice: normalPriceTriple },
+                    { key: "DOUBLE", label: "Double (Sekamar Ber-2)", fullPrice: promoPriceDouble, regPrice: normalPriceDouble },
                   ].map((r) => {
                     const isSelected = formData.roomType === r.key;
+                    const priceToShow = paymentScheme === "FULL_PAYMENT" ? r.fullPrice : r.regPrice;
                     return (
                       <div
                         key={r.key}
@@ -542,25 +654,33 @@ export default function PromoSeptemberPage() {
                         }`}
                       >
                         <span className="text-xs font-black text-slate-900 block">{r.label}</span>
-                        <span className="text-[11px] text-slate-400 line-through block font-mono mt-1">
-                          {formatCurrency(r.normal)}
+                        {paymentScheme === "FULL_PAYMENT" && (
+                          <span className="text-[11px] text-slate-400 line-through block font-mono mt-1">
+                            {formatCurrency(r.regPrice)}
+                          </span>
+                        )}
+                        <span className="text-lg font-black text-emerald-700 font-mono block mt-0.5">
+                          {formatCurrency(priceToShow)}
                         </span>
-                        <span className="text-lg font-black text-emerald-700 font-mono block">
-                          {formatCurrency(r.promo)}
-                        </span>
-                        <span className="inline-block mt-1 text-[10px] font-bold text-red-700 bg-red-50 px-1.5 py-0.5 rounded">
-                          Hemat Rp 4 Jt
-                        </span>
+                        {paymentScheme === "FULL_PAYMENT" ? (
+                          <span className="inline-block mt-1 text-[10px] font-bold text-red-700 bg-red-50 px-1.5 py-0.5 rounded">
+                            Diskon Rp 4 Jt
+                          </span>
+                        ) : (
+                          <span className="inline-block mt-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded">
+                            DP 5 Jt • Sisa {formatCurrency(r.regPrice - 5000000)}
+                          </span>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* SEKSI 2: RIWAYAT UMROH & ALUMNI */}
+              {/* SEKSI 3: RIWAYAT UMROH & ALUMNI */}
               <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/80 to-slate-50 border border-emerald-200 space-y-3 text-xs">
                 <label className="font-black text-slate-900 block">
-                  2. Riwayat Pengalaman Ibadah Umroh Calon Jamaah *
+                  3. Riwayat Pengalaman Ibadah Umroh Calon Jamaah *
                 </label>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -602,10 +722,10 @@ export default function PromoSeptemberPage() {
                 </div>
               </div>
 
-              {/* SEKSI 3: DATA PRIBADI JAMAAH */}
+              {/* SEKSI 4: IDENTITAS LENGKAP */}
               <div className="space-y-3">
                 <label className="text-xs font-black text-slate-900 block">
-                  3. Identitas Lengkap Sesuai KTP *
+                  4. Identitas Calon Jamaah Sesuai KTP *
                 </label>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -698,10 +818,10 @@ export default function PromoSeptemberPage() {
                 </div>
               </div>
 
-              {/* SEKSI 4: KESEHATAN & KURSI RODA */}
+              {/* SEKSI 5: KESEHATAN & KURSI RODA */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
                 <label className="font-black text-slate-900 block">
-                  4. Catatan Medis & Kebutuhan Khusus
+                  5. Catatan Medis & Kebutuhan Khusus
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -717,16 +837,41 @@ export default function PromoSeptemberPage() {
                 </div>
               </div>
 
-              {/* SEKSI 5: PEMBAYARAN DP & REKENING RESMI */}
+              {/* SEKSI 6: RINCIAN INVOICE & REKENING PEMBAYARAN */}
               <div className="p-5 rounded-2xl bg-amber-50/80 border-2 border-amber-300 space-y-4 text-xs">
                 <div>
                   <h4 className="font-black text-amber-950 text-sm flex items-center gap-1.5">
                     <ShieldCheck className="w-5 h-5 text-amber-600" />
-                    Skema Pembayaran Promo September 2026:
+                    Rincian Tagihan & Rekening Resmi Pembayaran:
                   </h4>
-                  <p className="text-slate-600 mt-1">
-                    Cukup bayar <strong>DP Rp 5.000.000,-</strong> hari ini untuk mengunci diskon Rp 4 Juta dan tiket penerbangan. Sisa pelunasan sebesar <strong>{formatCurrency(getSelectedPromoPrice() - 5000000)}</strong> dapat dibayarkan menjelang keberangkatan.
-                  </p>
+                  {paymentScheme === "FULL_PAYMENT" ? (
+                    <div className="mt-2 p-3 bg-white rounded-xl border border-amber-300 space-y-1">
+                      <p className="text-slate-700">
+                        • Skema Dipilih: <strong className="text-slate-950">Bayar Lunas Langsung (Diskon Tunai Rp 4 Juta)</strong>
+                      </p>
+                      <p className="text-slate-700">
+                        • Total Tagihan Lunas Hari Ini: <strong className="text-emerald-700 text-sm font-mono">{formatCurrency(getPackagePriceByScheme())}</strong>
+                      </p>
+                      <p className="text-emerald-700 font-bold text-[11px]">
+                        ✨ Bebas Hutang: Tidak ada sisa pelunasan lagi menjelang atau setelah keberangkatan.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-2 p-3 bg-white rounded-xl border border-emerald-300 space-y-1">
+                      <p className="text-slate-700">
+                        • Skema Dipilih: <strong className="text-slate-950">Bayar DP Rp 5 Juta Dulu</strong>
+                      </p>
+                      <p className="text-slate-700">
+                        • Tagihan DP Kunci Seat Hari Ini: <strong className="text-emerald-700 text-sm font-mono">Rp 5.000.000,-</strong>
+                      </p>
+                      <p className="text-slate-700">
+                        • Total Biaya Paket: <strong className="font-mono">{formatCurrency(getPackagePriceByScheme())}</strong>
+                      </p>
+                      <p className="text-amber-900 font-bold text-[11px]">
+                        ✈️ Sisa Pelunasan: <strong className="font-mono text-sm">{formatCurrency(getRemainingSettlementAmount())}</strong> (Dibayarkan saat menjelang, saat di Saudi, atau setelah umroh).
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="font-mono">
@@ -759,7 +904,9 @@ export default function PromoSeptemberPage() {
                   </div>
 
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Upload Bukti Transfer DP Rp 5 Juta:</label>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      {paymentScheme === "FULL_PAYMENT" ? "Upload Bukti Transfer Pelunasan:" : "Upload Bukti Transfer DP Rp 5 Juta:"}
+                    </label>
                     <input
                       type="file"
                       accept="image/*"
@@ -781,7 +928,13 @@ export default function PromoSeptemberPage() {
                 disabled={submitting}
                 className="w-full py-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-xl transition-all cursor-pointer hover:scale-[1.01]"
               >
-                {submitting ? "Memproses Pendaftaran..." : "Daftar Sekarang & Amankan Diskon 4 Juta (DP 5 Jt)"}
+                {submitting ? (
+                  "Memproses Pendaftaran..."
+                ) : paymentScheme === "FULL_PAYMENT" ? (
+                  `Daftar & Konfirmasi Bayar Lunas (${formatCurrency(getPackagePriceByScheme())})`
+                ) : (
+                  `Daftar & Kunci Seat dengan DP Rp 5.000.000,- (Sisa ${formatCurrency(getRemainingSettlementAmount())})`
+                )}
                 <ArrowRight className="w-5 h-5" />
               </button>
             </form>
