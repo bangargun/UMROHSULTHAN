@@ -107,16 +107,16 @@ export default function PromoSeptemberPage() {
     reader.readAsDataURL(file);
   };
 
-  // Pricing Matrix Promo vs Normal
-  const normalPriceQuad = 32700000;
-  const promoPriceQuad = 28700000;
+  // Pricing Matrix Promo vs Normal (Dinamis dari Database Paket)
+  const promoPriceQuad = septemberPackage?.priceQuad || 28700000;
+  const normalPriceQuad = promoPriceQuad + 4000000;
   const discountAmount = 4000000;
 
-  const normalPriceTriple = 36700000;
-  const promoPriceTriple = 32700000;
+  const promoPriceTriple = septemberPackage?.priceTriple || 32700000;
+  const normalPriceTriple = promoPriceTriple + 4000000;
 
-  const normalPriceDouble = 41700000;
-  const promoPriceDouble = 37700000;
+  const promoPriceDouble = septemberPackage?.priceDouble || 37700000;
+  const normalPriceDouble = promoPriceDouble + 4000000;
 
   const getSelectedPromoPrice = () => {
     if (formData.roomType === "TRIPLE") return promoPriceTriple;
@@ -247,7 +247,7 @@ export default function PromoSeptemberPage() {
                 ✅ <strong>Cukup DP Rp 5.000.000,-</strong> untuk mengunci tiket & seat promo Anda hari ini.
               </p>
               <p className="text-xs text-amber-300 font-bold">
-                ✅ <strong>Sisa Pelunasan (Rp 23.700.000)</strong> dapat dilunasi menjelang keberangkatan umroh!
+                ✅ <strong>Sisa Pelunasan ({formatCurrency(promoPriceQuad - 5000000)})</strong> dapat dilunasi menjelang keberangkatan umroh!
               </p>
             </div>
           </div>
@@ -257,7 +257,7 @@ export default function PromoSeptemberPage() {
               href="#form-daftar"
               className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm shadow-xl transition-all hover:scale-105"
             >
-              <Sparkles className="w-5 h-5" /> Amankan Kursi Promo Rp 28.7 Jt Sekarang
+              <Sparkles className="w-5 h-5" /> Amankan Kursi Promo {formatCurrency(promoPriceQuad)} Sekarang
             </a>
           </div>
         </div>
@@ -275,16 +275,16 @@ export default function PromoSeptemberPage() {
                 {septemberPackage?.name || "UMROH REGULER SEPTEMBER 2026"}
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                📅 Jadwal Keberangkatan: <strong>22 September 2026</strong> • Durasi: <strong>12 Hari</strong>
+                📅 Jadwal Keberangkatan: <strong>{septemberPackage?.departureDate ? formatDate(septemberPackage.departureDate, "dd MMMM yyyy") : "22 September 2026"}</strong> • Durasi: <strong>{septemberPackage?.durationDays || 12} Hari</strong>
               </p>
             </div>
 
             <div className="text-left sm:text-right">
               <span className="text-xs text-slate-400 line-through block font-mono">
-                Rp 32.700.000,-
+                {formatCurrency(normalPriceQuad)}
               </span>
               <span className="text-2xl font-black text-emerald-700 font-mono">
-                Rp 28.700.000,-
+                {formatCurrency(promoPriceQuad)}
               </span>
               <span className="text-[11px] text-slate-500 block">Kamar Quad (Sekamar Ber-4)</span>
             </div>
