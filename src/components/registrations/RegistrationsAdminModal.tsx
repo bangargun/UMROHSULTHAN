@@ -412,9 +412,18 @@ export default function RegistrationsAdminModal({
 
                 {/* Info Paket & Kamar */}
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1.5">
-                  <p className="font-bold text-slate-900">{selectedReg.package?.name}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-bold text-slate-900">{selectedReg.package?.name}</p>
+                    {selectedReg.notes?.includes("PROMO") && (
+                      <span className="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        🔥 PROMO DISKON 4 JT
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 text-slate-600">
                     <span>Kamar: <strong>{selectedReg.roomType}</strong></span>
+                    <span>•</span>
+                    <span>Harga: <strong className="text-emerald-700 font-bold">{formatCurrency(selectedReg.pricePackage)}</strong></span>
                     <span>•</span>
                     <span>Baju: <strong className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[10px]">Size {selectedReg.uniformSize || "L"}</strong></span>
                   </div>
