@@ -287,7 +287,14 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                       </td>
 
                       <td className="py-3.5 px-4">
-                        <p className="font-black text-slate-900 text-sm">{formatCurrency(inv.amount)}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-black text-slate-900 text-sm">{formatCurrency(inv.amount)}</p>
+                          {(inv.notes?.toLowerCase().includes("promo") || inv.notes?.toLowerCase().includes("diskon") || inv.title?.toLowerCase().includes("promo")) && (
+                            <span className="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
+                              Diskon 4 Jt
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-slate-400">{inv.title}</p>
                       </td>
 
@@ -652,6 +659,21 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                     {selectedInvoiceForReceipt.title} ({selectedInvoiceForReceipt.pilgrim?.package?.name})
                   </span>
                 </div>
+
+                {/* Keterangan Potongan Harga / Diskon Promo Resmi */}
+                {(selectedInvoiceForReceipt.notes?.toLowerCase().includes("promo") || selectedInvoiceForReceipt.notes?.toLowerCase().includes("diskon") || selectedInvoiceForReceipt.title?.toLowerCase().includes("promo")) && (
+                  <div className="flex items-start">
+                    <span className="w-36 text-slate-500 font-semibold pt-1">Keterangan Diskon:</span>
+                    <div className="flex-1 bg-amber-50 p-2.5 rounded-xl border border-amber-300 text-xs space-y-1">
+                      <p className="font-bold text-amber-950 flex items-center gap-1">
+                        🏷️ {selectedInvoiceForReceipt.notes || "Program Promo Spesial Keberangkatan September 2026 - Diskon Tunai Rp 4.000.000,-"}
+                      </p>
+                      <p className="text-[10px] text-slate-600">
+                        Potongan harga resmi telah diperhitungkan secara sah dalam total nilai tagihan / pelunasan kuitansi ini.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex">
                   <span className="w-36 text-slate-500 font-semibold">Metode & Tanggal:</span>

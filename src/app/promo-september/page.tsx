@@ -846,30 +846,65 @@ export default function PromoSeptemberPage() {
                     Rincian Tagihan & Rekening Resmi Pembayaran:
                   </h4>
                   {paymentScheme === "FULL_PAYMENT" ? (
-                    <div className="mt-2 p-3 bg-white rounded-xl border border-amber-300 space-y-1">
-                      <p className="text-slate-700">
-                        • Skema Dipilih: <strong className="text-slate-950">Bayar Lunas Langsung (Diskon Tunai Rp 4 Juta)</strong>
-                      </p>
-                      <p className="text-slate-700">
-                        • Total Tagihan Lunas Hari Ini: <strong className="text-emerald-700 text-sm font-mono">{formatCurrency(getPackagePriceByScheme())}</strong>
-                      </p>
-                      <p className="text-emerald-700 font-bold text-[11px]">
+                    <div className="mt-2 p-3.5 bg-white rounded-2xl border-2 border-amber-300 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-slate-700 font-bold">
+                          • Skema: <span className="text-slate-950">Bayar Lunas Langsung</span>
+                        </p>
+                        <span className="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+                          Hemat Rp 4.000.000,-
+                        </span>
+                      </div>
+
+                      {/* Tabel Rincian Potongan Harga */}
+                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-1 font-mono text-[11px]">
+                        <div className="flex justify-between text-slate-500">
+                          <span>Harga Normal ({formData.roomType}):</span>
+                          <span className="line-through">{formatCurrency(formData.roomType === "TRIPLE" ? normalPriceTriple : formData.roomType === "DOUBLE" ? normalPriceDouble : normalPriceQuad)}</span>
+                        </div>
+                        <div className="flex justify-between text-red-600 font-bold">
+                          <span>Potongan Harga Promo Spesial:</span>
+                          <span>- Rp 4.000.000,-</span>
+                        </div>
+                        <div className="flex justify-between text-emerald-800 font-black text-xs border-t border-slate-200 pt-1">
+                          <span>Total Tagihan Bersih (Lunas):</span>
+                          <span>{formatCurrency(getPackagePriceByScheme())}</span>
+                        </div>
+                      </div>
+
+                      <p className="text-emerald-700 font-bold text-[11px] flex items-center gap-1 font-sans">
                         ✨ Bebas Hutang: Tidak ada sisa pelunasan lagi menjelang atau setelah keberangkatan.
                       </p>
                     </div>
                   ) : (
-                    <div className="mt-2 p-3 bg-white rounded-xl border border-emerald-300 space-y-1">
-                      <p className="text-slate-700">
-                        • Skema Dipilih: <strong className="text-slate-950">Bayar DP Rp 5 Juta Dulu</strong>
-                      </p>
-                      <p className="text-slate-700">
-                        • Tagihan DP Kunci Seat Hari Ini: <strong className="text-emerald-700 text-sm font-mono">Rp 5.000.000,-</strong>
-                      </p>
-                      <p className="text-slate-700">
-                        • Total Biaya Paket: <strong className="font-mono">{formatCurrency(getPackagePriceByScheme())}</strong>
-                      </p>
-                      <p className="text-amber-900 font-bold text-[11px]">
-                        ✈️ Sisa Pelunasan: <strong className="font-mono text-sm">{formatCurrency(getRemainingSettlementAmount())}</strong> (Dibayarkan saat menjelang, saat di Saudi, atau setelah umroh).
+                    <div className="mt-2 p-3.5 bg-white rounded-2xl border-2 border-emerald-400 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-slate-700 font-bold">
+                          • Skema: <span className="text-slate-950">DP Rp 5 Juta Dulu</span>
+                        </p>
+                        <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+                          Sangat Ringan
+                        </span>
+                      </div>
+
+                      {/* Tabel Rincian Pembayaran Bertahap */}
+                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-1 font-mono text-[11px]">
+                        <div className="flex justify-between text-slate-700">
+                          <span>Harga Paket Reguler ({formData.roomType}):</span>
+                          <span className="font-bold">{formatCurrency(getPackagePriceByScheme())}</span>
+                        </div>
+                        <div className="flex justify-between text-emerald-700 font-bold border-t border-slate-200 pt-1">
+                          <span>Tagihan DP Kunci Seat Hari Ini:</span>
+                          <span>Rp 5.000.000,-</span>
+                        </div>
+                        <div className="flex justify-between text-amber-900 font-black text-xs border-t border-slate-200 pt-1">
+                          <span>Sisa Pelunasan (Saat/Setelah Umroh):</span>
+                          <span>{formatCurrency(getRemainingSettlementAmount())}</span>
+                        </div>
+                      </div>
+
+                      <p className="text-slate-600 text-[11px] font-sans">
+                        ✈️ Pelunasan dapat dibayarkan santai pada saat menjelang, saat di Saudi, atau <strong>setelah kepulangan umroh</strong>.
                       </p>
                     </div>
                   )}

@@ -411,7 +411,7 @@ export default function RegistrationsAdminModal({
                 </div>
 
                 {/* Info Paket & Kamar */}
-                <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="font-bold text-slate-900">{selectedReg.package?.name}</p>
                     {selectedReg.notes?.includes("PROMO") && (
@@ -430,6 +430,23 @@ export default function RegistrationsAdminModal({
                   <p className="text-slate-600">
                     Tagihan DP: <strong>{formatCurrency(selectedReg.dpAmount)}</strong> • Invoice: <strong>{selectedReg.invoiceNumber || "-"}</strong>
                   </p>
+
+                  {/* Keterangan Rincian Potongan Harga */}
+                  {selectedReg.notes?.includes("PROMO") && (
+                    <div className="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-300 space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-amber-950 flex items-center gap-1">
+                          🏷️ Rincian Potongan Harga:
+                        </span>
+                        <span className="font-mono font-black text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
+                          Diskon -Rp 4.000.000,-
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-600">
+                        Harga Normal: <span className="line-through font-mono">{formatCurrency(selectedReg.pricePackage + 4000000)}</span> ➔ Tagihan Bersih Paket: <strong className="font-mono text-emerald-800">{formatCurrency(selectedReg.pricePackage)}</strong>
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Info Riwayat Pengalaman Umroh */}
