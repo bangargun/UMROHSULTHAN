@@ -460,16 +460,16 @@ export default function TabunganUmrohPage() {
                   <ShieldCheck className="w-4 h-4 text-emerald-700" />
                   Rekening Resmi Pembayaran Setoran Awal Rp 2.000.000,-
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono">
-                  <div className="bg-white p-3 rounded-xl border border-emerald-200">
-                    <span className="text-[10px] text-slate-500 font-bold block">BANK SYARIAH INDONESIA (BSI)</span>
-                    <strong className="text-emerald-900 text-sm">724-8899-001</strong>
-                    <p className="text-[10px] text-slate-500 font-sans">a.n. PT BAROKAH SULTHAN HARAMAIN</p>
-                  </div>
-                  <div className="bg-white p-3 rounded-xl border border-emerald-200">
-                    <span className="text-[10px] text-slate-500 font-bold block">BANK MANDIRI</span>
-                    <strong className="text-blue-900 text-sm">106-00-1899-7788</strong>
-                    <p className="text-[10px] text-slate-500 font-sans">a.n. PT BAROKAH SULTHAN HARAMAIN</p>
+                <div className="font-mono">
+                  <div className="bg-white p-4 rounded-2xl border-2 border-emerald-300 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <span className="text-[11px] text-slate-500 font-bold block uppercase tracking-wider">REKENING RESMI PENERIMAAN (BANK MANDIRI)</span>
+                      <strong className="text-blue-900 text-lg sm:text-xl block tracking-wider font-mono">106-00-1899-7788</strong>
+                      <p className="text-xs text-slate-700 font-sans font-bold">a.n. PT BAROKAH SULTHAN HARAMAIN</p>
+                    </div>
+                    <span className="text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 px-2.5 py-1 rounded-lg self-start sm:self-center font-sans">
+                      Mandiri Cabang Tebing Tinggi
+                    </span>
                   </div>
                 </div>
 
