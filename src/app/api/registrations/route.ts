@@ -68,6 +68,9 @@ export async function POST(request: Request) {
       chronicDiseases,
       wheelchairAssistance = false,
       wheelchairNotes,
+      umrahExperienceCount = "BELUM_PERNAH",
+      isPreviousClient = false,
+      previousPackageName,
       channel = "DIRECT",
       agentId,
       agentName,
@@ -124,6 +127,17 @@ export async function POST(request: Request) {
     const regNumber = `REG-${dateStr}-${seq}`;
     const idJamaah = `JAM-${dateStr}-${seq}`;
 
+    // Label Pengalaman Umroh
+    const expMap: { [key: string]: string } = {
+      BELUM_PERNAH: "Belum Pernah (Pertama Kali)",
+      "1_KALI": "1 Kali",
+      "2_KALI": "2 Kali",
+      "3_KALI": "3 Kali",
+      LEBIH_DARI_3_KALI: "Lebih dari 3 Kali",
+    };
+    const expLabel = expMap[umrahExperienceCount] || umrahExperienceCount;
+    const alumniText = isPreviousClient ? ` | Alumni Sulthan Haramain (${previousPackageName || "Program Sebelumnya"})` : "";
+
     // 1. Catat Otomatis ke Prospek Marketing & Pencarian Jamaah (Leads CRM)
     let leadId: string | null = null;
     try {
@@ -140,11 +154,11 @@ export async function POST(request: Request) {
           status: "CLOSING_DP", // Status prospek siap bayar DP
           budget: pricePackage,
           estimatedPax: 1,
-          notes: `[Pendaftaran Online ${regNumber}] ID Jamaah: ${idJamaah} | Paket: ${pkg.name} | Kamar: ${roomType} | Baju: ${uniformSize} | Riwayat Penyakit: ${chronicDiseases || "Tidak Ada"} ${wheelchairAssistance ? `| Kursi Roda: ${wheelchairNotes || "Ya"}` : ""}`.trim(),
+          notes: `[Pendaftaran Online ${regNumber}] ID Jamaah: ${idJamaah} | Paket: ${pkg.name} | Kamar: ${roomType} | Baju: ${uniformSize} | Umroh: ${expLabel}${alumniText} | Riwayat Penyakit: ${chronicDiseases || "Tidak Ada"} ${wheelchairAssistance ? `| Kursi Roda: ${wheelchairNotes || "Ya"}` : ""}`.trim(),
           interactions: {
             create: {
               type: "WHATSAPP",
-              summary: `Calon jamaah mendaftar online melalui Landing Page resmi (No. Reg: ${regNumber}). Menunggu verifikasi DP.`,
+              summary: `Calon jamaah mendaftar online melalui Landing Page resmi (No. Reg: ${regNumber}). Pengalaman umroh: ${expLabel}${alumniText}. Menunggu verifikasi DP.`,
             },
           },
         },
@@ -209,6 +223,9 @@ export async function POST(request: Request) {
         chronicDiseases: chronicDiseases || null,
         wheelchairAssistance: Boolean(wheelchairAssistance),
         wheelchairNotes: wheelchairNotes || null,
+        umrahExperienceCount: umrahExperienceCount || "BELUM_PERNAH",
+        isPreviousClient: Boolean(isPreviousClient),
+        previousPackageName: previousPackageName ? previousPackageName.trim() : null,
         channel,
         agentId: agentId || null,
         agentName: agentName || null,

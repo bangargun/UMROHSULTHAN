@@ -578,6 +578,11 @@ model Registration {
   wheelchairAssistance Boolean   @default(false)
   wheelchairNotes      String?   // e.g. "Bawa sendiri" / "Perlu sewa pendorong di Mekkah"
 
+  // Riwayat Pengalaman Umroh
+  umrahExperienceCount String    @default("BELUM_PERNAH") // BELUM_PERNAH, 1_KALI, 2_KALI, 3_KALI, LEBIH_DARI_3_KALI
+  isPreviousClient     Boolean   @default(false)
+  previousPackageName  String?   // Program umroh sebelumnya jika alumni Sulthan Haramain
+
   // Jalur Pendaftaran & Referral
   channel             String    @default("DIRECT") // DIRECT, AGENT, REFERRAL
   agentId             String?

@@ -423,6 +423,30 @@ export default function RegistrationsAdminModal({
                   </p>
                 </div>
 
+                {/* Info Riwayat Pengalaman Umroh */}
+                <div className="bg-emerald-50/80 p-3 rounded-xl border border-emerald-200 space-y-1 text-[11px]">
+                  <p className="font-bold text-emerald-950 flex items-center gap-1">
+                    🕋 Pengalaman Ibadah Umroh:
+                  </p>
+                  <p className="text-slate-700">
+                    Frekuensi: <strong className="text-emerald-900">
+                      {selectedReg.umrahExperienceCount === "BELUM_PERNAH"
+                        ? "Belum Pernah (Jamaah Perdana)"
+                        : selectedReg.umrahExperienceCount?.replace(/_/g, " ")}
+                    </strong>
+                  </p>
+                  {selectedReg.umrahExperienceCount !== "BELUM_PERNAH" && (
+                    <p className="text-slate-700">
+                      Status Alumni:{" "}
+                      <strong className={selectedReg.isPreviousClient ? "text-emerald-800" : "text-slate-600"}>
+                        {selectedReg.isPreviousClient
+                          ? `✅ Pernah bersama Sulthan Haramain (${selectedReg.previousPackageName || "Program Sebelumnya"})`
+                          : "❌ Belum (Travel Lain)"}
+                      </strong>
+                    </p>
+                  )}
+                </div>
+
                 {/* Info Riwayat Kesehatan & Kursi Roda */}
                 <div className="bg-slate-100/80 p-3 rounded-xl border border-slate-200 space-y-1 text-[11px]">
                   <p className="font-bold text-slate-800">Catatan Medis & Kebutuhan Khusus:</p>

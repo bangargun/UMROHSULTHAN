@@ -26,6 +26,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default function PublicRegistrationPage() {
   const [packages, setPackages] = useState<any[]>([]);
+  const [allPackagesList, setAllPackagesList] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
@@ -37,6 +38,11 @@ export default function PublicRegistrationPage() {
   const [formData, setFormData] = useState({
     packageId: "",
     roomType: "QUAD",
+    // Pengalaman Umroh
+    umrahExperienceCount: "BELUM_PERNAH", // BELUM_PERNAH, 1_KALI, 2_KALI, 3_KALI, LEBIH_DARI_3_KALI
+    isPreviousClient: "TIDAK", // YA / TIDAK
+    previousPackageName: "",
+    customPreviousPackage: "",
     fullName: "",
     phone: "",
     email: "",
@@ -77,6 +83,7 @@ export default function PublicRegistrationPage() {
 
         if (pkgRes.ok) {
           const pkgData = await pkgRes.json();
+          setAllPackagesList(pkgData);
           const now = new Date();
           const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -204,8 +211,16 @@ export default function PublicRegistrationPage() {
         ? [...formData.chronicDiseases.filter((d) => d !== "LAINNYA"), formData.customChronicDisease]
         : formData.chronicDiseases;
 
+      const previousPkg =
+        formData.isPreviousClient === "YA"
+          ? (formData.previousPackageName === "LAINNYA" ? formData.customPreviousPackage : formData.previousPackageName)
+          : null;
+
       const payload = {
         ...formData,
+        umrahExperienceCount: formData.umrahExperienceCount,
+        isPreviousClient: formData.isPreviousClient === "YA",
+        previousPackageName: previousPkg,
         chronicDiseases: selectedDiseases.length > 0 ? selectedDiseases.join(", ") : "Tidak Ada (Sehat)",
         wheelchairNotes: formData.wheelchairAssistance ? formData.wheelchairNotes : null,
       };
@@ -399,8 +414,117 @@ export default function PublicRegistrationPage() {
                   Langkah 1: Pilih Program Paket & Tipe Kamar
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Tentukan paket keberangkatan dan jenis kamar yang Anda inginkan.
+                  Lengkapi riwayat pengalaman umroh Anda, lalu tentukan paket keberangkatan & kamar yang diinginkan.
                 </p>
+              </div>
+
+              {/* SEKSI RIWAYAT PENGALAMAN UMROH */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-50/80 via-teal-50/50 to-slate-50 border border-emerald-200/80 space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                    🕋
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-slate-900">
+                      Riwayat Pengalaman Ibadah Umroh Calon Jamaah
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Membantu kami menyiapkan bimbingan manasik & pelayanan terbaik bagi Anda dan keluarga.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {/* Pertanyaan 1: Berapa kali berangkat umroh */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      1. Berapa kali Anda pernah berangkat umroh? *
+                    </label>
+                    <select
+                      value={formData.umrahExperienceCount}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          umrahExperienceCount: val,
+                          isPreviousClient: val === "BELUM_PERNAH" ? "TIDAK" : prev.isPreviousClient,
+                          previousPackageName: val === "BELUM_PERNAH" ? "" : prev.previousPackageName,
+                        }));
+                      }}
+                      className="w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                    >
+                      <option value="BELUM_PERNAH">Belum Pernah (Pertama Kali)</option>
+                      <option value="1_KALI">1 Kali</option>
+                      <option value="2_KALI">2 Kali</option>
+                      <option value="3_KALI">3 Kali</option>
+                      <option value="LEBIH_DARI_3_KALI">Lebih dari 3 Kali</option>
+                    </select>
+                  </div>
+
+                  {/* Pertanyaan 2: Apakah bersama kami */}
+                  {formData.umrahExperienceCount !== "BELUM_PERNAH" ? (
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        2. Apakah umroh sebelumnya bersama Sulthan Haramain (kami)? *
+                      </label>
+                      <select
+                        value={formData.isPreviousClient}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormData((prev) => ({
+                            ...prev,
+                            isPreviousClient: val,
+                            previousPackageName: val === "YA" ? (prev.previousPackageName || (allPackagesList[0]?.name || "UMROH REGULER")) : "",
+                          }));
+                        }}
+                        className="w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-emerald-950 focus:ring-2 focus:ring-emerald-500/20"
+                      >
+                        <option value="YA">✅ Ya, Pernah Bersama Sulthan Haramain (Alumni)</option>
+                        <option value="TIDAK">❌ Tidak (Bersama Travel Lain)</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-[11px] text-emerald-700 font-semibold bg-emerald-100/50 p-2.5 rounded-xl border border-emerald-200/60">
+                      ✨ Ahlan wa Sahlan! Selamat datang calon tamu Allah untuk perjalanan ibadah umroh perdana Anda.
+                    </div>
+                  )}
+                </div>
+
+                {/* Pertanyaan 3: Jika YA, pilih program umroh sebelumnya */}
+                {formData.umrahExperienceCount !== "BELUM_PERNAH" && formData.isPreviousClient === "YA" && (
+                  <div className="p-3.5 bg-amber-50/80 rounded-xl border border-amber-200 space-y-2 text-xs animate-fadeIn">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
+                      <span>3. Pilih program umroh yang pernah Anda ikuti bersama kami sebelumnya:</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <select
+                        value={formData.previousPackageName}
+                        onChange={(e) => setFormData({ ...formData, previousPackageName: e.target.value })}
+                        className="w-full rounded-xl border border-amber-300 p-2.5 bg-white font-bold text-slate-800 focus:ring-2 focus:ring-amber-500/20"
+                      >
+                        <option value="">-- Pilih Program Alumni Sebelumnya --</option>
+                        {allPackagesList.map((pkg: any) => (
+                          <option key={pkg.id} value={pkg.name}>
+                            🛫 {pkg.name} ({formatDate(pkg.departureDate, "yyyy")})
+                          </option>
+                        ))}
+                        <option value="Program Umroh Musim 1445 H / 1446 H">Program Umroh Musim 1445 H / 1446 H</option>
+                        <option value="LAINNYA">Program Lainnya (Tuliskan Nama / Tahun)</option>
+                      </select>
+
+                      {formData.previousPackageName === "LAINNYA" && (
+                        <input
+                          type="text"
+                          placeholder="Tuliskan nama program / perkiraan tahun..."
+                          value={formData.customPreviousPackage}
+                          onChange={(e) => setFormData({ ...formData, customPreviousPackage: e.target.value })}
+                          className="w-full rounded-xl border border-amber-300 p-2 bg-white font-semibold text-slate-800"
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Package Selection Cards */}
