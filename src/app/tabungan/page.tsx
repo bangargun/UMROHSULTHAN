@@ -117,8 +117,15 @@ export default function TabunganUmrohPage() {
       {/* Top Banner Hero */}
       <div className="relative bg-gradient-to-b from-emerald-950 via-slate-900 to-slate-950 text-white py-14 px-4 border-b border-emerald-800/30">
         <div className="max-w-4xl mx-auto text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-300/30 text-xs font-black">
-            <Gift className="w-4 h-4 text-amber-400" /> Program Tabungan Umroh Barokah 1447H / 2026M
+          {/* Logo Resmi Sulthan Haramain */}
+          <div className="flex justify-center">
+            <div className="bg-white/95 backdrop-blur-md px-6 py-3 rounded-3xl border-2 border-amber-400 shadow-xl inline-flex items-center justify-center">
+              <img
+                src="/sulthan-haramain-logo.jpg"
+                alt="Sulthan Haramain Tour & Travel"
+                className="h-12 sm:h-16 w-auto object-contain rounded-xl"
+              />
+            </div>
           </div>
 
           <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight uppercase text-white leading-tight">

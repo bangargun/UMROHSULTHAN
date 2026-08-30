@@ -223,9 +223,15 @@ export default function PromoSeptemberPage() {
         <div className="absolute -top-10 -right-10 w-72 h-72 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
 
         <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-900/80 border border-emerald-400/40 text-emerald-300 text-xs font-black shadow-lg">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            PT BAROKAH SULTHAN HARAMAIN • Izin Resmi PPIU Kemenag RI
+          {/* Logo Resmi Sulthan Haramain Tour & Travel */}
+          <div className="flex justify-center">
+            <div className="bg-white/95 backdrop-blur-md px-6 py-3.5 rounded-3xl border-2 border-amber-400 shadow-2xl inline-flex items-center justify-center hover:scale-105 transition-all">
+              <img
+                src="/sulthan-haramain-logo.jpg"
+                alt="Sulthan Haramain Tour & Travel"
+                className="h-14 sm:h-18 w-auto object-contain rounded-xl"
+              />
+            </div>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight uppercase text-white leading-tight">
