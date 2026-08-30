@@ -119,11 +119,12 @@ export default function TabunganUmrohPage() {
         <div className="max-w-4xl mx-auto text-center space-y-4">
           {/* Logo Resmi Sulthan Haramain */}
           <div className="flex justify-center">
-            <div className="bg-white/95 backdrop-blur-md px-6 py-3 rounded-3xl border-2 border-amber-400 shadow-xl inline-flex items-center justify-center">
+            <div className="bg-white px-6 py-3 rounded-2xl border-2 border-amber-400 shadow-xl inline-flex items-center justify-center">
               <img
                 src="/sulthan-haramain-logo.jpg"
                 alt="Sulthan Haramain Tour & Travel"
-                className="h-12 sm:h-16 w-auto object-contain rounded-xl"
+                style={{ maxHeight: "65px", width: "auto", objectFit: "contain" }}
+                className="h-12 sm:h-16 w-auto object-contain"
               />
             </div>
           </div>

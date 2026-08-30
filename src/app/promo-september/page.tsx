@@ -253,11 +253,12 @@ export default function PromoSeptemberPage() {
         <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
           {/* Logo Resmi Sulthan Haramain Tour & Travel */}
           <div className="flex justify-center">
-            <div className="bg-white/95 backdrop-blur-md px-6 py-3.5 rounded-3xl border-2 border-amber-400 shadow-2xl inline-flex items-center justify-center hover:scale-105 transition-all">
+            <div className="bg-white px-6 py-3 rounded-2xl border-2 border-amber-400 shadow-2xl inline-flex items-center justify-center">
               <img
                 src="/sulthan-haramain-logo.jpg"
                 alt="Sulthan Haramain Tour & Travel"
-                className="h-14 sm:h-18 w-auto object-contain rounded-xl"
+                style={{ maxHeight: "70px", width: "auto", objectFit: "contain" }}
+                className="h-14 sm:h-16 w-auto object-contain"
               />
             </div>
           </div>
