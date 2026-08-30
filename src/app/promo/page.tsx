@@ -22,6 +22,15 @@ import {
   Award,
   AlertCircle,
   HelpCircle,
+  HeartHandshake,
+  HeartCrack,
+  Smile,
+  Compass,
+  MapPin,
+  Users,
+  BadgePercent,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -40,18 +49,15 @@ export default function PromoSeptemberPage() {
     gender: "MALE",
     city: "Tebing Tinggi",
     address: "",
-    roomType: "QUAD", // QUAD (28.7jt), TRIPLE (32.7jt), DOUBLE (37.7jt)
+    roomType: "QUAD",
     uniformSize: "L",
-    // Riwayat Umroh
     umrahExperienceCount: "BELUM_PERNAH",
     isPreviousClient: "TIDAK",
     previousPackageName: "",
-    // Kesehatan
     chronicDiseases: [] as string[],
     customChronicDisease: "",
     wheelchairAssistance: false,
     wheelchairNotes: "Bawa kursi roda sendiri",
-    // Dokumen
     ktpBase64: "",
     transferProofBase64: "",
     notes: "",
@@ -60,17 +66,17 @@ export default function PromoSeptemberPage() {
   const [ktpPreview, setKtpPreview] = useState<string | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch("/api/packages")
-      .then((res) => res.json())
-      .then((data) => {
+  const loadPackageData = async () => {
+    try {
+      const res = await fetch("/api/packages");
+      if (res.ok) {
+        const data = await res.json();
         if (Array.isArray(data)) {
-          // Cari paket September 2026
           const sept = data.find(
             (p: any) =>
               p.code === "UMR-5734" ||
               p.name.toUpperCase().includes("SEPTEMBER") ||
-              new Date(p.departureDate).getMonth() === 8 // Month 8 is September (0-indexed)
+              new Date(p.departureDate).getMonth() === 8
           );
           if (sept) {
             setSeptemberPackage(sept);
@@ -78,9 +84,16 @@ export default function PromoSeptemberPage() {
             setSeptemberPackage(data[0]);
           }
         }
-      })
-      .catch((err) => console.error("Failed to load package:", err))
-      .finally(() => setLoading(false));
+      }
+    } catch (err) {
+      console.error("Failed to load package:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPackageData();
   }, []);
 
   const handleKtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,10 +120,9 @@ export default function PromoSeptemberPage() {
     reader.readAsDataURL(file);
   };
 
-  // Pricing Matrix Promo vs Normal (Dinamis dari Database Paket)
+  // Pricing Matrix Promo vs Normal (100% Dinamis dari Database)
   const promoPriceQuad = septemberPackage?.priceQuad || 28700000;
   const normalPriceQuad = promoPriceQuad + 4000000;
-  const discountAmount = 4000000;
 
   const promoPriceTriple = septemberPackage?.priceTriple || 32700000;
   const normalPriceTriple = promoPriceTriple + 4000000;
@@ -129,6 +141,10 @@ export default function PromoSeptemberPage() {
     if (formData.roomType === "DOUBLE") return normalPriceDouble;
     return normalPriceQuad;
   };
+
+  const remainingQuota = septemberPackage
+    ? Math.max(0, septemberPackage.quota - septemberPackage.bookedCount)
+    : 17;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,38 +207,41 @@ export default function PromoSeptemberPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-900 font-sans pb-24 selection:bg-amber-400 selection:text-slate-950">
-      {/* Top Urgent Ribbon */}
-      <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 py-2.5 px-4 text-center font-black text-xs tracking-wide shadow-md flex items-center justify-center gap-2">
-        <Flame className="w-4 h-4 text-red-600 animate-bounce" />
-        <span>PROMO SPESIAL KEBERANGKATAN SEPTEMBER 2026 • KUOTA SANGAT TERBATAS!</span>
+      {/* 1. TOP URGENT RIBBON */}
+      <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 py-2.5 px-4 text-center font-black text-xs tracking-wide shadow-md flex items-center justify-center gap-2 sticky top-0 z-50">
+        <Flame className="w-4 h-4 text-red-600 animate-bounce shrink-0" />
+        <span>PROMO SPESIAL AKBAR SEPTEMBER 2026 • SISA {remainingQuota} SEAT LAGI!</span>
         <span className="hidden sm:inline bg-slate-950 text-amber-400 text-[10px] px-2 py-0.5 rounded-full font-mono">
-          DISKON RP 4.000.000
+          DISKON RP 4.000.000,-
         </span>
       </div>
 
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-b from-slate-900 via-emerald-950 to-slate-950 text-white py-14 px-4 border-b border-emerald-800/30 overflow-hidden">
-        {/* Glow backdrop */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* 2. HERO SECTION (EMOTIONAL & EXCLUSIVE OFFER) */}
+      <div className="relative bg-gradient-to-b from-slate-900 via-emerald-950 to-slate-950 text-white py-16 px-4 border-b border-emerald-800/30 overflow-hidden">
+        {/* Glow Effects */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-10 -right-10 w-72 h-72 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="max-w-4xl mx-auto text-center space-y-5 relative z-10">
+        <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-900/80 border border-emerald-400/40 text-emerald-300 text-xs font-black shadow-lg">
             <Sparkles className="w-4 h-4 text-amber-400" />
             PT BAROKAH SULTHAN HARAMAIN • Izin Resmi PPIU Kemenag RI
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight uppercase text-white leading-tight">
-            PROMO AKBAR <span className="text-amber-400">SEPTEMBER 2026</span><br />
-            HEMAT RP 4.000.000,- / PAX!
+            Rindukah Anda Meneteskan Air Mata<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-amber-200">
+              Di Depan Ka'bah?
+            </span>
           </h1>
 
-          <p className="text-xs sm:text-base text-emerald-100 max-w-2xl mx-auto">
-            Wujudkan impian ibadah ke Baitullah dengan fasilitas hotel nyaman dekat Masjidil Haram & Masjid Nabawi, penerbangan direct, dan bimbingan ibadah sesuai sunnah.
+          <p className="text-sm sm:text-base text-emerald-100/90 max-w-2xl mx-auto leading-relaxed">
+            Kini saatnya menjawab panggilan Baitullah tanpa rasa cemas. Nikmati <strong>Promo Spesial Akbar September 2026</strong> dengan diskon langsung <strong>Rp 4.000.000,-</strong> dan kemudahan bayar yang sangat ringan!
           </p>
 
-          {/* Pricing Highlight Badge */}
+          {/* Pricing Highlight Card */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <div className="bg-white/10 backdrop-blur-md p-5 rounded-3xl border border-amber-400/40 shadow-2xl text-center">
+            <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-amber-400/50 shadow-2xl text-center">
               <span className="text-xs text-slate-400 block line-through font-mono font-bold">
                 Harga Normal: {formatCurrency(normalPriceQuad)}
               </span>
@@ -232,19 +251,19 @@ export default function PromoSeptemberPage() {
                   {formatCurrency(promoPriceQuad)}
                 </span>
               </div>
-              <span className="inline-block mt-2 px-3 py-1 bg-red-600/90 text-white font-black text-xs rounded-full uppercase">
-                🔥 Diskon Spesial Rp 4.000.000,-
+              <span className="inline-block mt-2 px-3 py-1 bg-red-600 text-white font-black text-xs rounded-full uppercase shadow-xs">
+                🔥 Hemat Rp 4.000.000,- / Pax
               </span>
             </div>
 
             {/* Skema DP Hook */}
-            <div className="bg-emerald-900/60 backdrop-blur-md p-5 rounded-3xl border border-emerald-400/30 text-left space-y-2 max-w-sm">
+            <div className="bg-emerald-900/70 backdrop-blur-md p-6 rounded-3xl border border-emerald-400/30 text-left space-y-2 max-w-sm">
               <div className="flex items-center gap-2 text-emerald-300 font-black text-xs">
                 <ShieldCheck className="w-4 h-4 text-amber-400" />
                 KEMUDAHAN SKEMA PEMBAYARAN:
               </div>
               <p className="text-xs text-slate-200">
-                ✅ <strong>Cukup DP Rp 5.000.000,-</strong> untuk mengunci tiket & seat promo Anda hari ini.
+                ✅ <strong>Cukup DP Rp 5.000.000,-</strong> untuk mengunci seat pesawat & harga promo diskon 4 juta hari ini.
               </p>
               <p className="text-xs text-amber-300 font-bold">
                 ✅ <strong>Sisa Pelunasan ({formatCurrency(promoPriceQuad - 5000000)})</strong> dapat dilunasi menjelang keberangkatan umroh!
@@ -252,10 +271,10 @@ export default function PromoSeptemberPage() {
             </div>
           </div>
 
-          <div className="pt-3">
+          <div className="pt-2">
             <a
               href="#form-daftar"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm shadow-xl transition-all hover:scale-105"
+              className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm shadow-xl transition-all hover:scale-105"
             >
               <Sparkles className="w-5 h-5" /> Amankan Kursi Promo {formatCurrency(promoPriceQuad)} Sekarang
             </a>
@@ -263,14 +282,112 @@ export default function PromoSeptemberPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 -mt-6 space-y-8 relative z-20">
-        {/* Ringkasan Program Paket September 2026 */}
+      <div className="max-w-4xl mx-auto px-4 -mt-6 space-y-10 relative z-20">
+        {/* 3. SEKSI STORY TELLING: MASALAH (THE PAIN POINTS) */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 text-red-800 text-[11px] font-black uppercase">
+              <HeartCrack className="w-3.5 h-3.5 text-red-600" />
+              Apakah Ini yang Sedang Anda Rasakan?
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+              Niat Sudah Kuat ke Baitullah, Namun Sering Terbentur Kendala Ini:
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-5 rounded-2xl bg-rose-50/60 border border-rose-200 space-y-2">
+              <div className="w-9 h-9 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-black text-lg">
+                💸
+              </div>
+              <h3 className="font-black text-slate-900 text-sm">Biaya Melambung Tinggi</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Banyak paket umroh saat ini mencapai Rp 33 – 36 Juta per jamaah, membuat impian beribadah bersama keluarga tertunda berkali-kali.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-black text-lg">
+                ⌛
+              </div>
+              <h3 className="font-black text-slate-900 text-sm">Harus Bayar Lunas di Muka</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Banyak travel mewajibkan pembayaran puluhan juta secara tunai di awal pendaftaran, sangat memberatkan jika belum ada dana cair saat ini.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center font-black text-lg">
+                😟
+              </div>
+              <h3 className="font-black text-slate-900 text-sm">Khawatir Fasilitas & Jadwal</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Takut hotel terlalu jauh dari masjid, penerbangan transit melelahkan, atau pembimbing ibadah yang kurang ramah dan tidak membimbing dengan sabar.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. SEKSI STORY TELLING: SOLUSI (PT BAROKAH SULTHAN HARAMAIN) */}
+        <div className="bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-emerald-500/30 space-y-6">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-black uppercase">
+              <Smile className="w-3.5 h-3.5 text-emerald-400" />
+              Solusi Penuh Berkah & Ketenangan
+            </div>
+            <h2 className="text-xl sm:text-3xl font-black text-white">
+              Sulthan Haramain Hadir Mewujudkan Impian Ibadah Anda Nyaman & Aman!
+            </h2>
+            <p className="text-xs text-emerald-200/80">
+              Kami merancang Program Khusus September 2026 agar setiap keluarga muslim dapat beribadah khusyuk tanpa beban finansial.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10 space-y-2">
+              <div className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center font-black text-sm">
+                1
+              </div>
+              <h3 className="font-black text-amber-300 text-sm">Potongan Nyata Rp 4 Juta</h3>
+              <p className="text-xs text-slate-200 leading-relaxed">
+                Harga terbaik <strong>{formatCurrency(promoPriceQuad)}</strong> tanpa mengurangi kenyamanan hotel, maskapai, maupun konsumsi makanan khas Indonesia.
+              </p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10 space-y-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-400 text-slate-950 flex items-center justify-center font-black text-sm">
+                2
+              </div>
+              <h3 className="font-black text-emerald-300 text-sm">Cukup DP 5 Juta Dulu</h3>
+              <p className="text-xs text-slate-200 leading-relaxed">
+                Seat pesawat dan hotel Anda sudah terkunci aman. Sisa pelunasan bisa dibayarkan santai menjelang jadwal keberangkatan.
+              </p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10 space-y-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-400 text-slate-950 flex items-center justify-center font-black text-sm">
+                3
+              </div>
+              <h3 className="font-black text-blue-300 text-sm">Bimbingan Sesuai Sunnah</h3>
+              <p className="text-xs text-slate-200 leading-relaxed">
+                Didampingi Muthawwif berpengalaman & sabar, mulai dari bimbingan manasik di tanah air hingga thawaf, sa'i, dan ziarah Raudhah.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. SEKSI DETAIL PAKET & FASILITAS REAL DARI DATABASE */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
             <div>
-              <span className="text-[10px] font-mono font-bold bg-slate-900 text-white px-2.5 py-1 rounded">
-                KODE: {septemberPackage?.code || "UMR-5734"}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-bold bg-slate-900 text-white px-2.5 py-1 rounded">
+                  KODE: {septemberPackage?.code || "UMR-5734"}
+                </span>
+                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded border border-emerald-300">
+                  ✈️ Direct Flight
+                </span>
+              </div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1.5">
                 {septemberPackage?.name || "UMROH REGULER SEPTEMBER 2026"}
               </h2>
@@ -283,14 +400,14 @@ export default function PromoSeptemberPage() {
               <span className="text-xs text-slate-400 line-through block font-mono">
                 {formatCurrency(normalPriceQuad)}
               </span>
-              <span className="text-2xl font-black text-emerald-700 font-mono">
+              <span className="text-2xl sm:text-3xl font-black text-emerald-700 font-mono">
                 {formatCurrency(promoPriceQuad)}
               </span>
               <span className="text-[11px] text-slate-500 block">Kamar Quad (Sekamar Ber-4)</span>
             </div>
           </div>
 
-          {/* Fasilitas Hotel & Maskapai Grid */}
+          {/* Fasilitas Hotel & Maskapai Grid (Dinamis Sesuai Database) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase block">✈️ Maskapai Penerbangan</span>
@@ -298,29 +415,29 @@ export default function PromoSeptemberPage() {
               <p className="text-[11px] text-slate-500">Penerbangan Langsung Tanpa Transit</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-1">
+            <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-1">
               <span className="text-[10px] font-bold text-amber-900 uppercase block">🏨 Hotel Makkah</span>
-              <p className="font-black text-slate-900 text-sm">{septemberPackage?.hotelMakkah || "AJYD MAKKAH"}</p>
-              <p className="text-[11px] text-slate-600">Dekat Pelataran Masjidil Haram</p>
+              <p className="font-black text-slate-900 text-sm">{septemberPackage?.hotelMakkah || "WA DAEFA / DHAIF SYUHADA"}</p>
+              <p className="text-[11px] text-slate-600">Akses Mudah ke Pelataran Masjidil Haram</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-1">
+            <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 space-y-1">
               <span className="text-[10px] font-bold text-emerald-900 uppercase block">🕌 Hotel Madinah</span>
-              <p className="font-black text-slate-900 text-sm">{septemberPackage?.hotelMadinah || "ROYAL MADINAH"}</p>
-              <p className="text-[11px] text-slate-600">Jalan Kaki ke Masjid Nabawi</p>
+              <p className="font-black text-slate-900 text-sm">{septemberPackage?.hotelMadinah || "ARKAN GOLDEN"}</p>
+              <p className="text-[11px] text-slate-600">Dekat Gerbang Masuk Masjid Nabawi</p>
             </div>
           </div>
 
-          {/* Checklist Fasilitas All-Inclusive */}
+          {/* Checklist Fasilitas Lengkap */}
           <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-slate-50 border border-emerald-200 space-y-3">
             <h4 className="font-black text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
               <Gift className="w-4 h-4 text-emerald-700" />
-              Fasilitas Lengkap Termasuk dalam Biaya Promo:
+              Fasilitas All-Inclusive yang Sudah Anda Dapatkan:
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-slate-700">
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Tiket Pesawat PP Internasional</span>
+                <span>Tiket Pesawat PP Internasional ({septemberPackage?.airline || "LION AIR"})</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -332,21 +449,21 @@ export default function PromoSeptemberPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Bus AC Eksekutif untuk Ziarah & Transportasi</span>
+                <span>Bus AC Eksekutif Saudi untuk Transportasi & Ziarah</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>1 Set Perlengkapan Lengkap (Koper, Batik, Ihram/Mukena)</span>
+                <span>1 Set Perlengkapan Lengkap (Koper, Batik, Kain Ihram/Mukena)</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Pembimbing Ibadah (Muthawwif) & Handling Bandara</span>
+                <span>Bimbingan Muthawwif Bersertifikat & Handling Bandara</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Formulir Pendaftaran Promo */}
+        {/* 6. FORMULIR PENDAFTARAN PROMO */}
         <div id="form-daftar" className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6">
           {submitSuccess ? (
             <div className="text-center py-10 px-4 space-y-4">
@@ -378,7 +495,7 @@ export default function PromoSeptemberPage() {
                   href={`/daftar/status?reg=${submitSuccess.regNumber}`}
                   className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-md"
                 >
-                  Pelajari Status & Konfirmasi DP <ArrowRight className="w-4 h-4" />
+                  Lihat Status & Konfirmasi DP <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             </div>
@@ -389,10 +506,10 @@ export default function PromoSeptemberPage() {
                   <Tag className="w-3.5 h-3.5" /> Formulir Registrasi Khusus Promo September 2026
                 </div>
                 <h3 className="text-xl font-black text-slate-900">
-                  Kunci Kursi Promo Rp 28.7 Juta Anda Hari Ini
+                  Kunci Kursi Promo {formatCurrency(promoPriceQuad)} Anda Hari Ini
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Isi data calon jamaah di bawah ini sesuai KTP asli untuk penguncian seat dan invoice resmi.
+                  Lengkapi data di bawah ini untuk penguncian kuota seat dan penerbitan invoice resmi.
                 </p>
               </div>
 
