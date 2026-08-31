@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { saveUploadedFile } from "@/lib/google-drive";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
       recipientDateOfBirth,
       packageType = "BADAL_BASIC",
       price,
+      transferProofBase64,
       notes,
     } = body;
 
@@ -78,6 +80,21 @@ export async function POST(request: Request) {
     // Generate invoice number
     const invoiceNumber = `INV-BDL-${orderNumber.replace("BDL-", "")}`;
 
+    // Upload Bukti Transfer jika ada
+    let transferProofUrl: string | null = null;
+    if (transferProofBase64) {
+      try {
+        const saved = await saveUploadedFile({
+          fileBase64: transferProofBase64,
+          fileName: `TRANSFER_BADAL_${ordererName.replace(/\s+/g, "_")}_${Date.now().toString().slice(-4)}.jpg`,
+          subFolder: "transfers",
+        });
+        transferProofUrl = saved.fileUrl;
+      } catch (err) {
+        console.error("Gagal simpan Bukti Transfer Badal:", err);
+      }
+    }
+
     const order = await prisma.badalUmroh.create({
       data: {
         orderNumber,
@@ -95,6 +112,7 @@ export async function POST(request: Request) {
         recipientDateOfBirth: recipientDateOfBirth ? new Date(recipientDateOfBirth) : null,
         packageType,
         price: finalPrice,
+        transferProofUrl,
         invoiceNumber,
         notes,
         status: "PENDING_PAYMENT",
