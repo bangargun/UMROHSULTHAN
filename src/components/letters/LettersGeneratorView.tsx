@@ -1251,20 +1251,10 @@ export default function LettersGeneratorView({
                       <div className="w-24 sm:w-32 h-3.5 bg-slate-900 -skew-x-25 -mr-3" />
                     </div>
                   </>
-                ) : (
-                  <>
-                    {/* Placeholder on Screen Preview */}
-                    <div className="no-print border-2 border-dashed border-slate-300 rounded-xl p-3.5 text-center bg-slate-50/80 text-slate-500 text-xs">
-                      <p className="font-bold text-slate-700">🏷️ AREA KERTAS BERKOP FISIK RESMI</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Kepala surat tidak dicetak ke kertas printer. Isi surat akan mulai tepat di bawah kop fisik kertas Anda.</p>
-                    </div>
-                    {/* Top Print Spacing on Physical Paper */}
-                    <div className="hidden print:block h-[3.6cm] w-full" />
-                  </>
-                )}
+                ) : null}
 
                 {/* 3. DATE & LETTER NUMBER */}
-                <div className="pt-4 text-xs flex justify-between items-start">
+                <div className={`${includeLetterhead ? "pt-4" : "pt-0"} text-xs flex justify-between items-start`}>
                   <div>
                     <p className="font-mono text-slate-900">
                       <strong>Nomor :</strong> {selectedLetterForPrint.letterNumber || "001/ENDOS/SULTHAN/VIII/2026"}
