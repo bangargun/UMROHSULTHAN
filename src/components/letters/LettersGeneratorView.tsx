@@ -38,6 +38,8 @@ export default function LettersGeneratorView({
   const [editingLetter, setEditingLetter] = useState<any | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedLetterForPrint, setSelectedLetterForPrint] = useState<any | null>(null);
+  const [includeLetterhead, setIncludeLetterhead] = useState(true);
+  const [includeFooter, setIncludeFooter] = useState(true);
   const [includeLegalAttachments, setIncludeLegalAttachments] = useState(true);
   const [travelSettings, setTravelSettings] = useState<any>({
     companyName: "PT BAROKAH SULTHAN HARAMAIN",
@@ -1143,73 +1145,123 @@ export default function LettersGeneratorView({
               </div>
             </div>
 
-            {/* Legal Document Attachment Toggle */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-amber-50/90 p-3.5 rounded-2xl border border-amber-200 no-print">
-              <label className="flex items-center gap-2.5 text-xs font-bold text-amber-950 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={includeLegalAttachments}
-                  onChange={(e) => setIncludeLegalAttachments(e.target.checked)}
-                  className="rounded border-amber-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
-                />
-                <span>Lampirkan Salinan Dokumen Legalitas Resmi (SK Kemenkumham RI & NIB Berbasis Risiko)</span>
-              </label>
-              <span className="text-[10px] font-bold text-amber-900 bg-amber-100/90 px-2.5 py-1 rounded-full border border-amber-300">
-                {includeLegalAttachments ? "📄 Total 4 Halaman Siap Cetak" : "📄 1 Halaman Surat Saja"}
-              </span>
+            {/* Print Options & Letterhead Control Toolbar */}
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5 no-print">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-bold text-slate-800">
+                  <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={includeLetterhead}
+                      onChange={(e) => setIncludeLetterhead(e.target.checked)}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                    />
+                    <span>Sertakan Kepala Surat (Kop Resmi)</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={includeFooter}
+                      onChange={(e) => setIncludeFooter(e.target.checked)}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                    />
+                    <span>Sertakan Footer Garis & Kontak</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={includeLegalAttachments}
+                      onChange={(e) => setIncludeLegalAttachments(e.target.checked)}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                    />
+                    <span>Lampiran Legalitas (SK & NIB)</span>
+                  </label>
+                </div>
+
+                <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${
+                  !includeLetterhead
+                    ? "bg-amber-100 text-amber-900 border-amber-300"
+                    : "bg-emerald-100 text-emerald-900 border-emerald-300"
+                }`}>
+                  {!includeLetterhead ? "🖨️ Mode Kertas Berkop (Tanpa Kepala Surat)" : "📄 Mode Standar (Dengan Kop Lengkap)"}
+                </span>
+              </div>
+
+              {!includeLetterhead && (
+                <div className="text-[11px] text-amber-900 bg-amber-50/90 px-3 py-2 rounded-xl border border-amber-200 flex items-center gap-2">
+                  <span className="font-bold text-amber-700">💡 Info Mode Kertas Berkop Fisik:</span>
+                  <span>Kepala surat disembunyikan. Spasi atas otomatis disesuaikan agar isi surat langsung pas dicetak pada kertas berkop resmi fisik Anda.</span>
+                </div>
+              )}
             </div>
 
             {/* Official Letter A4 Template (Matching Exact Geometric PPIU Reference) */}
             <div className="print-sheet border border-slate-300 p-8 sm:p-10 rounded-2xl bg-white text-slate-900 font-sans leading-relaxed text-xs space-y-6 shadow-sm min-h-[840px] flex flex-col justify-between print:border-none print:shadow-none print:p-4 print:min-h-[27cm]">
               <div>
-                {/* 1. KOP SURAT */}
-                <div className="flex items-center gap-4 pb-2">
-                  <div className="h-16 w-16 flex-shrink-0 flex items-center justify-center p-1">
-                    <img
-                      src="/sulthan-haramain-logo.jpg"
-                      alt="Logo Sulthan Haramain"
-                      className="h-full w-full object-contain"
-                    />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-950 uppercase leading-none">
-                      {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
-                    </h1>
-                    <p className="text-[10px] sm:text-[10.5px] text-slate-700 leading-tight mt-1">
-                      {travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}
-                    </p>
-                    <p className="text-[9.5px] sm:text-[10px] font-semibold text-slate-700 leading-tight mt-0.5">
-                      Telp / WhatsApp: {travelSettings.phone || "0821-6733-9464"} • Email: {travelSettings.email || "barokahsulthanharamain@gmail.com"}
-                    </p>
-                    <p className="text-[9.5px] sm:text-[10px] font-bold text-slate-900 leading-tight mt-0.5 tracking-tight">
-                      {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026"}
-                    </p>
-                    <p className="text-[8px] sm:text-[8.5px] font-semibold text-slate-500 tracking-wide mt-0.5 uppercase">
-                      NO. IZIN PPIU : {(travelSettings.licenseNumber || "25052200384080005")
-                        .replace(/•?\s*NIB[\s\S]*/i, "")
-                        .replace(/•?\s*KBLI[\s\S]*/i, "")
-                        .replace(/NO\.\s*IZIN\s*PPIU\s*:\s*/i, "")
-                        .trim()}
-                    </p>
-                  </div>
-                </div>
+                {/* 1. KOP SURAT (Conditional) */}
+                {includeLetterhead ? (
+                  <>
+                    <div className="flex items-center gap-4 pb-2">
+                      <div className="h-16 w-16 flex-shrink-0 flex items-center justify-center p-1">
+                        <img
+                          src="/sulthan-haramain-logo.jpg"
+                          alt="Logo Sulthan Haramain"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-950 uppercase leading-none">
+                          {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
+                        </h1>
+                        <p className="text-[10px] sm:text-[10.5px] text-slate-700 leading-tight mt-1">
+                          {travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}
+                        </p>
+                        <p className="text-[9.5px] sm:text-[10px] font-semibold text-slate-700 leading-tight mt-0.5">
+                          Telp / WhatsApp: {travelSettings.phone || "0821-6733-9464"} • Email: {travelSettings.email || "barokahsulthanharamain@gmail.com"}
+                        </p>
+                        <p className="text-[9.5px] sm:text-[10px] font-bold text-slate-900 leading-tight mt-0.5 tracking-tight">
+                          {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026"}
+                        </p>
+                        <p className="text-[8px] sm:text-[8.5px] font-semibold text-slate-500 tracking-wide mt-0.5 uppercase">
+                          NO. IZIN PPIU : {(travelSettings.licenseNumber || "25052200384080005")
+                            .replace(/•?\s*NIB[\s\S]*/i, "")
+                            .replace(/•?\s*KBLI[\s\S]*/i, "")
+                            .replace(/NO\.\s*IZIN\s*PPIU\s*:\s*/i, "")
+                            .trim()}
+                        </p>
+                      </div>
+                    </div>
 
-                {/* 2. GEOMETRIC HEADER DIVIDER LINE (Yellow Bar + Diagonal Slashes + Dark Wedge) */}
-                <div className="relative w-full h-5 flex items-center my-1 overflow-hidden">
-                  {/* Left Gold Bar */}
-                  <div className="h-2.5 flex-1 bg-gradient-to-r from-amber-400 to-amber-500 rounded-l" />
-                  
-                  {/* Middle Diagonal Slashes */}
-                  <div className="flex gap-1 px-2">
-                    <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                    <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                    <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                    <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                  </div>
+                    {/* 2. GEOMETRIC HEADER DIVIDER LINE (Yellow Bar + Diagonal Slashes + Dark Wedge) */}
+                    <div className="relative w-full h-5 flex items-center my-1 overflow-hidden">
+                      {/* Left Gold Bar */}
+                      <div className="h-2.5 flex-1 bg-gradient-to-r from-amber-400 to-amber-500 rounded-l" />
+                      
+                      {/* Middle Diagonal Slashes */}
+                      <div className="flex gap-1 px-2">
+                        <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
+                        <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
+                        <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
+                        <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
+                      </div>
 
-                  {/* Right Dark Wedge Block */}
-                  <div className="w-24 sm:w-32 h-3.5 bg-slate-900 -skew-x-25 -mr-3" />
-                </div>
+                      {/* Right Dark Wedge Block */}
+                      <div className="w-24 sm:w-32 h-3.5 bg-slate-900 -skew-x-25 -mr-3" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Placeholder on Screen Preview */}
+                    <div className="no-print border-2 border-dashed border-slate-300 rounded-xl p-3.5 text-center bg-slate-50/80 text-slate-500 text-xs">
+                      <p className="font-bold text-slate-700">🏷️ AREA KERTAS BERKOP FISIK RESMI</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Kepala surat tidak dicetak ke kertas printer. Isi surat akan mulai tepat di bawah kop fisik kertas Anda.</p>
+                    </div>
+                    {/* Top Print Spacing on Physical Paper */}
+                    <div className="hidden print:block h-[3.6cm] w-full" />
+                  </>
+                )}
 
                 {/* 3. DATE & LETTER NUMBER */}
                 <div className="pt-4 text-xs flex justify-between items-start">
@@ -1523,30 +1575,34 @@ export default function LettersGeneratorView({
               </div>
 
               {/* 7. GEOMETRIC FOOTER DIVIDER (Matching Exact PPIU Reference) */}
-              <div className="pt-6">
-                <div className="relative w-full h-7 flex items-center overflow-hidden">
-                  {/* Left Dark Wedge Block */}
-                  <div className="w-24 sm:w-32 h-4 bg-slate-900 -skew-x-25 -ml-3" />
+              {includeFooter ? (
+                <div className="pt-6">
+                  <div className="relative w-full h-7 flex items-center overflow-hidden">
+                    {/* Left Dark Wedge Block */}
+                    <div className="w-24 sm:w-32 h-4 bg-slate-900 -skew-x-25 -ml-3" />
 
-                  {/* Middle Diagonal Slashes */}
-                  <div className="flex gap-1 px-2">
-                    <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                    <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                    <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                    <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                  </div>
+                    {/* Middle Diagonal Slashes */}
+                    <div className="flex gap-1 px-2">
+                      <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
+                      <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
+                      <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
+                      <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
+                    </div>
 
-                  {/* Right Gold Contact Bar */}
-                  <div className="h-4 flex-1 bg-gradient-to-r from-amber-400 to-amber-500 rounded-r flex items-center justify-end px-3 gap-4 text-[9px] font-bold text-slate-950">
-                    <span className="flex items-center gap-1">
-                      📞 {travelSettings.phone || "0811-9876-5432"}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      ✉️ {travelSettings.email || "barokahsulthanharamain@gmail.com"}
-                    </span>
+                    {/* Right Gold Contact Bar */}
+                    <div className="h-4 flex-1 bg-gradient-to-r from-amber-400 to-amber-500 rounded-r flex items-center justify-end px-3 gap-4 text-[9px] font-bold text-slate-950">
+                      <span className="flex items-center gap-1">
+                        📞 {travelSettings.phone || "0821-6733-9464"}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        ✉️ {travelSettings.email || "barokahsulthanharamain@gmail.com"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="pt-2" />
+              )}
             </div>
 
             {/* ATTACHMENT PAGES (LAMPIRAN DOKUMEN LEGALITAS RESMI PPIU) */}
