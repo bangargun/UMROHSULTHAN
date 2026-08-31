@@ -172,6 +172,11 @@ export default function LettersGeneratorView({
       defaultSubject = "Permohonan Paspor Calon Jemaah Umrah";
       defaultNote = "Rekomendasi & Jaminan resmi pengurusan paspor baru umroh berdasarkan SE Dirjen Imigrasi No. IMI-0342 GR.01.01 Tahun 2014.";
       defaultCustomTitle = "Surat Permohonan Rekomendasi & Pernyataan Jaminan Paspor";
+    } else if (newType === "SURAT_PERPANJANG_PASPOR") {
+      defaultDest = "Kantor Imigrasi Kelas II TPI Pematang Siantar";
+      defaultSubject = "Permohonan Perpanjangan / Penggantian Paspor Calon Jemaah Umrah";
+      defaultNote = "Rekomendasi & Jaminan resmi perpanjangan/penggantian paspor habis masa berlaku untuk ibadah Umroh berdasarkan SE Dirjen Imigrasi No. IMI-0342 GR.01.01 Tahun 2014.";
+      defaultCustomTitle = "Surat Rekomendasi Perpanjangan Paspor";
     } else if (newType === "SURAT_IZIN_CUTI") {
       defaultDest = "Pimpinan Perusahaan / Instansi Terkait";
       defaultSubject = "Permohonan Izin / Dispensasi Cuti Ibadah Umroh";
@@ -335,6 +340,8 @@ export default function LettersGeneratorView({
         return "Surat Permohonan Endos Nama di Paspor";
       case "SURAT_REKOMENDASI_PASPOR":
         return "Surat Rekomendasi Pembuatan Paspor";
+      case "SURAT_PERPANJANG_PASPOR":
+        return "Surat Rekomendasi Perpanjangan Paspor";
       case "SURAT_IZIN_CUTI":
         return "Surat Permohonan Izin Cuti Umroh";
       case "SURAT_PENGANTAR_KEMENAG":
@@ -390,7 +397,7 @@ export default function LettersGeneratorView({
       </div>
 
       {/* Quick Letter Type Category Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 no-print">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 no-print">
         <button
           onClick={() => {
             handleTypeChange("SURAT_ENDORSEMENT_PASPOR");
@@ -414,6 +421,19 @@ export default function LettersGeneratorView({
           <span className="text-[10px] font-bold text-emerald-800 uppercase block">Imigrasi</span>
           <p className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 line-clamp-1 mt-0.5">
             Paspor Baru
+          </p>
+        </button>
+
+        <button
+          onClick={() => {
+            handleTypeChange("SURAT_PERPANJANG_PASPOR");
+            setIsAddModalOpen(true);
+          }}
+          className="p-2.5 rounded-xl bg-white hover:bg-teal-50 border border-slate-200 text-left transition-all group shadow-2xs"
+        >
+          <span className="text-[10px] font-bold text-teal-800 uppercase block">Imigrasi</span>
+          <p className="text-xs font-bold text-slate-900 group-hover:text-teal-700 line-clamp-1 mt-0.5">
+            Perpanjang Paspor
           </p>
         </button>
 
@@ -620,6 +640,7 @@ export default function LettersGeneratorView({
                     <>
                       <option value="SURAT_ENDORSEMENT_PASPOR">✨ Surat Permohonan Endos Nama di Paspor (Imigrasi - 3 Kata)</option>
                       <option value="SURAT_REKOMENDASI_PASPOR">Surat Rekomendasi Pembuatan Paspor Baru (Imigrasi)</option>
+                      <option value="SURAT_PERPANJANG_PASPOR">Surat Rekomendasi Perpanjangan / Penggantian Paspor (Imigrasi)</option>
                       <option value="SURAT_IZIN_CUTI">Surat Permohonan Izin Cuti Kerja / Kuliah / Sekolah</option>
                       <option value="SURAT_PENGANTAR_KEMENAG">Surat Pengantar Rekomendasi Kemenag Kab/Kota</option>
                       <option value="SURAT_KETERANGAN_JAMAAH">Surat Keterangan Terdaftar Calon Jamaah Umroh</option>
@@ -895,6 +916,7 @@ export default function LettersGeneratorView({
                     <>
                       <option value="SURAT_ENDORSEMENT_PASPOR">✨ Surat Permohonan Endos Nama di Paspor (Imigrasi - 3 Kata)</option>
                       <option value="SURAT_REKOMENDASI_PASPOR">Surat Rekomendasi Pembuatan Paspor Baru (Imigrasi)</option>
+                      <option value="SURAT_PERPANJANG_PASPOR">Surat Rekomendasi Perpanjangan / Penggantian Paspor (Imigrasi)</option>
                       <option value="SURAT_IZIN_CUTI">Surat Permohonan Izin Cuti Kerja / Kuliah / Sekolah</option>
                       <option value="SURAT_PENGANTAR_KEMENAG">Surat Pengantar Rekomendasi Kemenag Kab/Kota</option>
                       <option value="SURAT_KETERANGAN_JAMAAH">Surat Keterangan Terdaftar Calon Jamaah Umroh</option>
@@ -1219,7 +1241,9 @@ export default function LettersGeneratorView({
                 </div>
 
                 {/* 5. LETTER BODY */}
-                {selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR" ? (
+                {selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR" ||
+                selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ||
+                selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ? (
                   <div className="pt-3 space-y-3 text-xs text-justify leading-relaxed">
                     <p className="font-semibold text-slate-900">Assalamu’alaikum Wr. Wb.</p>
                     <p className="text-slate-800">
@@ -1249,14 +1273,30 @@ export default function LettersGeneratorView({
 
                     <div className="space-y-1 pt-1">
                       <p className="font-semibold text-slate-900">
-                        Bersama ini saya mengajukan permohonan paspor untuk calon Jemaah Umrah dengan data sebagai berikut:
+                        {selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR"
+                          ? "Bersama ini saya mengajukan permohonan penambahan / endorsement nama pada halaman pengesahan paspor menjadi 3 (tiga) suku kata guna memenuhi persyaratan penerbitan Visa Umroh dari Kementerian Haji dan Umrah Kerajaan Arab Saudi, untuk calon Jemaah Umrah dengan data sebagai berikut:"
+                          : selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR"
+                          ? "Bersama ini saya mengajukan permohonan perpanjangan / penggantian paspor untuk calon Jemaah Umrah dengan data sebagai berikut:"
+                          : "Bersama ini saya mengajukan permohonan paspor untuk calon Jemaah Umrah dengan data sebagai berikut:"}
                       </p>
+
                       <div className="pl-3 sm:pl-5 space-y-0.5 text-slate-900">
                         <div className="grid grid-cols-[140px_12px_1fr]">
-                          <span className="font-semibold">Nama</span>
+                          <span className="font-semibold">{selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ? "Nama Sesuai KTP" : "Nama"}</span>
                           <span>:</span>
                           <span className="font-bold uppercase text-slate-950">{selectedLetterForPrint.pilgrim?.name || "-"}</span>
                         </div>
+
+                        {selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" && (
+                          <div className="grid grid-cols-[140px_12px_1fr] bg-amber-50/80 p-1 rounded">
+                            <span className="font-bold text-amber-950">Nama Endorsement (3 Kata)</span>
+                            <span className="text-amber-950">:</span>
+                            <span className="font-black text-slate-950 underline uppercase tracking-wide">
+                              {getEndorsedName(selectedLetterForPrint)}
+                            </span>
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-[140px_12px_1fr]">
                           <span className="font-semibold">Tempat/tanggal lahir</span>
                           <span>:</span>
@@ -1264,11 +1304,34 @@ export default function LettersGeneratorView({
                             {selectedLetterForPrint.pilgrim?.placeOfBirth || "INDONESIA"}, {formatDate(selectedLetterForPrint.pilgrim?.dateOfBirth, "dd-MM-yyyy")}
                           </span>
                         </div>
+
                         <div className="grid grid-cols-[140px_12px_1fr]">
                           <span className="font-semibold">NIK</span>
                           <span>:</span>
                           <span className="font-mono font-bold text-slate-950">{selectedLetterForPrint.pilgrim?.nik || "-"}</span>
                         </div>
+
+                        {(selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" || selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR") && (
+                          <div className="grid grid-cols-[140px_12px_1fr]">
+                            <span className="font-semibold">Nomor Paspor RI</span>
+                            <span>:</span>
+                            <span className="font-mono font-bold text-slate-950">
+                              {selectedLetterForPrint.pilgrim?.passportNumber ? (
+                                <>
+                                  {selectedLetterForPrint.pilgrim?.passportNumber}{" "}
+                                  {selectedLetterForPrint.pilgrim?.passportExpiry && (
+                                    <span className="font-sans font-normal text-slate-600">
+                                      (Masa Berlaku s/d: {formatDate(selectedLetterForPrint.pilgrim?.passportExpiry, "dd-MM-yyyy")})
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                "Dalam Proses"
+                              )}
+                            </span>
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-[140px_12px_1fr]">
                           <span className="font-semibold">Alamat</span>
                           <span>:</span>
@@ -1285,7 +1348,7 @@ export default function LettersGeneratorView({
 
                     <ol className="list-decimal pl-5 space-y-1 text-slate-900 leading-relaxed">
                       <li>
-                        Permohonan paspor yang diurus adalah Paspor Warga Negara Indonesia yang akan melakukan perjalanan ke Arab Saudi dalam rangka menunaikan Ibadah Umrah.
+                        Permohonan {selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ? "penambahan / endorsement nama paspor" : selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ? "perpanjangan / penggantian paspor" : "paspor"} yang diurus adalah Paspor Warga Negara Indonesia yang akan melakukan perjalanan ke Arab Saudi dalam rangka menunaikan Ibadah Umrah.
                       </li>
                       <li>
                         Rombongan calon jama’ah umrah yang diberangkatkan tidak akan melakukan pelanggaran peraturan Keimigrasian berupa penyalahgunaan izin tinggal, dan atau tidak melebihi izin tinggalnya (<em>overstay</em>), memalsukan atau membuat palsu paspor yang diberikan kepadanya maupun bekerja secara illegal.
@@ -1311,10 +1374,6 @@ export default function LettersGeneratorView({
                     {/* CUSTOM BODY OR DEDICATED TEMPLATE BODY */}
                     {selectedLetterForPrint.customBody ? (
                       <p>{selectedLetterForPrint.customBody}</p>
-                    ) : selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ? (
-                      <p>
-                        Bersama ini kami selaku Pimpinan <strong>{travelSettings.companyName}</strong> (Izin Penyelenggara Perjalanan Ibadah Umrah No. {travelSettings.licenseNumber}) mengajukan permohonan kepada Bapak/Ibu kiranya berkenan melakukan <strong>Penambahan / Endorsement Nama</strong> pada Halaman Pengesahan (Endorsement Page) paspor calon jamaah umroh kami menjadi <strong>3 (tiga) suku kata</strong> guna memenuhi persyaratan penerbitan Visa Umroh dari Kementerian Haji dan Umrah Kerajaan Arab Saudi, atas nama jamaah berikut :
-                      </p>
                     ) : selectedLetterForPrint.type === "SURAT_IZIN_CUTI" ? (
                       <p>
                         Bersama ini kami selaku Pimpinan <strong>{travelSettings.companyName}</strong> memohon kiranya Bapak/Ibu dapat memberikan dispensasi dan izin cuti bagi karyawan/peserta didik yang terdaftar sebagai calon jamaah umroh kami untuk menunaikan ibadah umroh ke Tanah Suci pada tanggal <strong>{formatDate(selectedLetterForPrint.pilgrim?.package?.departureDate, "dd MMMM yyyy")}</strong> s.d. selesai, dengan data diri sebagai berikut :
@@ -1347,17 +1406,6 @@ export default function LettersGeneratorView({
                               {selectedLetterForPrint.pilgrim?.name || "-"}
                             </td>
                           </tr>
-
-                          {selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" && (
-                            <tr className="bg-amber-50/70">
-                              <td className="border border-slate-900 py-2.5 px-3 font-bold text-slate-900">
-                                Nama Pengajuan Endorsement (3 Kata)
-                              </td>
-                              <td className="border border-slate-900 py-2.5 px-3 font-black text-slate-950 underline uppercase text-sm tracking-wide">
-                                {getEndorsedName(selectedLetterForPrint)}
-                              </td>
-                            </tr>
-                          )}
 
                           <tr>
                             <td className="border border-slate-900 py-2 px-3 font-bold text-slate-900">
@@ -1426,8 +1474,10 @@ export default function LettersGeneratorView({
                   </div>
                 )}
 
-                {/* 6. SIGNATURE AREA (All on the Left) */}
-                {selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR" ? (
+                {/* 6. SIGNATURE AREA (All on the Left for Immigration Letters) */}
+                {selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR" ||
+                selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ||
+                selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ? (
                   <div className="pt-4 flex flex-col items-start text-left text-xs space-y-1.5">
                     <p className="font-bold text-slate-950 uppercase">{travelSettings.companyName || "PT. BAROKAH SULTHAN HARAMAIN"}</p>
 

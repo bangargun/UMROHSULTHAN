@@ -70,6 +70,7 @@ export async function POST(request: Request) {
     if (!tmpl) {
       if (type === "SURAT_ENDORSEMENT_PASPOR") prefix = "ENDOS";
       else if (type === "SURAT_REKOMENDASI_PASPOR") prefix = "PASPOR";
+      else if (type === "SURAT_PERPANJANG_PASPOR") prefix = "PERPANJANG";
       else if (type === "SURAT_IZIN_CUTI") prefix = "CUTI";
       else if (type === "SURAT_PENGANTAR_KEMENAG") prefix = "KEMENAG";
       else if (type === "SURAT_KETERANGAN_JAMAAH") prefix = "JAMAAH";
