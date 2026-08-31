@@ -1426,26 +1426,28 @@ export default function LettersGeneratorView({
                   </div>
                 )}
 
-                {/* 6. SIGNATURE AREA */}
+                {/* 6. SIGNATURE AREA (All on the Left) */}
                 {selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR" ? (
-                  <div className="pt-5 flex justify-between items-end text-xs">
-                    {/* Kotak Meterai */}
-                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-2 text-center w-32 h-20 flex flex-col items-center justify-center bg-slate-50 text-[9px] text-slate-500">
-                      <span className="font-bold text-slate-700">METERAI TEMPEL</span>
-                      <span className="font-black text-slate-900 text-[11px]">Rp 10.000</span>
-                      <span className="text-[8px] text-slate-400">Tempel di sini</span>
+                  <div className="pt-4 flex flex-col items-start text-left text-xs space-y-1.5">
+                    <p className="font-bold text-slate-950 uppercase">{travelSettings.companyName || "PT. BAROKAH SULTHAN HARAMAIN"}</p>
+
+                    {/* Kotak Meterai & Ruang TTD/Stempel di Sebelah Kiri */}
+                    <div className="flex items-center gap-3 my-1">
+                      <div className="border-2 border-dashed border-slate-300 rounded-xl p-1.5 text-center w-28 h-16 flex flex-col items-center justify-center bg-slate-50 text-[9px] text-slate-500 shrink-0">
+                        <span className="font-bold text-slate-700">METERAI TEMPEL</span>
+                        <span className="font-black text-slate-900 text-[10px]">Rp 10.000</span>
+                        <span className="text-[7.5px] text-slate-400">Tempel di sini</span>
+                      </div>
+                      <div className="h-16 w-36">
+                        {/* Ruang Tanda Tangan & Stempel Menimpa Meterai */}
+                      </div>
                     </div>
 
-                    {/* Tanda Tangan Direktur */}
-                    <div className="text-left w-60">
-                      <p className="font-bold text-slate-950 uppercase">{travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}</p>
-                      <div className="my-5 h-12">
-                        {/* Ruang Bersih Tanda Tangan & Stempel */}
-                      </div>
+                    <div>
                       <p className="font-bold text-slate-950 underline text-xs uppercase">
                         {selectedLetterForPrint.generatedBy || travelSettings.directorName || "ATIYATUL AMRA"}
                       </p>
-                      <p className="text-[11px] text-slate-700">{travelSettings.directorTitle || "Direktur Utama"}</p>
+                      <p className="text-[11px] text-slate-700 font-medium">{travelSettings.directorTitle || "Direktur Utama"}</p>
                     </div>
                   </div>
                 ) : (
