@@ -675,4 +675,56 @@ model SavingsTransaction {
   createdAt            DateTime             @default(now())
 }
 
+model BadalUmroh {
+  id                   String    @id @default(uuid())
+  orderNumber          String    @unique // BDL-2608-0001
 
+  // Data Pemesan (Keluarga / Ahli Waris)
+  ordererName          String
+  ordererPhone         String
+  ordererEmail         String?
+  ordererNik           String?
+  ordererAddress       String?
+  ordererCity          String?
+  ordererRelation      String    // ANAK, SUAMI, ISTRI, CUCU, SAUDARA, KEPONAKAN, LAINNYA
+
+  // Data Almarhum / Yang Dibadalkan
+  recipientName        String    // Nama almarhum / yang mau dibadalkan
+  recipientGender      String    @default("MALE") // MALE, FEMALE
+  recipientStatus      String    @default("DECEASED") // DECEASED, ALIVE_DISABLED
+  recipientBirthPlace  String?
+  recipientDateOfBirth DateTime?
+
+  // Paket & Harga
+  packageType          String    @default("BADAL_BASIC") // BADAL_BASIC, BADAL_PREMIUM, BADAL_WITH_VIDEO
+  price                Float     @default(3500000)
+  dpAmount             Float     @default(0)
+
+  // Pelaksana Badal (di Saudi)
+  executorName         String?
+  executorPhone        String?
+
+  // Status & Tracking
+  // PENDING_PAYMENT → PAYMENT_RECEIVED → SCHEDULED → IN_PROGRESS → COMPLETED → CERTIFICATE_ISSUED
+  status               String    @default("PENDING_PAYMENT")
+
+  scheduledDate        DateTime?
+  completedAt          DateTime?
+
+  // Bukti & Dokumentasi
+  transferProofUrl     String?
+  executionPhotoUrl    String?
+  executionVideoUrl    String?
+
+  // Sertifikat
+  certificateIssuedAt  DateTime?
+
+  // Keuangan
+  invoiceNumber        String?
+  paymentMethod        String?   @default("BANK_TRANSFER")
+  paymentDate          DateTime?
+
+  notes                String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}

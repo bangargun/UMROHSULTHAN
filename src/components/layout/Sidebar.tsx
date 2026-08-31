@@ -26,6 +26,7 @@ import {
   Zap,
   MessageSquare,
   Coins,
+  Heart,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -86,6 +87,12 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
           label: "Tabungan Umroh (DP 2 Jt)",
           icon: Coins,
           desc: "Nabung fleksibel & koper awal",
+        },
+        {
+          id: "badal",
+          label: "Badal Umroh",
+          icon: Heart,
+          desc: "Layanan badal untuk almarhum & uzur",
         },
         {
           id: "faq",

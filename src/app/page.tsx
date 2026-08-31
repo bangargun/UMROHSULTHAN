@@ -14,6 +14,7 @@ import HandoverChecklistView from "@/components/handovers/HandoverChecklistView"
 import RequirementsChecklistView from "@/components/requirements/RequirementsChecklistView";
 import LettersGeneratorView from "@/components/letters/LettersGeneratorView";
 import SavingsManagementView from "@/components/savings/SavingsManagementView";
+import BadalUmrohView from "@/components/badal/BadalUmrohView";
 import BranchAgentView from "@/components/agents/BranchAgentView";
 import AgentPayoutView from "@/components/agents/AgentPayoutView";
 import SalesFaqView from "@/components/faq/SalesFaqView";
@@ -275,6 +276,10 @@ export default function Home() {
               packages={packages}
               onRefresh={fetchAllData}
             />
+          )}
+
+          {activeTab === "badal" && (
+            <BadalUmrohView />
           )}
 
           {activeTab === "faq" && (
