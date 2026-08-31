@@ -168,10 +168,10 @@ export default function LettersGeneratorView({
       defaultNote = "Penambahan nama menjadi 3 kata pada halaman pengesahan paspor untuk pemenuhan syarat Visa Umroh.";
       defaultCustomTitle = "Surat Permohonan Endorsement Nama Paspor";
     } else if (newType === "SURAT_REKOMENDASI_PASPOR") {
-      defaultDest = "Kepala Kantor Imigrasi Kelas I / II TPI";
-      defaultSubject = "Permohonan Rekomendasi Pembuatan Paspor Baru";
-      defaultNote = "Untuk keperluan kelengkapan pembuatan paspor perjalanan ibadah Umroh.";
-      defaultCustomTitle = "Surat Rekomendasi Pembuatan Paspor";
+      defaultDest = "Kantor Imigrasi Kelas II TPI Pematang Siantar";
+      defaultSubject = "Permohonan Paspor Calon Jemaah Umrah";
+      defaultNote = "Rekomendasi & Jaminan resmi pengurusan paspor baru umroh berdasarkan SE Dirjen Imigrasi No. IMI-0342 GR.01.01 Tahun 2014.";
+      defaultCustomTitle = "Surat Permohonan Rekomendasi & Pernyataan Jaminan Paspor";
     } else if (newType === "SURAT_IZIN_CUTI") {
       defaultDest = "Pimpinan Perusahaan / Instansi Terkait";
       defaultSubject = "Permohonan Izin / Dispensasi Cuti Ibadah Umroh";
@@ -765,12 +765,22 @@ export default function LettersGeneratorView({
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Kepala Kantor Imigrasi Tebing Tinggi"
+                    list="destination-institutions-list"
+                    placeholder="e.g. Kantor Imigrasi Kelas II TPI Pematang Siantar"
                     value={formData.destinationInstitution}
                     onChange={(e) => setFormData({ ...formData, destinationInstitution: e.target.value })}
                     className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold focus:ring-2 focus:ring-emerald-500/20"
                   />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">Nama kantor imigrasi / instansi</span>
+                  <datalist id="destination-institutions-list">
+                    <option value="Kantor Imigrasi Kelas II TPI Pematang Siantar" />
+                    <option value="Kantor Imigrasi Kelas I Khusus TPI Medan" />
+                    <option value="Kantor Imigrasi Kelas II TPI Tanjung Balai Asahan" />
+                    <option value="Kantor Imigrasi Kelas II TPI Belawan" />
+                    <option value="Kantor Imigrasi Kelas II Non TPI Sibolga" />
+                    <option value="Kepala Kantor Kementerian Agama Kota Tebing Tinggi" />
+                    <option value="Kepala Kantor Kementerian Agama Kab. Serdang Bedagai" />
+                  </datalist>
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">Pilih dari rekomendasi atau ketik instansi lain</span>
                 </div>
               </div>
 
@@ -1024,12 +1034,13 @@ export default function LettersGeneratorView({
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Kepala Kantor Imigrasi Tebing Tinggi"
+                    list="destination-institutions-list"
+                    placeholder="e.g. Kantor Imigrasi Kelas II TPI Pematang Siantar"
                     value={editFormData.destinationInstitution}
                     onChange={(e) => setEditFormData({ ...editFormData, destinationInstitution: e.target.value })}
                     className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold focus:ring-2 focus:ring-amber-500/20"
                   />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">Nama kantor imigrasi / instansi</span>
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">Pilih dari rekomendasi atau ketik instansi lain</span>
                 </div>
               </div>
 
@@ -1208,138 +1219,248 @@ export default function LettersGeneratorView({
                 </div>
 
                 {/* 5. LETTER BODY */}
-                <div className="pt-4 space-y-3.5 text-xs text-justify leading-relaxed">
-                  <p>Dengan hormat,</p>
-
-                  {/* CUSTOM BODY OR DEDICATED TEMPLATE BODY */}
-                  {selectedLetterForPrint.customBody ? (
-                    <p>{selectedLetterForPrint.customBody}</p>
-                  ) : selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ? (
-                    <p>
-                      Bersama ini kami selaku Pimpinan <strong>{travelSettings.companyName}</strong> (Izin Penyelenggara Perjalanan Ibadah Umrah No. {travelSettings.licenseNumber}) mengajukan permohonan kepada Bapak/Ibu kiranya berkenan melakukan <strong>Penambahan / Endorsement Nama</strong> pada Halaman Pengesahan (Endorsement Page) paspor calon jamaah umroh kami menjadi <strong>3 (tiga) suku kata</strong> guna memenuhi persyaratan penerbitan Visa Umroh dari Kementerian Haji dan Umrah Kerajaan Arab Saudi, atas nama jamaah berikut :
+                {selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR" ? (
+                  <div className="pt-3 space-y-3 text-xs text-justify leading-relaxed">
+                    <p className="font-semibold text-slate-900">Assalamu’alaikum Wr. Wb.</p>
+                    <p className="text-slate-800">
+                      Semoga Allah SWT melimpahkan Rahmat dan Hidayah-Nya kepada kita semua sehingga kita dapat melaksanakan aktifitas sehari-hari dengan baik.
                     </p>
-                  ) : selectedLetterForPrint.type === "SURAT_IZIN_CUTI" ? (
-                    <p>
-                      Bersama ini kami selaku Pimpinan <strong>{travelSettings.companyName}</strong> memohon kiranya Bapak/Ibu dapat memberikan dispensasi dan izin cuti bagi karyawan/peserta didik yang terdaftar sebagai calon jamaah umroh kami untuk menunaikan ibadah umroh ke Tanah Suci pada tanggal <strong>{formatDate(selectedLetterForPrint.pilgrim?.package?.departureDate, "dd MMMM yyyy")}</strong> s.d. selesai, dengan data diri sebagai berikut :
-                    </p>
-                  ) : (
-                    <p>
-                      Bersama ini kami memohon kepada Bapak/Ibu dapat kiranya mempermudah pengurusan{" "}
-                      <strong>{getLetterTitle(selectedLetterForPrint)}</strong> jamaah umrah kami, yang terdaftar pada{" "}
-                      <strong>{travelSettings.companyName}</strong>, yang akan berangkat pada tanggal{" "}
-                      <strong>{formatDate(selectedLetterForPrint.pilgrim?.package?.departureDate, "dd MMMM yyyy")}</strong>{" "}
-                      dengan nama sebagai berikut :
-                    </p>
-                  )}
 
-                  {/* BORDERED TABLE FOR PILGRIM DATA */}
-                  <div className="pt-1">
-                    <table className="w-full border-collapse border border-slate-900 text-xs text-left">
-                      <thead>
-                        <tr className="bg-slate-100 border-b border-slate-900 font-bold text-slate-900 text-center">
-                          <th className="border border-slate-900 py-2 px-3">Data Informasi Jamaah</th>
-                          <th className="border border-slate-900 py-2 px-3">Rincian Dokumen Resmi</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-900">
-                        <tr>
-                          <td className="border border-slate-900 py-2 px-3 font-bold text-slate-900 w-1/3">
-                            Nama Lengkap Sesuai KTP
-                          </td>
-                          <td className="border border-slate-900 py-2 px-3 font-bold uppercase text-slate-950">
-                            {selectedLetterForPrint.pilgrim?.name || "-"}
-                          </td>
-                        </tr>
+                    <div className="space-y-1">
+                      <p className="font-semibold text-slate-900">Saya yang bertanda tangan dibawah ini:</p>
+                      <div className="pl-3 sm:pl-5 space-y-0.5 text-slate-900">
+                        <div className="grid grid-cols-[140px_12px_1fr]">
+                          <span className="font-semibold">Nama</span>
+                          <span>:</span>
+                          <span className="font-bold uppercase text-slate-950">{selectedLetterForPrint.generatedBy || travelSettings.directorName || "ATIYATUL AMRA"}</span>
+                        </div>
+                        <div className="grid grid-cols-[140px_12px_1fr]">
+                          <span className="font-semibold">Jabatan</span>
+                          <span>:</span>
+                          <span className="font-bold uppercase text-slate-950">{travelSettings.directorTitle || "DIREKTUR UTAMA"}</span>
+                        </div>
+                        <div className="grid grid-cols-[140px_12px_1fr]">
+                          <span className="font-semibold">Alamat</span>
+                          <span>:</span>
+                          <span>{travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                        {selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" && (
-                          <tr className="bg-amber-50/70">
-                            <td className="border border-slate-900 py-2.5 px-3 font-bold text-slate-900">
-                              Nama Pengajuan Endorsement (3 Kata)
+                    <div className="space-y-1 pt-1">
+                      <p className="font-semibold text-slate-900">
+                        Bersama ini saya mengajukan permohonan paspor untuk calon Jemaah Umrah dengan data sebagai berikut:
+                      </p>
+                      <div className="pl-3 sm:pl-5 space-y-0.5 text-slate-900">
+                        <div className="grid grid-cols-[140px_12px_1fr]">
+                          <span className="font-semibold">Nama</span>
+                          <span>:</span>
+                          <span className="font-bold uppercase text-slate-950">{selectedLetterForPrint.pilgrim?.name || "-"}</span>
+                        </div>
+                        <div className="grid grid-cols-[140px_12px_1fr]">
+                          <span className="font-semibold">Tempat/tanggal lahir</span>
+                          <span>:</span>
+                          <span className="uppercase">
+                            {selectedLetterForPrint.pilgrim?.placeOfBirth || "INDONESIA"}, {formatDate(selectedLetterForPrint.pilgrim?.dateOfBirth, "dd-MM-yyyy")}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-[140px_12px_1fr]">
+                          <span className="font-semibold">NIK</span>
+                          <span>:</span>
+                          <span className="font-mono font-bold text-slate-950">{selectedLetterForPrint.pilgrim?.nik || "-"}</span>
+                        </div>
+                        <div className="grid grid-cols-[140px_12px_1fr]">
+                          <span className="font-semibold">Alamat</span>
+                          <span>:</span>
+                          <span className="uppercase">
+                            {selectedLetterForPrint.pilgrim?.address || selectedLetterForPrint.pilgrim?.city || "-"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="pt-1 text-slate-900">
+                      Benar yang bersangkutan telah mendaftar dan berniat melaksanakan Ibadah Umrah melalui kami, berdasarkan <strong>SE Direktur Jendral Imigrasi No. IMI-0342 GR.01.01 tahun 2014</strong> tentang Penerbitan Proses Pengurusan Paspor oleh PPIU tanggal 04 Maret 2014, Kami menyatakan bahwa :
+                    </p>
+
+                    <ol className="list-decimal pl-5 space-y-1 text-slate-900 leading-relaxed">
+                      <li>
+                        Permohonan paspor yang diurus adalah Paspor Warga Negara Indonesia yang akan melakukan perjalanan ke Arab Saudi dalam rangka menunaikan Ibadah Umrah.
+                      </li>
+                      <li>
+                        Rombongan calon jama’ah umrah yang diberangkatkan tidak akan melakukan pelanggaran peraturan Keimigrasian berupa penyalahgunaan izin tinggal, dan atau tidak melebihi izin tinggalnya (<em>overstay</em>), memalsukan atau membuat palsu paspor yang diberikan kepadanya maupun bekerja secara illegal.
+                      </li>
+                      <li>
+                        Apabila terjadi pelanggaran sebagaimana dimaksud, maka izin usaha sebagai Penyelenggara Perjalanan Ibadah Umrah bersedia dicabut.
+                      </li>
+                      <li>
+                        Calon Jama’ah tersebut Insya Allah akan berangkat Umrah pada bulan <strong>{formatDate(selectedLetterForPrint.pilgrim?.package?.departureDate, "MMMM yyyy")}</strong>.
+                      </li>
+                    </ol>
+
+                    <p className="pt-0.5 text-slate-900">
+                      Demikian surat pernyataan dan jaminan ini kami sampaikan, apabila kami tidak memenuhi kewajiban sebagaimana tersebut diatas, kami bersedia menerima sanksi sesuai dengan ketentuan peraturan perundang-undangan yang berlaku.
+                    </p>
+
+                    <p className="font-semibold text-slate-900">Wassalamu’alaikum Wr. Wb.</p>
+                  </div>
+                ) : (
+                  <div className="pt-4 space-y-3.5 text-xs text-justify leading-relaxed">
+                    <p>Dengan hormat,</p>
+
+                    {/* CUSTOM BODY OR DEDICATED TEMPLATE BODY */}
+                    {selectedLetterForPrint.customBody ? (
+                      <p>{selectedLetterForPrint.customBody}</p>
+                    ) : selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ? (
+                      <p>
+                        Bersama ini kami selaku Pimpinan <strong>{travelSettings.companyName}</strong> (Izin Penyelenggara Perjalanan Ibadah Umrah No. {travelSettings.licenseNumber}) mengajukan permohonan kepada Bapak/Ibu kiranya berkenan melakukan <strong>Penambahan / Endorsement Nama</strong> pada Halaman Pengesahan (Endorsement Page) paspor calon jamaah umroh kami menjadi <strong>3 (tiga) suku kata</strong> guna memenuhi persyaratan penerbitan Visa Umroh dari Kementerian Haji dan Umrah Kerajaan Arab Saudi, atas nama jamaah berikut :
+                      </p>
+                    ) : selectedLetterForPrint.type === "SURAT_IZIN_CUTI" ? (
+                      <p>
+                        Bersama ini kami selaku Pimpinan <strong>{travelSettings.companyName}</strong> memohon kiranya Bapak/Ibu dapat memberikan dispensasi dan izin cuti bagi karyawan/peserta didik yang terdaftar sebagai calon jamaah umroh kami untuk menunaikan ibadah umroh ke Tanah Suci pada tanggal <strong>{formatDate(selectedLetterForPrint.pilgrim?.package?.departureDate, "dd MMMM yyyy")}</strong> s.d. selesai, dengan data diri sebagai berikut :
+                      </p>
+                    ) : (
+                      <p>
+                        Bersama ini kami memohon kepada Bapak/Ibu dapat kiranya mempermudah pengurusan{" "}
+                        <strong>{getLetterTitle(selectedLetterForPrint)}</strong> jamaah umrah kami, yang terdaftar pada{" "}
+                        <strong>{travelSettings.companyName}</strong>, yang akan berangkat pada tanggal{" "}
+                        <strong>{formatDate(selectedLetterForPrint.pilgrim?.package?.departureDate, "dd MMMM yyyy")}</strong>{" "}
+                        dengan nama sebagai berikut :
+                      </p>
+                    )}
+
+                    {/* BORDERED TABLE FOR PILGRIM DATA */}
+                    <div className="pt-1">
+                      <table className="w-full border-collapse border border-slate-900 text-xs text-left">
+                        <thead>
+                          <tr className="bg-slate-100 border-b border-slate-900 font-bold text-slate-900 text-center">
+                            <th className="border border-slate-900 py-2 px-3">Data Informasi Jamaah</th>
+                            <th className="border border-slate-900 py-2 px-3">Rincian Dokumen Resmi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-900">
+                          <tr>
+                            <td className="border border-slate-900 py-2 px-3 font-bold text-slate-900 w-1/3">
+                              Nama Lengkap Sesuai KTP
                             </td>
-                            <td className="border border-slate-900 py-2.5 px-3 font-black text-slate-950 underline uppercase text-sm tracking-wide">
-                              {getEndorsedName(selectedLetterForPrint)}
+                            <td className="border border-slate-900 py-2 px-3 font-bold uppercase text-slate-950">
+                              {selectedLetterForPrint.pilgrim?.name || "-"}
                             </td>
                           </tr>
-                        )}
 
-                        <tr>
-                          <td className="border border-slate-900 py-2 px-3 font-bold text-slate-900">
-                            Nomor Induk Kependudukan (NIK)
-                          </td>
-                          <td className="border border-slate-900 py-2 px-3 font-mono font-bold text-slate-900">
-                            {selectedLetterForPrint.pilgrim?.nik || "-"}
-                          </td>
-                        </tr>
+                          {selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" && (
+                            <tr className="bg-amber-50/70">
+                              <td className="border border-slate-900 py-2.5 px-3 font-bold text-slate-900">
+                                Nama Pengajuan Endorsement (3 Kata)
+                              </td>
+                              <td className="border border-slate-900 py-2.5 px-3 font-black text-slate-950 underline uppercase text-sm tracking-wide">
+                                {getEndorsedName(selectedLetterForPrint)}
+                              </td>
+                            </tr>
+                          )}
 
-                        <tr>
-                          <td className="border border-slate-900 py-2 px-3 font-bold text-slate-900">
-                            Tempat & Tanggal Lahir (TTL)
-                          </td>
-                          <td className="border border-slate-900 py-2 px-3 uppercase text-slate-900">
-                            {selectedLetterForPrint.pilgrim?.placeOfBirth || "INDONESIA"},{" "}
-                            {formatDate(selectedLetterForPrint.pilgrim?.dateOfBirth, "dd MMMM yyyy")}
-                          </td>
-                        </tr>
+                          <tr>
+                            <td className="border border-slate-900 py-2 px-3 font-bold text-slate-900">
+                              Nomor Induk Kependudukan (NIK)
+                            </td>
+                            <td className="border border-slate-900 py-2 px-3 font-mono font-bold text-slate-900">
+                              {selectedLetterForPrint.pilgrim?.nik || "-"}
+                            </td>
+                          </tr>
 
-                        <tr>
-                          <td className="border border-slate-900 py-2 px-3 font-bold text-slate-900">
-                            Nomor Paspor RI
-                          </td>
-                          <td className="border border-slate-900 py-2 px-3 font-mono font-bold text-slate-900">
-                            {selectedLetterForPrint.pilgrim?.passportNumber ? (
-                              <>
-                                {selectedLetterForPrint.pilgrim?.passportNumber}{" "}
-                                {selectedLetterForPrint.pilgrim?.passportExpiry && (
-                                  <span className="font-sans font-normal text-slate-600">
-                                    (Berlaku s/d {formatDate(selectedLetterForPrint.pilgrim?.passportExpiry, "dd MMM yyyy")})
-                                  </span>
-                                )}
-                              </>
-                            ) : (
-                              "Dalam Proses Pembuatan / Perpanjangan"
-                            )}
-                          </td>
-                        </tr>
+                          <tr>
+                            <td className="border border-slate-900 py-2 px-3 font-bold text-slate-900">
+                              Tempat & Tanggal Lahir (TTL)
+                            </td>
+                            <td className="border border-slate-900 py-2 px-3 uppercase text-slate-900">
+                              {selectedLetterForPrint.pilgrim?.placeOfBirth || "INDONESIA"},{" "}
+                              {formatDate(selectedLetterForPrint.pilgrim?.dateOfBirth, "dd MMMM yyyy")}
+                            </td>
+                          </tr>
 
-                        <tr>
-                          <td className="border border-slate-900 py-2 px-3 font-bold text-slate-900">
-                            Program Paket & Jadwal
-                          </td>
-                          <td className="border border-slate-900 py-2 px-3 text-slate-900">
-                            <strong>{selectedLetterForPrint.pilgrim?.package?.name || "Program Umroh Reguler"}</strong>{" "}
-                            (Keberangkatan: {formatDate(selectedLetterForPrint.pilgrim?.package?.departureDate, "dd MMMM yyyy")})
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                          <tr>
+                            <td className="border border-slate-900 py-2 px-3 font-bold text-slate-900">
+                              Nomor Paspor RI
+                            </td>
+                            <td className="border border-slate-900 py-2 px-3 font-mono font-bold text-slate-900">
+                              {selectedLetterForPrint.pilgrim?.passportNumber ? (
+                                <>
+                                  {selectedLetterForPrint.pilgrim?.passportNumber}{" "}
+                                  {selectedLetterForPrint.pilgrim?.passportExpiry && (
+                                    <span className="font-sans font-normal text-slate-600">
+                                      (Berlaku s/d {formatDate(selectedLetterForPrint.pilgrim?.passportExpiry, "dd MMM yyyy")})
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                "Dalam Proses Pembuatan / Perpanjangan"
+                              )}
+                            </td>
+                          </tr>
 
-                  {selectedLetterForPrint.customNotes &&
-                    !selectedLetterForPrint.customNotes.startsWith("Permohonan penambahan nama") &&
-                    !selectedLetterForPrint.customNotes.startsWith("Target Nama Endorsement") && (
-                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] leading-normal">
-                      <strong>Keterangan Tambahan:</strong>
-                      <p className="mt-0.5 text-slate-800">{selectedLetterForPrint.customNotes}</p>
+                          <tr>
+                            <td className="border border-slate-900 py-2 px-3 font-bold text-slate-900">
+                              Program Paket & Jadwal
+                            </td>
+                            <td className="border border-slate-900 py-2 px-3 text-slate-900">
+                              <strong>{selectedLetterForPrint.pilgrim?.package?.name || "Program Umroh Reguler"}</strong>{" "}
+                              (Keberangkatan: {formatDate(selectedLetterForPrint.pilgrim?.package?.departureDate, "dd MMMM yyyy")})
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
-                  )}
 
-                  <p className="pt-1">
-                    Demikian surat ini kami ajukan kepada Bapak/Ibu dengan harapan Bapak/Ibu berkenan membantu kelancaran proses tersebut. Atas bantuan, perhatian, dan kerjasama yang baik, kami ucapkan terima kasih.
-                  </p>
-                </div>
+                    {selectedLetterForPrint.customNotes &&
+                      !selectedLetterForPrint.customNotes.startsWith("Permohonan penambahan nama") &&
+                      !selectedLetterForPrint.customNotes.startsWith("Target Nama Endorsement") && (
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] leading-normal">
+                        <strong>Keterangan Tambahan:</strong>
+                        <p className="mt-0.5 text-slate-800">{selectedLetterForPrint.customNotes}</p>
+                      </div>
+                    )}
 
-                {/* 6. SIGNATURE AREA (Clean blank for physical signature and stamp) */}
-                <div className="pt-8 flex flex-col items-start text-xs">
-                  <p>Hormat Kami,</p>
-                  <p className="font-bold text-slate-900">{travelSettings.companyName}</p>
-                  <div className="my-6 h-16 w-44">
-                    {/* Ruang Bersih untuk Tanda Tangan Fisik & Stempel Resmi Perusahaan */}
+                    <p className="pt-1">
+                      Demikian surat ini kami ajukan kepada Bapak/Ibu dengan harapan Bapak/Ibu berkenan membantu kelancaran proses tersebut. Atas bantuan, perhatian, dan kerjasama yang baik, kami ucapkan terima kasih.
+                    </p>
                   </div>
-                  <p className="font-bold text-slate-950 underline text-xs uppercase">
-                    {selectedLetterForPrint.generatedBy || travelSettings.directorName}
-                  </p>
-                  <p className="text-[11px] text-slate-700">{travelSettings.directorTitle || "Direktur Utama"}</p>
-                </div>
+                )}
+
+                {/* 6. SIGNATURE AREA */}
+                {selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR" ? (
+                  <div className="pt-5 flex justify-between items-end text-xs">
+                    {/* Kotak Meterai */}
+                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-2 text-center w-32 h-20 flex flex-col items-center justify-center bg-slate-50 text-[9px] text-slate-500">
+                      <span className="font-bold text-slate-700">METERAI TEMPEL</span>
+                      <span className="font-black text-slate-900 text-[11px]">Rp 10.000</span>
+                      <span className="text-[8px] text-slate-400">Tempel di sini</span>
+                    </div>
+
+                    {/* Tanda Tangan Direktur */}
+                    <div className="text-left w-60">
+                      <p className="font-bold text-slate-950 uppercase">{travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}</p>
+                      <div className="my-5 h-12">
+                        {/* Ruang Bersih Tanda Tangan & Stempel */}
+                      </div>
+                      <p className="font-bold text-slate-950 underline text-xs uppercase">
+                        {selectedLetterForPrint.generatedBy || travelSettings.directorName || "ATIYATUL AMRA"}
+                      </p>
+                      <p className="text-[11px] text-slate-700">{travelSettings.directorTitle || "Direktur Utama"}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="pt-8 flex flex-col items-start text-xs">
+                    <p>Hormat Kami,</p>
+                    <p className="font-bold text-slate-900">{travelSettings.companyName}</p>
+                    <div className="my-6 h-16 w-44">
+                      {/* Ruang Bersih untuk Tanda Tangan Fisik & Stempel Resmi Perusahaan */}
+                    </div>
+                    <p className="font-bold text-slate-950 underline text-xs uppercase">
+                      {selectedLetterForPrint.generatedBy || travelSettings.directorName}
+                    </p>
+                    <p className="text-[11px] text-slate-700">{travelSettings.directorTitle || "Direktur Utama"}</p>
+                  </div>
+                )}
               </div>
 
               {/* 7. GEOMETRIC FOOTER DIVIDER (Matching Exact PPIU Reference) */}
