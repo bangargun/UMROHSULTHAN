@@ -1220,10 +1220,15 @@ export default function LettersGeneratorView({
                     <p className="text-slate-900 mt-0.5">
                       <strong>Perihal :</strong>{" "}
                       <span className="font-bold underline">
-                        {selectedLetterForPrint.customSubject ||
-                          (selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR"
-                            ? "Permohonan Penambahan / Endorsement Nama pada Paspor"
-                            : getLetterTitle(selectedLetterForPrint))}
+                        {selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ||
+                        (selectedLetterForPrint.customTitle && /perpanjang/i.test(selectedLetterForPrint.customTitle))
+                          ? "Permohonan Perpanjangan / Penggantian Paspor Calon Jemaah Umrah"
+                          : selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ||
+                            (selectedLetterForPrint.customTitle && /endorse/i.test(selectedLetterForPrint.customTitle))
+                          ? "Permohonan Penambahan / Endorsement Nama pada Paspor"
+                          : selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR"
+                          ? "Permohonan Paspor Calon Jemaah Umrah"
+                          : selectedLetterForPrint.customSubject || getLetterTitle(selectedLetterForPrint)}
                       </span>
                     </p>
                   </div>
@@ -1243,7 +1248,8 @@ export default function LettersGeneratorView({
                 {/* 5. LETTER BODY */}
                 {selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR" ||
                 selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ||
-                selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ? (
+                selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ||
+                (selectedLetterForPrint.customTitle && /perpanjang.*paspor|paspor.*baru|endorse/i.test(selectedLetterForPrint.customTitle)) ? (
                   <div className="pt-3 space-y-3 text-xs text-justify leading-relaxed">
                     <p className="font-semibold text-slate-900">Assalamu’alaikum Wr. Wb.</p>
                     <p className="text-slate-800">
@@ -1477,7 +1483,8 @@ export default function LettersGeneratorView({
                 {/* 6. SIGNATURE AREA (All on the Left for Immigration Letters) */}
                 {selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR" ||
                 selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ||
-                selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ? (
+                selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ||
+                (selectedLetterForPrint.customTitle && /perpanjang.*paspor|paspor.*baru|endorse/i.test(selectedLetterForPrint.customTitle)) ? (
                   <div className="pt-4 flex flex-col items-start text-left text-xs space-y-1.5">
                     <p className="font-bold text-slate-950 uppercase">{travelSettings.companyName || "PT. BAROKAH SULTHAN HARAMAIN"}</p>
 
