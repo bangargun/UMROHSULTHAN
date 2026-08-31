@@ -41,6 +41,7 @@ export default function LettersGeneratorView({
   const [includeLetterhead, setIncludeLetterhead] = useState(true);
   const [includeFooter, setIncludeFooter] = useState(true);
   const [includeLegalAttachments, setIncludeLegalAttachments] = useState(true);
+  const [paperSize, setPaperSize] = useState<"A4" | "F4" | "Letter">("A4");
   const [travelSettings, setTravelSettings] = useState<any>({
     companyName: "PT BAROKAH SULTHAN HARAMAIN",
     licenseNumber: "25052200384080005",
@@ -1145,8 +1146,80 @@ export default function LettersGeneratorView({
               </div>
             </div>
 
+            {/* Dynamic Print Paper Size Styling */}
+            <style dangerouslySetInnerHTML={{ __html: `
+              @media print {
+                @page {
+                  size: ${paperSize === "F4" ? "215mm 330mm portrait" : paperSize === "Letter" ? "letter portrait" : "A4 portrait"};
+                  margin: 0.6cm;
+                }
+              }
+            ` }} />
+
             {/* Print Options & Letterhead Control Toolbar */}
-            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5 no-print">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 no-print">
+              {/* Row 1: Paper Type Presets & Paper Size Selector */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 border-b border-slate-200/80">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="font-bold text-slate-700 flex items-center gap-1.5 mr-1">
+                    📄 Jenis Kertas:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIncludeLetterhead(true);
+                      setIncludeFooter(true);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition-all text-xs flex items-center gap-1.5 cursor-pointer ${
+                      includeLetterhead
+                        ? "bg-emerald-600 text-white shadow-xs"
+                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span>📄 Kertas HVS Polos</span>
+                    {includeLetterhead && <span className="text-[10px] bg-emerald-700 px-1.5 py-0.2 rounded-full">Aktif</span>}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIncludeLetterhead(false);
+                      setIncludeFooter(false);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition-all text-xs flex items-center gap-1.5 cursor-pointer ${
+                      !includeLetterhead
+                        ? "bg-amber-600 text-white shadow-xs"
+                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span>🏷️ Kertas Berkop Fisik</span>
+                    {!includeLetterhead && <span className="text-[10px] bg-amber-700 px-1.5 py-0.2 rounded-full">Aktif</span>}
+                  </button>
+                </div>
+
+                {/* Paper Size Selector */}
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-bold text-slate-700">📐 Ukuran Kertas:</span>
+                  <div className="inline-flex rounded-xl bg-white p-0.5 border border-slate-200 shadow-2xs">
+                    {(["A4", "F4", "Letter"] as const).map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => setPaperSize(size)}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                          paperSize === size
+                            ? "bg-slate-900 text-white shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        {size === "A4" ? "A4 (210×297)" : size === "F4" ? "F4 / Folio (215×330)" : "Letter"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Granular Checkboxes & Status Badge */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-bold text-slate-800">
                   <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs hover:bg-slate-100 transition-colors">
@@ -1156,7 +1229,7 @@ export default function LettersGeneratorView({
                       onChange={(e) => setIncludeLetterhead(e.target.checked)}
                       className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
                     />
-                    <span>Sertakan Kepala Surat (Kop Resmi)</span>
+                    <span>Kepala Surat (Kop Resmi)</span>
                   </label>
 
                   <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs hover:bg-slate-100 transition-colors">
@@ -1166,7 +1239,7 @@ export default function LettersGeneratorView({
                       onChange={(e) => setIncludeFooter(e.target.checked)}
                       className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
                     />
-                    <span>Sertakan Footer Garis & Kontak</span>
+                    <span>Footer Garis & Kontak</span>
                   </label>
 
                   <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs hover:bg-slate-100 transition-colors">
@@ -1185,19 +1258,19 @@ export default function LettersGeneratorView({
                     ? "bg-amber-100 text-amber-900 border-amber-300"
                     : "bg-emerald-100 text-emerald-900 border-emerald-300"
                 }`}>
-                  {!includeLetterhead ? "🖨️ Mode Kertas Berkop (Tanpa Kepala Surat)" : "📄 Mode Standar (Dengan Kop Lengkap)"}
+                  {!includeLetterhead ? `🖨️ Cetak Kertas Berkop (${paperSize})` : `📄 Cetak Kertas Polos (${paperSize})`}
                 </span>
               </div>
 
               {!includeLetterhead && (
                 <div className="text-[11px] text-amber-900 bg-amber-50/90 px-3 py-2 rounded-xl border border-amber-200 flex items-center gap-2">
                   <span className="font-bold text-amber-700">💡 Info Mode Kertas Berkop Fisik:</span>
-                  <span>Kepala surat disembunyikan. Spasi atas otomatis disesuaikan agar isi surat langsung pas dicetak pada kertas berkop resmi fisik Anda.</span>
+                  <span>Kepala surat disembunyikan dan isi surat langsung naik ke baris teratas agar pas dicetak pada kertas blanko berkop Anda.</span>
                 </div>
               )}
             </div>
 
-            {/* Official Letter A4 Template (Matching Exact Geometric PPIU Reference) */}
+            {/* Official Letter A4/F4 Template (Matching Exact Geometric PPIU Reference) */}
             <div className="print-sheet border border-slate-300 p-8 sm:p-10 rounded-2xl bg-white text-slate-900 font-sans leading-relaxed text-xs space-y-6 shadow-sm min-h-[840px] flex flex-col justify-between print:border-none print:shadow-none print:p-4 print:min-h-[27cm]">
               <div>
                 {/* 1. KOP SURAT (Conditional) */}
