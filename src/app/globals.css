@@ -70,16 +70,12 @@
   .print-sheet {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    page-break-after: avoid !important;
-    break-after: auto !important;
+    min-height: 27cm !important;
     height: auto !important;
-    max-height: 27.5cm !important;
     width: 100% !important;
     box-sizing: border-box !important;
     border: none !important;
     box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
   }
 
   .print-attachment-page {
@@ -87,7 +83,7 @@
     break-before: page !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    min-height: 26.5cm !important;
+    min-height: 27.5cm !important;
     height: auto !important;
     box-sizing: border-box !important;
     display: flex !important;
@@ -96,12 +92,12 @@
     align-items: center !important;
     border: none !important;
     box-shadow: none !important;
-    margin-top: 0.5cm !important;
+    margin-top: 1cm !important;
   }
 
   .print-attachment-img {
     max-width: 100% !important;
-    max-height: 24cm !important;
+    max-height: 25cm !important;
     width: auto !important;
     height: auto !important;
     object-fit: contain !important;
@@ -118,7 +114,7 @@
   }
 
   @page {
-    margin: 0.6cm 0.8cm;
+    margin: 0.6cm;
     size: A4 portrait;
   }
 }
