@@ -1198,13 +1198,13 @@ export default function LettersGeneratorView({
             </div>
 
             {/* Official Letter A4 Template (Matching Exact Geometric PPIU Reference) */}
-            <div className="print-sheet border border-slate-300 p-8 sm:p-10 rounded-2xl bg-white text-slate-900 font-sans leading-relaxed text-xs space-y-6 shadow-sm min-h-[840px] flex flex-col justify-between print:border-none print:shadow-none print:p-4 print:min-h-[27cm]">
+            <div className="print-sheet border border-slate-300 p-6 sm:p-8 rounded-2xl bg-white text-slate-900 font-sans leading-relaxed text-xs space-y-4 shadow-sm min-h-[800px] flex flex-col justify-between print:border-none print:shadow-none print:p-0 print:space-y-0 print:text-[10px] print:leading-snug">
               <div>
                 {/* 1. KOP SURAT (Conditional) */}
                 {includeLetterhead ? (
                   <>
-                    <div className="flex items-center gap-4 pb-2">
-                      <div className="h-16 w-16 flex-shrink-0 flex items-center justify-center p-1">
+                    <div className="flex items-center gap-4 pb-2 print:pb-0.5 print:gap-3">
+                      <div className="h-16 w-16 print:h-12 print:w-12 flex-shrink-0 flex items-center justify-center p-1">
                         <img
                           src="/sulthan-haramain-logo.jpg"
                           alt="Logo Sulthan Haramain"
@@ -1212,19 +1212,19 @@ export default function LettersGeneratorView({
                         />
                       </div>
                       <div className="flex-1 text-left">
-                        <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-950 uppercase leading-none">
+                        <h1 className="text-lg sm:text-xl print:text-[15px] font-black tracking-tight text-slate-950 uppercase leading-none">
                           {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
                         </h1>
-                        <p className="text-[10px] sm:text-[10.5px] text-slate-700 leading-tight mt-1">
+                        <p className="text-[10px] sm:text-[10.5px] print:text-[8.5px] text-slate-700 leading-tight mt-1 print:mt-0.5">
                           {travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}
                         </p>
-                        <p className="text-[9.5px] sm:text-[10px] font-semibold text-slate-700 leading-tight mt-0.5">
+                        <p className="text-[9.5px] sm:text-[10px] print:text-[8px] font-semibold text-slate-700 leading-tight mt-0.5">
                           Telp / WhatsApp: {travelSettings.phone || "0821-6733-9464"} • Email: {travelSettings.email || "barokahsulthanharamain@gmail.com"}
                         </p>
-                        <p className="text-[9.5px] sm:text-[10px] font-bold text-slate-900 leading-tight mt-0.5 tracking-tight">
+                        <p className="text-[9.5px] sm:text-[10px] print:text-[8px] font-bold text-slate-900 leading-tight mt-0.5 tracking-tight">
                           {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026"}
                         </p>
-                        <p className="text-[8px] sm:text-[8.5px] font-semibold text-slate-500 tracking-wide mt-0.5 uppercase">
+                        <p className="text-[8px] sm:text-[8.5px] print:text-[7.5px] font-semibold text-slate-500 tracking-wide mt-0.5 uppercase">
                           NO. IZIN PPIU : {(travelSettings.licenseNumber || "25052200384080005")
                             .replace(/•?\s*NIB[\s\S]*/i, "")
                             .replace(/•?\s*KBLI[\s\S]*/i, "")
@@ -1235,20 +1235,20 @@ export default function LettersGeneratorView({
                     </div>
 
                     {/* 2. GEOMETRIC HEADER DIVIDER LINE (Yellow Bar + Diagonal Slashes + Dark Wedge) */}
-                    <div className="relative w-full h-5 flex items-center my-1 overflow-hidden">
+                    <div className="relative w-full h-5 print:h-3.5 flex items-center my-1 print:my-0.5 overflow-hidden">
                       {/* Left Gold Bar */}
-                      <div className="h-2.5 flex-1 bg-gradient-to-r from-amber-400 to-amber-500 rounded-l" />
+                      <div className="h-2.5 print:h-2 flex-1 bg-gradient-to-r from-amber-400 to-amber-500 rounded-l" />
                       
                       {/* Middle Diagonal Slashes */}
-                      <div className="flex gap-1 px-2">
-                        <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                        <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                        <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                        <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
+                      <div className="flex gap-1 px-2 print:px-1">
+                        <div className="w-1.5 print:w-1 h-3.5 print:h-2.5 bg-amber-400 -skew-x-25" />
+                        <div className="w-1.5 print:w-1 h-3.5 print:h-2.5 bg-amber-400 -skew-x-25" />
+                        <div className="w-1.5 print:w-1 h-3.5 print:h-2.5 bg-amber-400 -skew-x-25" />
+                        <div className="w-1.5 print:w-1 h-3.5 print:h-2.5 bg-amber-400 -skew-x-25" />
                       </div>
 
                       {/* Right Dark Wedge Block */}
-                      <div className="w-24 sm:w-32 h-3.5 bg-slate-900 -skew-x-25 -mr-3" />
+                      <div className="w-24 sm:w-32 print:w-20 h-3.5 print:h-2.5 bg-slate-900 -skew-x-25 -mr-3" />
                     </div>
                   </>
                 ) : (
@@ -1259,17 +1259,17 @@ export default function LettersGeneratorView({
                       <p className="text-[10px] text-slate-400 mt-0.5">Kepala surat tidak dicetak ke kertas printer. Isi surat akan mulai tepat di bawah kop fisik kertas Anda.</p>
                     </div>
                     {/* Top Print Spacing on Physical Paper */}
-                    <div className="hidden print:block h-[3.6cm] w-full" />
+                    <div className="hidden print:block h-[3.4cm] w-full" />
                   </>
                 )}
 
                 {/* 3. DATE & LETTER NUMBER */}
-                <div className="pt-4 text-xs flex justify-between items-start">
+                <div className="pt-3 print:pt-1 text-xs print:text-[9.5px] flex justify-between items-start">
                   <div>
                     <p className="font-mono text-slate-900">
                       <strong>Nomor :</strong> {selectedLetterForPrint.letterNumber || "001/ENDOS/SULTHAN/VIII/2026"}
                     </p>
-                    <p className="text-slate-900 mt-0.5">
+                    <p className="text-slate-900 mt-0.5 print:mt-0">
                       <strong>Perihal :</strong>{" "}
                       <span className="font-bold underline">
                         {selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ||
@@ -1290,7 +1290,7 @@ export default function LettersGeneratorView({
                 </div>
 
                 {/* 4. RECIPIENT */}
-                <div className="pt-4 text-xs space-y-0.5">
+                <div className="pt-3 print:pt-1 text-xs print:text-[9.5px] space-y-0.5 print:space-y-0">
                   <p>Kepada Yth :</p>
                   <p className="font-bold text-slate-950">{selectedLetterForPrint.destinationInstitution}</p>
                   <p>Di</p>
@@ -1302,26 +1302,26 @@ export default function LettersGeneratorView({
                 selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ||
                 selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ||
                 (selectedLetterForPrint.customTitle && /perpanjang.*paspor|paspor.*baru|endorse/i.test(selectedLetterForPrint.customTitle)) ? (
-                  <div className="pt-3 space-y-3 text-xs text-justify leading-relaxed">
+                  <div className="pt-2 print:pt-1 space-y-2 print:space-y-1 text-xs print:text-[9.5px] text-justify leading-relaxed print:leading-snug">
                     <p className="font-semibold text-slate-900">Assalamu’alaikum Wr. Wb.</p>
                     <p className="text-slate-800">
                       Semoga Allah SWT melimpahkan Rahmat dan Hidayah-Nya kepada kita semua sehingga kita dapat melaksanakan aktifitas sehari-hari dengan baik.
                     </p>
 
-                    <div className="space-y-1">
+                    <div className="space-y-0.5 print:space-y-0">
                       <p className="font-semibold text-slate-900">Saya yang bertanda tangan dibawah ini:</p>
-                      <div className="pl-3 sm:pl-5 space-y-0.5 text-slate-900">
-                        <div className="grid grid-cols-[140px_12px_1fr]">
+                      <div className="pl-3 sm:pl-5 print:pl-3 space-y-0.5 print:space-y-0 text-slate-900">
+                        <div className="grid grid-cols-[140px_12px_1fr] print:grid-cols-[115px_10px_1fr]">
                           <span className="font-semibold">Nama</span>
                           <span>:</span>
                           <span className="font-bold uppercase text-slate-950">{selectedLetterForPrint.generatedBy || travelSettings.directorName || "ATIYATUL AMRA"}</span>
                         </div>
-                        <div className="grid grid-cols-[140px_12px_1fr]">
+                        <div className="grid grid-cols-[140px_12px_1fr] print:grid-cols-[115px_10px_1fr]">
                           <span className="font-semibold">Jabatan</span>
                           <span>:</span>
                           <span className="font-bold uppercase text-slate-950">{travelSettings.directorTitle || "DIREKTUR UTAMA"}</span>
                         </div>
-                        <div className="grid grid-cols-[140px_12px_1fr]">
+                        <div className="grid grid-cols-[140px_12px_1fr] print:grid-cols-[115px_10px_1fr]">
                           <span className="font-semibold">Alamat</span>
                           <span>:</span>
                           <span>{travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}</span>
@@ -1329,7 +1329,7 @@ export default function LettersGeneratorView({
                       </div>
                     </div>
 
-                    <div className="space-y-1 pt-1">
+                    <div className="space-y-0.5 print:space-y-0 pt-0.5 print:pt-0">
                       <p className="font-semibold text-slate-900">
                         {selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR"
                           ? "Bersama ini saya mengajukan permohonan penambahan / endorsement nama pada halaman pengesahan paspor menjadi 3 (tiga) suku kata guna memenuhi persyaratan penerbitan Visa Umroh dari Kementerian Haji dan Umrah Kerajaan Arab Saudi, untuk calon Jemaah Umrah dengan data sebagai berikut:"
@@ -1338,15 +1338,15 @@ export default function LettersGeneratorView({
                           : "Bersama ini saya mengajukan permohonan paspor untuk calon Jemaah Umrah dengan data sebagai berikut:"}
                       </p>
 
-                      <div className="pl-3 sm:pl-5 space-y-0.5 text-slate-900">
-                        <div className="grid grid-cols-[140px_12px_1fr]">
+                      <div className="pl-3 sm:pl-5 print:pl-3 space-y-0.5 print:space-y-0 text-slate-900">
+                        <div className="grid grid-cols-[140px_12px_1fr] print:grid-cols-[115px_10px_1fr]">
                           <span className="font-semibold">{selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ? "Nama Sesuai KTP" : "Nama"}</span>
                           <span>:</span>
                           <span className="font-bold uppercase text-slate-950">{selectedLetterForPrint.pilgrim?.name || "-"}</span>
                         </div>
 
                         {selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" && (
-                          <div className="grid grid-cols-[140px_12px_1fr] bg-amber-50/80 p-1 rounded">
+                          <div className="grid grid-cols-[140px_12px_1fr] print:grid-cols-[115px_10px_1fr] bg-amber-50/80 print:bg-transparent p-0.5 rounded">
                             <span className="font-bold text-amber-950">Nama Endorsement (3 Kata)</span>
                             <span className="text-amber-950">:</span>
                             <span className="font-black text-slate-950 underline uppercase tracking-wide">
@@ -1355,7 +1355,7 @@ export default function LettersGeneratorView({
                           </div>
                         )}
 
-                        <div className="grid grid-cols-[140px_12px_1fr]">
+                        <div className="grid grid-cols-[140px_12px_1fr] print:grid-cols-[115px_10px_1fr]">
                           <span className="font-semibold">Tempat/tanggal lahir</span>
                           <span>:</span>
                           <span className="uppercase">
@@ -1363,14 +1363,14 @@ export default function LettersGeneratorView({
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-[140px_12px_1fr]">
+                        <div className="grid grid-cols-[140px_12px_1fr] print:grid-cols-[115px_10px_1fr]">
                           <span className="font-semibold">NIK</span>
                           <span>:</span>
                           <span className="font-mono font-bold text-slate-950">{selectedLetterForPrint.pilgrim?.nik || "-"}</span>
                         </div>
 
                         {(selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" || selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR") && (
-                          <div className="grid grid-cols-[140px_12px_1fr]">
+                          <div className="grid grid-cols-[140px_12px_1fr] print:grid-cols-[115px_10px_1fr]">
                             <span className="font-semibold">Nomor Paspor RI</span>
                             <span>:</span>
                             <span className="font-mono font-bold text-slate-950">
@@ -1379,7 +1379,7 @@ export default function LettersGeneratorView({
                                   {selectedLetterForPrint.pilgrim?.passportNumber}{" "}
                                   {selectedLetterForPrint.pilgrim?.passportExpiry && (
                                     <span className="font-sans font-normal text-slate-600">
-                                      (Masa Berlaku s/d: {formatDate(selectedLetterForPrint.pilgrim?.passportExpiry, "dd-MM-yyyy")})
+                                      (Masa Berlaku: {formatDate(selectedLetterForPrint.pilgrim?.passportExpiry, "dd-MM-yyyy")})
                                     </span>
                                   )}
                                 </>
@@ -1390,7 +1390,7 @@ export default function LettersGeneratorView({
                           </div>
                         )}
 
-                        <div className="grid grid-cols-[140px_12px_1fr]">
+                        <div className="grid grid-cols-[140px_12px_1fr] print:grid-cols-[115px_10px_1fr]">
                           <span className="font-semibold">Alamat</span>
                           <span>:</span>
                           <span className="uppercase">
@@ -1400,11 +1400,11 @@ export default function LettersGeneratorView({
                       </div>
                     </div>
 
-                    <p className="pt-1 text-slate-900">
+                    <p className="pt-0.5 print:pt-0 text-slate-900">
                       Benar yang bersangkutan telah mendaftar dan berniat melaksanakan Ibadah Umrah melalui kami, berdasarkan <strong>SE Direktur Jendral Imigrasi No. IMI-0342 GR.01.01 tahun 2014</strong> tentang Penerbitan Proses Pengurusan Paspor oleh PPIU tanggal 04 Maret 2014, Kami menyatakan bahwa :
                     </p>
 
-                    <ol className="list-decimal pl-5 space-y-1 text-slate-900 leading-relaxed">
+                    <ol className="list-decimal pl-5 print:pl-4 space-y-0.5 print:space-y-0 text-slate-900 leading-relaxed print:leading-snug">
                       <li>
                         Permohonan {selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ? "penambahan / endorsement nama paspor" : selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ? "perpanjangan / penggantian paspor" : "paspor"} yang diurus adalah Paspor Warga Negara Indonesia yang akan melakukan perjalanan ke Arab Saudi dalam rangka menunaikan Ibadah Umrah.
                       </li>
@@ -1419,7 +1419,7 @@ export default function LettersGeneratorView({
                       </li>
                     </ol>
 
-                    <p className="pt-0.5 text-slate-900">
+                    <p className="pt-0.5 print:pt-0 text-slate-900">
                       Demikian surat pernyataan dan jaminan ini kami sampaikan, apabila kami tidak memenuhi kewajiban sebagaimana tersebut diatas, kami bersedia menerima sanksi sesuai dengan ketentuan peraturan perundang-undangan yang berlaku.
                     </p>
 
@@ -1537,60 +1537,60 @@ export default function LettersGeneratorView({
                 selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ||
                 selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ||
                 (selectedLetterForPrint.customTitle && /perpanjang.*paspor|paspor.*baru|endorse/i.test(selectedLetterForPrint.customTitle)) ? (
-                  <div className="pt-4 flex flex-col items-start text-left text-xs space-y-1.5">
+                  <div className="pt-3 print:pt-1 flex flex-col items-start text-left text-xs print:text-[9.5px] space-y-1 print:space-y-0.5">
                     <p className="font-bold text-slate-950 uppercase">{travelSettings.companyName || "PT. BAROKAH SULTHAN HARAMAIN"}</p>
 
                     {/* Kotak Meterai & Ruang TTD/Stempel di Sebelah Kiri */}
-                    <div className="flex items-center gap-3 my-1">
-                      <div className="border-2 border-dashed border-slate-300 rounded-xl p-1.5 text-center w-28 h-16 flex flex-col items-center justify-center bg-slate-50 text-[9px] text-slate-500 shrink-0">
+                    <div className="flex items-center gap-3 my-1 print:my-0.5">
+                      <div className="border-2 border-dashed border-slate-300 rounded-xl p-1.5 print:p-1 text-center w-28 print:w-22 h-15 print:h-11 flex flex-col items-center justify-center bg-slate-50 text-[9px] print:text-[7.5px] text-slate-500 shrink-0">
                         <span className="font-bold text-slate-700">METERAI TEMPEL</span>
-                        <span className="font-black text-slate-900 text-[10px]">Rp 10.000</span>
-                        <span className="text-[7.5px] text-slate-400">Tempel di sini</span>
+                        <span className="font-black text-slate-900 text-[10px] print:text-[8.5px]">Rp 10.000</span>
+                        <span className="text-[7.5px] print:text-[6.5px] text-slate-400">Tempel di sini</span>
                       </div>
-                      <div className="h-16 w-36">
+                      <div className="h-15 print:h-11 w-36 print:w-28">
                         {/* Ruang Tanda Tangan & Stempel Menimpa Meterai */}
                       </div>
                     </div>
 
                     <div>
-                      <p className="font-bold text-slate-950 underline text-xs uppercase">
+                      <p className="font-bold text-slate-950 underline text-xs print:text-[9.5px] uppercase">
                         {selectedLetterForPrint.generatedBy || travelSettings.directorName || "ATIYATUL AMRA"}
                       </p>
-                      <p className="text-[11px] text-slate-700 font-medium">{travelSettings.directorTitle || "Direktur Utama"}</p>
+                      <p className="text-[11px] print:text-[9px] text-slate-700 font-medium">{travelSettings.directorTitle || "Direktur Utama"}</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="pt-8 flex flex-col items-start text-xs">
+                  <div className="pt-6 print:pt-2 flex flex-col items-start text-xs print:text-[9.5px]">
                     <p>Hormat Kami,</p>
                     <p className="font-bold text-slate-900">{travelSettings.companyName}</p>
-                    <div className="my-6 h-16 w-44">
+                    <div className="my-4 print:my-2 h-14 print:h-10 w-44">
                       {/* Ruang Bersih untuk Tanda Tangan Fisik & Stempel Resmi Perusahaan */}
                     </div>
-                    <p className="font-bold text-slate-950 underline text-xs uppercase">
+                    <p className="font-bold text-slate-950 underline text-xs print:text-[9.5px] uppercase">
                       {selectedLetterForPrint.generatedBy || travelSettings.directorName}
                     </p>
-                    <p className="text-[11px] text-slate-700">{travelSettings.directorTitle || "Direktur Utama"}</p>
+                    <p className="text-[11px] print:text-[9px] text-slate-700">{travelSettings.directorTitle || "Direktur Utama"}</p>
                   </div>
                 )}
               </div>
 
               {/* 7. GEOMETRIC FOOTER DIVIDER (Matching Exact PPIU Reference) */}
               {includeFooter ? (
-                <div className="pt-6">
-                  <div className="relative w-full h-7 flex items-center overflow-hidden">
+                <div className="pt-4 print:pt-1">
+                  <div className="relative w-full h-6 print:h-4.5 flex items-center overflow-hidden">
                     {/* Left Dark Wedge Block */}
-                    <div className="w-24 sm:w-32 h-4 bg-slate-900 -skew-x-25 -ml-3" />
+                    <div className="w-24 sm:w-32 print:w-20 h-3.5 print:h-2.5 bg-slate-900 -skew-x-25 -ml-3" />
 
                     {/* Middle Diagonal Slashes */}
-                    <div className="flex gap-1 px-2">
-                      <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                      <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                      <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
-                      <div className="w-1.5 h-3.5 bg-amber-400 -skew-x-25" />
+                    <div className="flex gap-1 px-2 print:px-1">
+                      <div className="w-1.5 print:w-1 h-3 print:h-2 bg-amber-400 -skew-x-25" />
+                      <div className="w-1.5 print:w-1 h-3 print:h-2 bg-amber-400 -skew-x-25" />
+                      <div className="w-1.5 print:w-1 h-3 print:h-2 bg-amber-400 -skew-x-25" />
+                      <div className="w-1.5 print:w-1 h-3 print:h-2 bg-amber-400 -skew-x-25" />
                     </div>
 
                     {/* Right Gold Contact Bar */}
-                    <div className="h-4 flex-1 bg-gradient-to-r from-amber-400 to-amber-500 rounded-r flex items-center justify-end px-3 gap-4 text-[9px] font-bold text-slate-950">
+                    <div className="h-3.5 print:h-2.5 flex-1 bg-gradient-to-r from-amber-400 to-amber-500 rounded-r flex items-center justify-end px-3 print:px-2 gap-4 print:gap-2 text-[9px] print:text-[8px] font-bold text-slate-950">
                       <span className="flex items-center gap-1">
                         📞 {travelSettings.phone || "0821-6733-9464"}
                       </span>
@@ -1601,7 +1601,7 @@ export default function LettersGeneratorView({
                   </div>
                 </div>
               ) : (
-                <div className="pt-2" />
+                <div className="pt-1 print:pt-0" />
               )}
             </div>
 
