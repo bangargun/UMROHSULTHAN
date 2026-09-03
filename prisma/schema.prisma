@@ -778,3 +778,22 @@ model BadalUmroh {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 }
+
+model SopDocument {
+  id              String    @id @default(uuid())
+  code            String    @unique // e.g. SOP-OPS-001, REG-CORP-001
+  category        String    // OPERASIONAL_UMROH, LEGALITAS_PERUSAHAAN, LAYANAN_JAMAAH, MITIGASI_DARURAT, KEUANGAN_REFUND, SDM_KODE_ETIK
+  title           String    // Judul Dokumen / SOP
+  purpose         String?   // Tujuan SOP
+  scope           String?   // Ruang Lingkup
+  responsibleRole String?   // Penanggung Jawab
+  version         String    @default("1.0")
+  effectiveDate   DateTime? @default(now())
+  contentMarkdown String    // Isi Dokumen Lengkap Terstruktur
+  tags            String?   // Tags Pencarian
+  isMandatory     Boolean   @default(true) // Wajib Akreditasi / PPIU
+  orderIndex      Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+

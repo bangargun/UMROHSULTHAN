@@ -156,6 +156,12 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
           desc: "Distribusi logistik & TTD digital",
         },
         {
+          id: "sop",
+          label: "SOP & Tata Kelola PPIU",
+          icon: BookOpen,
+          desc: "Alur ibadah, peraturan & mitigasi AI",
+        },
+        {
           id: "alumni",
           label: "Riwayat Jamaah & Alumni",
           icon: Award,

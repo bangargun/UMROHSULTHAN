@@ -25,6 +25,7 @@ import PaymentGatewayView from "@/components/payment/PaymentGatewayView";
 import PilgrimPortalView from "@/components/portal/PilgrimPortalView";
 import MasterDataView from "@/components/master/MasterDataView";
 import SettingsView from "@/components/settings/SettingsView";
+import SopManagementView from "@/components/sop/SopManagementView";
 import LoginView from "@/components/auth/LoginView";
 import { Loader2 } from "lucide-react";
 
@@ -317,6 +318,10 @@ export default function Home() {
               onRefresh={fetchAllData}
               onNavigateTab={(tab, filter) => handleNavigateTab(tab, filter)}
             />
+          )}
+
+          {activeTab === "sop" && (
+            <SopManagementView />
           )}
 
           {activeTab === "finance" && (
