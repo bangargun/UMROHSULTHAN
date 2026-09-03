@@ -29,6 +29,7 @@ import {
   Gift,
   AlertCircle,
   FileCheck2,
+  UserCheck,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -53,18 +54,32 @@ export default function PublicRegistrationPage() {
     isPreviousClient: "TIDAK", // YA / TIDAK
     previousPackageName: "",
     customPreviousPackage: "",
+    title: "Bpk",
     fullName: "",
-    phone: "",
-    email: "",
+    fatherName: "",
+    identityType: "KTP",
     nik: "",
+    hasPassport: false,
+    passportName: "",
     passportNumber: "",
+    passportIssuedDate: "",
+    passportIssuedCity: "",
     passportExpiry: "",
     placeOfBirth: "",
     dateOfBirth: "",
     gender: "MALE",
     address: "",
+    subDistrict: "",
+    district: "",
     city: "",
     province: "",
+    telephone: "",
+    phone: "",
+    email: "",
+    citizenship: "WNI",
+    maritalStatus: "MENIKAH",
+    education: "SMA",
+    job: "SWASTA",
     uniformSize: "L", // S, M, L, XL, XXL, XXXL, Custom
     chronicDiseases: [] as string[],
     customChronicDisease: "",
@@ -75,11 +90,17 @@ export default function PublicRegistrationPage() {
     agentName: "",
     referralName: "",
     ktpBase64: "",
+    familyCardBase64: "",
     passportBase64: "",
+    diplomaBase64: "",
+    marriageBookBase64: "",
     notes: "",
   });
   const [ktpPreview, setKtpPreview] = useState<string | null>(null);
+  const [familyCardPreview, setFamilyCardPreview] = useState<string | null>(null);
   const [passportPreview, setPassportPreview] = useState<string | null>(null);
+  const [diplomaPreview, setDiplomaPreview] = useState<string | null>(null);
+  const [marriageBookPreview, setMarriageBookPreview] = useState<string | null>(null);
 
   // 2. Form State: TABUNGAN UMROH
   const [savingsForm, setSavingsForm] = useState({
@@ -249,6 +270,18 @@ export default function PublicRegistrationPage() {
     }
   };
 
+  const handleFamilyCardUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file);
+      setFamilyCardPreview(compressed);
+      setFormData((prev) => ({ ...prev, familyCardBase64: compressed }));
+    } catch (err) {
+      console.error("Failed to compress Family Card:", err);
+    }
+  };
+
   const handlePassportUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -258,6 +291,30 @@ export default function PublicRegistrationPage() {
       setFormData((prev) => ({ ...prev, passportBase64: compressed }));
     } catch (err) {
       console.error("Failed to compress Passport:", err);
+    }
+  };
+
+  const handleDiplomaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file);
+      setDiplomaPreview(compressed);
+      setFormData((prev) => ({ ...prev, diplomaBase64: compressed }));
+    } catch (err) {
+      console.error("Failed to compress Diploma:", err);
+    }
+  };
+
+  const handleMarriageBookUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file);
+      setMarriageBookPreview(compressed);
+      setFormData((prev) => ({ ...prev, marriageBookBase64: compressed }));
+    } catch (err) {
+      console.error("Failed to compress Marriage Book:", err);
     }
   };
 
@@ -310,6 +367,11 @@ export default function PublicRegistrationPage() {
 
       const payload = {
         ...formData,
+        passportName: formData.hasPassport ? formData.passportName : null,
+        passportNumber: formData.hasPassport ? formData.passportNumber : null,
+        passportIssuedDate: formData.hasPassport && formData.passportIssuedDate ? formData.passportIssuedDate : null,
+        passportIssuedCity: formData.hasPassport ? formData.passportIssuedCity : null,
+        passportExpiry: formData.hasPassport && formData.passportExpiry ? formData.passportExpiry : null,
         umrahExperienceCount: formData.umrahExperienceCount,
         isPreviousClient: formData.isPreviousClient === "YA",
         previousPackageName: previousPkg,
@@ -998,156 +1060,417 @@ export default function PublicRegistrationPage() {
                 <div>
                   <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                     <User className="w-5 h-5 text-emerald-600" />
-                    Langkah 2: Data Lengkap Calon Jamaah
+                    Langkah 2: Data Lengkap Calon Jamaah (Standar SISKOPATUH Kemenag)
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Pastikan nama sesuai dengan KTP & Paspor Anda untuk keperluan visa dan tiket pesawat.
+                    Pastikan nama sesuai dengan Kartu Vaksin & Paspor Anda untuk keperluan visa dan tiket pesawat resmi.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <div className="sm:col-span-2">
-                    <label className="font-bold text-slate-700">Nama Lengkap (Sesuai KTP / Paspor) *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. AHMAD GEVIN RICH DAMANIK"
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value.toUpperCase() })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold focus:ring-2 focus:ring-emerald-500/20"
-                    />
+                {/* Sub-section 1: Identitas Pribadi */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4">
+                  <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                    <User className="w-4 h-4 text-emerald-600" />
+                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                      1. Identitas Pribadi & Keluarga
+                    </h4>
                   </div>
 
-                  <div>
-                    <label className="font-bold text-slate-700">Nomor WhatsApp Aktif *</label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="e.g. 082167339464"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <label className="font-bold text-slate-700">Title / Sapaan *</label>
+                      <select
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold"
+                      >
+                        {["Bpk", "Ibu", "Sdr", "Sdri", "H.", "Hj.", "Ustadz", "Ustadzah", "Dr.", "Prof."].map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                  <div>
-                    <label className="font-bold text-slate-700">Alamat Email</label>
-                    <input
-                      type="email"
-                      placeholder="e.g. jamaah@gmail.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                  </div>
+                    <div className="sm:col-span-2">
+                      <label className="font-bold text-slate-700">Nama (Sesuai Kartu Vaksin & KTP) *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. AHMAD GEVIN RICH DAMANIK"
+                        value={formData.fullName}
+                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value.toUpperCase() })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold focus:ring-2 focus:ring-emerald-500/20 uppercase"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="font-bold text-slate-700">Nomor Induk Kependudukan (NIK) *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="16 Digit NIK KTP"
-                      maxLength={16}
-                      value={formData.nik}
-                      onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-mono focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                  </div>
+                    <div>
+                      <label className="font-bold text-slate-700">Nama Ayah Kandung *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nama lengkap ayah kandung..."
+                        value={formData.fatherName}
+                        onChange={(e) => setFormData({ ...formData, fatherName: e.target.value.toUpperCase() })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold focus:ring-2 focus:ring-emerald-500/20 uppercase"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="font-bold text-slate-700">Jenis Kelamin *</label>
-                    <select
-                      value={formData.gender}
-                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white focus:ring-2 focus:ring-emerald-500/20"
-                    >
-                      <option value="MALE">Laki-laki</option>
-                      <option value="FEMALE">Perempuan</option>
-                    </select>
-                  </div>
+                    <div>
+                      <label className="font-bold text-slate-700">Jenis Identitas *</label>
+                      <select
+                        value={formData.identityType}
+                        onChange={(e) => setFormData({ ...formData, identityType: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold"
+                      >
+                        <option value="KTP">KTP (e-KTP RI)</option>
+                        <option value="PASPOR">PASPOR RI</option>
+                        <option value="KITAS">KITAS / KITAP</option>
+                        <option value="SIM">SIM RI</option>
+                      </select>
+                    </div>
 
-                  <div>
-                    <label className="font-bold text-slate-700">Tempat Lahir *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Medan"
-                      value={formData.placeOfBirth}
-                      onChange={(e) => setFormData({ ...formData, placeOfBirth: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-700">Tanggal Lahir *</label>
-                    <input
-                      type="date"
-                      value={formData.dateOfBirth}
-                      onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-700">Ukuran Seragam / Batik Travel *</label>
-                    <select
-                      value={formData.uniformSize}
-                      onChange={(e) => setFormData({ ...formData, uniformSize: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold"
-                    >
-                      {["S", "M", "L", "XL", "XXL", "XXXL", "CUSTOM"].map((sz) => (
-                        <option key={sz} value={sz}>Ukuran {sz}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-700">Kota / Kabupaten *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Tebing Tinggi"
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="font-bold text-slate-700">Alamat Lengkap KTP</label>
-                    <textarea
-                      rows={2}
-                      placeholder="Jl. Nama Jalan, No. Rumah, RT/RW, Kelurahan, Kecamatan..."
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
-                    />
+                    <div>
+                      <label className="font-bold text-slate-700">Nomor Identitas (NIK) *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="16 Digit NIK KTP"
+                        maxLength={16}
+                        value={formData.nik}
+                        onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-mono focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Paspor (Opsional jika belum ada) */}
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                      <FileCheck2 className="w-4 h-4 text-emerald-600" />
-                      Informasi Dokumen Paspor (Boleh dikosongkan jika sedang proses buat)
-                    </label>
+                {/* Sub-section 2: Kondisional Paspor */}
+                <div className="bg-emerald-50/40 p-4 rounded-2xl border border-emerald-200 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 pb-2">
+                    <div className="flex items-center gap-2">
+                      <FileCheck2 className="w-4 h-4 text-emerald-700" />
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                        2. Apakah Paspor Sudah Ada? *
+                      </h4>
+                    </div>
+
+                    {/* Toggle Button Paspor */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, hasPassport: false })}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all ${
+                          !formData.hasPassport
+                            ? "bg-amber-500 text-slate-950 border-amber-600 shadow-sm"
+                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        ❌ Belum Ada Paspor
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, hasPassport: true })}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all ${
+                          formData.hasPassport
+                            ? "bg-emerald-600 text-white border-emerald-700 shadow-sm"
+                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        ✅ Sudah Ada Paspor
+                      </button>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+
+                  {formData.hasPassport ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs pt-1">
+                      <div className="sm:col-span-2">
+                        <label className="font-bold text-slate-700">Nama Sesuai Paspor *</label>
+                        <input
+                          type="text"
+                          placeholder="Nama lengkap pada paspor..."
+                          value={formData.passportName || formData.fullName}
+                          onChange={(e) => setFormData({ ...formData, passportName: e.target.value.toUpperCase() })}
+                          className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold focus:ring-2 focus:ring-emerald-500/20 uppercase"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700">Nomor Paspor *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. C1234567"
+                          value={formData.passportNumber}
+                          onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value.toUpperCase() })}
+                          className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-mono font-bold uppercase"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700">Kota Paspor (Kanim Penerbit) *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Medan / Jakarta"
+                          value={formData.passportIssuedCity}
+                          onChange={(e) => setFormData({ ...formData, passportIssuedCity: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700">Tanggal Dikeluarkan Paspor (yyyy-mm-dd)</label>
+                        <input
+                          type="date"
+                          value={formData.passportIssuedDate}
+                          onChange={(e) => setFormData({ ...formData, passportIssuedDate: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700">Tanggal Berakhir Paspor (Expiry)</label>
+                        <input
+                          type="date"
+                          value={formData.passportExpiry}
+                          onChange={(e) => setFormData({ ...formData, passportExpiry: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-white rounded-xl border border-dashed border-amber-300 text-xs text-amber-900 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        Data paspor disembunyikan. Kami akan membantu pengurusan Surat Rekomendasi Pembuatan Paspor Baru untuk Anda.
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Sub-section 3: Tempat & Tanggal Lahir & Domisili */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4">
+                  <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                    <MapPin className="w-4 h-4 text-rose-600" />
+                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                      3. Tempat Lahir & Alamat Domisili
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                     <div>
-                      <label className="font-bold text-slate-700">Nomor Paspor</label>
+                      <label className="font-bold text-slate-700">Tempat Lahir *</label>
                       <input
                         type="text"
-                        placeholder="e.g. C1234567"
-                        value={formData.passportNumber}
-                        onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value.toUpperCase() })}
-                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-mono"
+                        required
+                        placeholder="e.g. Medan"
+                        value={formData.placeOfBirth}
+                        onChange={(e) => setFormData({ ...formData, placeOfBirth: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 focus:ring-2 focus:ring-emerald-500/20"
                       />
                     </div>
+
                     <div>
-                      <label className="font-bold text-slate-700">Masa Berlaku Paspor</label>
+                      <label className="font-bold text-slate-700">Tanggal Lahir (yyyy-mm-dd) *</label>
                       <input
                         type="date"
-                        value={formData.passportExpiry}
-                        onChange={(e) => setFormData({ ...formData, passportExpiry: e.target.value })}
+                        required
+                        value={formData.dateOfBirth}
+                        onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700">Jenis Kelamin *</label>
+                      <select
+                        value={formData.gender}
+                        onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white focus:ring-2 focus:ring-emerald-500/20 font-bold"
+                      >
+                        <option value="MALE">Laki-laki</option>
+                        <option value="FEMALE">Perempuan</option>
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-3">
+                      <label className="font-bold text-slate-700">Alamat Lengkap (Jalan, No. Rumah, RT/RW) *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Jl. Thamrin No. 12, RT 02 / RW 05"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700">Provinsi *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Sumatera Utara"
+                        value={formData.province}
+                        onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700">Kabupaten / Kota *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Tebing Tinggi / Medan"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700">Kecamatan *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Padang Hulu"
+                        value={formData.district}
+                        onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700">Kelurahan / Desa *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Bandar Sono"
+                        value={formData.subDistrict}
+                        onChange={(e) => setFormData({ ...formData, subDistrict: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700">No. Telepon (Rumah/Kantor)</label>
+                      <input
+                        type="tel"
+                        placeholder="e.g. 0621-123456"
+                        value={formData.telephone}
+                        onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700">No HP / WhatsApp Aktif *</label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="e.g. 082167339464"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-bold text-emerald-800"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sub-section 4: Demografi & Pekerjaan */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4">
+                  <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                    <UserCheck className="w-4 h-4 text-teal-600" />
+                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                      4. Demografi, Pendidikan & Pekerjaan
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                    <div>
+                      <label className="font-bold text-slate-700">Kewarganegaraan *</label>
+                      <select
+                        value={formData.citizenship}
+                        onChange={(e) => setFormData({ ...formData, citizenship: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold"
+                      >
+                        <option value="WNI">WNI (Warga Negara Indonesia)</option>
+                        <option value="WNA">WNA (Warga Negara Asing)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700">Status Pernikahan *</label>
+                      <select
+                        value={formData.maritalStatus}
+                        onChange={(e) => setFormData({ ...formData, maritalStatus: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold"
+                      >
+                        <option value="MENIKAH">Menikah</option>
+                        <option value="BELUM_MENIKAH">Belum Menikah</option>
+                        <option value="CERAI_HIDUP">Cerai Hidup</option>
+                        <option value="CERAI_MATI">Cerai Mati</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700">Pendidikan Terakhir *</label>
+                      <select
+                        value={formData.education}
+                        onChange={(e) => setFormData({ ...formData, education: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold"
+                      >
+                        {["SD", "SMP", "SMA", "D1", "D2", "D3", "D4", "S1", "S2", "S3", "PESANTREN", "LAINNYA"].map((ed) => (
+                          <option key={ed} value={ed}>{ed}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700">Pekerjaan *</label>
+                      <select
+                        value={formData.job}
+                        onChange={(e) => setFormData({ ...formData, job: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold"
+                      >
+                        {[
+                          "PNS",
+                          "TNI_POLRI",
+                          "BUMN",
+                          "SWASTA",
+                          "WIRASWASTA",
+                          "PEDAGANG",
+                          "PETANI",
+                          "GURU_DOSEN",
+                          "DOKTER_MEDIS",
+                          "IBU_RUMAH_TANGGA",
+                          "PENSIUNAN",
+                          "PELAJAR_MAHASISWA",
+                          "LAINNYA",
+                        ].map((jb) => (
+                          <option key={jb} value={jb}>{jb.replace(/_/g, " ")}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700">Ukuran Seragam / Batik Travel *</label>
+                      <select
+                        value={formData.uniformSize}
+                        onChange={(e) => setFormData({ ...formData, uniformSize: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold"
+                      >
+                        {["S", "M", "L", "XL", "XXL", "XXXL", "CUSTOM"].map((sz) => (
+                          <option key={sz} value={sz}>Ukuran {sz}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-3">
+                      <label className="font-bold text-slate-700">Alamat Email (Opsional)</label>
+                      <input
+                        type="email"
+                        placeholder="e.g. jamaah@gmail.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
                       />
                     </div>
@@ -1165,8 +1488,8 @@ export default function PublicRegistrationPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (!formData.fullName || !formData.phone || !formData.nik) {
-                        alert("Mohon lengkapi Nama Lengkap, No WhatsApp, dan NIK terlebih dahulu!");
+                      if (!formData.fullName || !formData.phone || !formData.nik || !formData.fatherName) {
+                        alert("Mohon lengkapi Nama Lengkap, Nama Ayah Kandung, No HP/WA, dan NIK terlebih dahulu!");
                         return;
                       }
                       setCurrentStep(3);
@@ -1291,46 +1614,112 @@ export default function PublicRegistrationPage() {
                 <div>
                   <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                     <Upload className="w-5 h-5 text-emerald-600" />
-                    Langkah 4: Upload Dokumen & Ringkasan Tagihan
+                    Langkah 4: Upload 5 Dokumen Persyaratan & Ringkasan Pendaftaran
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Upload foto KTP dan Paspor (jika ada). Dokumen juga dapat diserahkan menyusul ke kantor.
+                    Berkas yang Anda upload akan tersimpan secara otomatis & aman di Google Drive sistem Sulthan Haramain. Dokumen juga dapat diserahkan menyusul jika belum lengkap.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Upload KTP */}
-                  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center space-y-2 hover:border-emerald-500 transition-colors">
-                    <p className="text-xs font-bold text-slate-800">Foto KTP Asli</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {/* 1. Upload KTP */}
+                  <div className="border-2 border-dashed border-emerald-200 bg-emerald-50/20 rounded-2xl p-3.5 text-center space-y-2 hover:border-emerald-500 transition-colors">
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-xs font-bold text-slate-800">1. Foto KTP Asli</span>
+                      <span className="text-[10px] text-rose-600 font-bold">*Wajib</span>
+                    </div>
                     {ktpPreview ? (
-                      <div className="space-y-2">
-                        <img src={ktpPreview} alt="Preview KTP" className="h-28 mx-auto rounded-lg object-contain border" />
-                        <label className="text-[10px] text-emerald-600 font-bold cursor-pointer block">Ganti Foto KTP</label>
+                      <div className="space-y-1.5">
+                        <img src={ktpPreview} alt="Preview KTP" className="h-24 mx-auto rounded-lg object-contain border bg-white" />
+                        <label className="text-[10px] text-emerald-700 font-bold cursor-pointer block">Ganti Foto KTP</label>
                       </div>
                     ) : (
-                      <div className="py-4 space-y-1">
-                        <Upload className="w-8 h-8 text-slate-300 mx-auto" />
-                        <p className="text-[11px] text-slate-500">Format JPG/PNG (Maks 5MB)</p>
+                      <div className="py-3 space-y-1">
+                        <Upload className="w-7 h-7 text-emerald-600 mx-auto" />
+                        <p className="text-[10px] text-slate-500">e-KTP asli jelas & terbaca</p>
                       </div>
                     )}
-                    <input type="file" accept="image/*" onChange={handleKtpUpload} className="text-xs file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />
+                    <input type="file" accept="image/*" onChange={handleKtpUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200 cursor-pointer" />
                   </div>
 
-                  {/* Upload Paspor */}
-                  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center space-y-2 hover:border-emerald-500 transition-colors">
-                    <p className="text-xs font-bold text-slate-800">Foto Halaman Depan Paspor</p>
-                    {passportPreview ? (
-                      <div className="space-y-2">
-                        <img src={passportPreview} alt="Preview Paspor" className="h-28 mx-auto rounded-lg object-contain border" />
-                        <label className="text-[10px] text-emerald-600 font-bold cursor-pointer block">Ganti Foto Paspor</label>
+                  {/* 2. Upload Kartu Keluarga */}
+                  <div className="border-2 border-dashed border-emerald-200 bg-emerald-50/20 rounded-2xl p-3.5 text-center space-y-2 hover:border-emerald-500 transition-colors">
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-xs font-bold text-slate-800">2. Foto Kartu Keluarga</span>
+                      <span className="text-[10px] text-rose-600 font-bold">*Wajib</span>
+                    </div>
+                    {familyCardPreview ? (
+                      <div className="space-y-1.5">
+                        <img src={familyCardPreview} alt="Preview KK" className="h-24 mx-auto rounded-lg object-contain border bg-white" />
+                        <label className="text-[10px] text-emerald-700 font-bold cursor-pointer block">Ganti Foto KK</label>
                       </div>
                     ) : (
-                      <div className="py-4 space-y-1">
-                        <Upload className="w-8 h-8 text-slate-300 mx-auto" />
-                        <p className="text-[11px] text-slate-500">Boleh menyusul jika belum ada</p>
+                      <div className="py-3 space-y-1">
+                        <Upload className="w-7 h-7 text-emerald-600 mx-auto" />
+                        <p className="text-[10px] text-slate-500">Foto KK asli / barcode</p>
                       </div>
                     )}
-                    <input type="file" accept="image/*" onChange={handlePassportUpload} className="text-xs file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />
+                    <input type="file" accept="image/*" onChange={handleFamilyCardUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200 cursor-pointer" />
+                  </div>
+
+                  {/* 3. Upload Paspor */}
+                  <div className={`border-2 border-dashed rounded-2xl p-3.5 text-center space-y-2 transition-colors ${formData.hasPassport ? "border-blue-300 bg-blue-50/20 hover:border-blue-500" : "border-slate-200 bg-slate-50/60"}`}>
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-xs font-bold text-slate-800">3. Foto Paspor</span>
+                      <span className="text-[10px] text-slate-500 font-medium">({formData.hasPassport ? "Jika Ada" : "Menyusul"})</span>
+                    </div>
+                    {passportPreview ? (
+                      <div className="space-y-1.5">
+                        <img src={passportPreview} alt="Preview Paspor" className="h-24 mx-auto rounded-lg object-contain border bg-white" />
+                        <label className="text-[10px] text-blue-700 font-bold cursor-pointer block">Ganti Foto Paspor</label>
+                      </div>
+                    ) : (
+                      <div className="py-3 space-y-1">
+                        <Upload className="w-7 h-7 text-blue-600 mx-auto" />
+                        <p className="text-[10px] text-slate-500">Halaman depan berfoto</p>
+                      </div>
+                    )}
+                    <input type="file" accept="image/*" onChange={handlePassportUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-blue-100 file:text-blue-800 hover:file:bg-blue-200 cursor-pointer" />
+                  </div>
+
+                  {/* 4. Upload Ijazah */}
+                  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-3.5 text-center space-y-2 hover:border-emerald-500 transition-colors">
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-xs font-bold text-slate-800">4. Foto Ijazah</span>
+                      <span className="text-[10px] text-slate-400">(Jika Ada / Opsional)</span>
+                    </div>
+                    {diplomaPreview ? (
+                      <div className="space-y-1.5">
+                        <img src={diplomaPreview} alt="Preview Ijazah" className="h-24 mx-auto rounded-lg object-contain border bg-white" />
+                        <label className="text-[10px] text-emerald-700 font-bold cursor-pointer block">Ganti Foto Ijazah</label>
+                      </div>
+                    ) : (
+                      <div className="py-3 space-y-1">
+                        <Upload className="w-7 h-7 text-slate-400 mx-auto" />
+                        <p className="text-[10px] text-slate-500">Ijazah / Akta Lahir</p>
+                      </div>
+                    )}
+                    <input type="file" accept="image/*" onChange={handleDiplomaUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-slate-100 file:text-slate-800 hover:file:bg-slate-200 cursor-pointer" />
+                  </div>
+
+                  {/* 5. Upload Buku Nikah */}
+                  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-3.5 text-center space-y-2 hover:border-emerald-500 transition-colors">
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-xs font-bold text-slate-800">5. Foto Buku Nikah</span>
+                      <span className="text-[10px] text-slate-400">(Jika Ada / Menikah)</span>
+                    </div>
+                    {marriageBookPreview ? (
+                      <div className="space-y-1.5">
+                        <img src={marriageBookPreview} alt="Preview Buku Nikah" className="h-24 mx-auto rounded-lg object-contain border bg-white" />
+                        <label className="text-[10px] text-emerald-700 font-bold cursor-pointer block">Ganti Buku Nikah</label>
+                      </div>
+                    ) : (
+                      <div className="py-3 space-y-1">
+                        <Upload className="w-7 h-7 text-slate-400 mx-auto" />
+                        <p className="text-[10px] text-slate-500">Buku Nikah (Bagi Pasutri)</p>
+                      </div>
+                    )}
+                    <input type="file" accept="image/*" onChange={handleMarriageBookUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-slate-100 file:text-slate-800 hover:file:bg-slate-200 cursor-pointer" />
                   </div>
                 </div>
 

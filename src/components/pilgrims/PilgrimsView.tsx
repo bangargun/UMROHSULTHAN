@@ -61,6 +61,92 @@ export default function PilgrimsView({
   const [isRegistrationsModalOpen, setIsRegistrationsModalOpen] = useState(false);
   const [editingPilgrimId, setEditingPilgrimId] = useState<string | null>(null);
 
+  // Column Visibility Filter State
+  const [columns, setColumns] = useState({
+    title: true,
+    name: true,
+    fatherName: true,
+    identity: true,
+    passport: true,
+    birth: true,
+    address: true,
+    phone: true,
+    demography: true,
+    visa: true,
+    package: true,
+    room: true,
+    status: true,
+  });
+  const [isColumnFilterOpen, setIsColumnFilterOpen] = useState(false);
+
+  const setPresetColumns = (preset: "ALL" | "SISKOPATUH" | "PASSPORT_VISA" | "IDENTITY_CONTACT") => {
+    if (preset === "ALL") {
+      setColumns({
+        title: true,
+        name: true,
+        fatherName: true,
+        identity: true,
+        passport: true,
+        birth: true,
+        address: true,
+        phone: true,
+        demography: true,
+        visa: true,
+        package: true,
+        room: true,
+        status: true,
+      });
+    } else if (preset === "SISKOPATUH") {
+      setColumns({
+        title: true,
+        name: true,
+        fatherName: true,
+        identity: true,
+        passport: true,
+        birth: true,
+        address: true,
+        phone: true,
+        demography: true,
+        visa: true,
+        package: true,
+        room: false,
+        status: true,
+      });
+    } else if (preset === "PASSPORT_VISA") {
+      setColumns({
+        title: false,
+        name: true,
+        fatherName: false,
+        identity: false,
+        passport: true,
+        birth: false,
+        address: false,
+        phone: true,
+        demography: false,
+        visa: true,
+        package: true,
+        room: false,
+        status: true,
+      });
+    } else if (preset === "IDENTITY_CONTACT") {
+      setColumns({
+        title: true,
+        name: true,
+        fatherName: true,
+        identity: true,
+        passport: false,
+        birth: true,
+        address: true,
+        phone: true,
+        demography: true,
+        visa: false,
+        package: true,
+        room: false,
+        status: true,
+      });
+    }
+  };
+
   // Helper to calculate age from birth date string
   const calculateAge = (dobString: string | null | undefined) => {
     if (!dobString) return null;
@@ -387,12 +473,19 @@ export default function PilgrimsView({
   // Form input data jamaah baru
   const [formData, setFormData] = useState({
     packageId: packages[0]?.id || "",
+    title: "Bpk",
     name: "",
+    fatherName: "",
+    identityType: "KTP",
     nik: "",
     hasPassport: false,
+    passportName: "",
     passportNumber: "",
+    passportIssuedDate: "",
+    passportIssuedCity: "",
     passportExpiry: "",
     hasVisa: false,
+    visaProvider: "",
     visaNumber: "",
     visaIssueDate: "",
     visaExpiryDate: "",
@@ -402,12 +495,18 @@ export default function PilgrimsView({
     placeOfBirth: "",
     dateOfBirth: "",
     gender: "MALE",
-    phone: "",
-    email: "",
     address: "",
+    subDistrict: "",
+    district: "",
     city: "",
     province: "",
-    fatherName: "",
+    telephone: "",
+    phone: "",
+    email: "",
+    citizenship: "WNI",
+    maritalStatus: "MENIKAH",
+    education: "SMA",
+    job: "SWASTA",
     motherName: "",
     emergencyContactName: "",
     emergencyContactPhone: "",
@@ -423,12 +522,19 @@ export default function PilgrimsView({
   // Edit form data
   const [editFormData, setEditFormData] = useState({
     packageId: "",
+    title: "Bpk",
     name: "",
+    fatherName: "",
+    identityType: "KTP",
     nik: "",
     hasPassport: false,
+    passportName: "",
     passportNumber: "",
+    passportIssuedDate: "",
+    passportIssuedCity: "",
     passportExpiry: "",
     hasVisa: false,
+    visaProvider: "",
     visaNumber: "",
     visaIssueDate: "",
     visaExpiryDate: "",
@@ -438,12 +544,18 @@ export default function PilgrimsView({
     placeOfBirth: "",
     dateOfBirth: "",
     gender: "MALE",
-    phone: "",
-    email: "",
     address: "",
+    subDistrict: "",
+    district: "",
     city: "",
     province: "",
-    fatherName: "",
+    telephone: "",
+    phone: "",
+    email: "",
+    citizenship: "WNI",
+    maritalStatus: "MENIKAH",
+    education: "SMA",
+    job: "SWASTA",
     motherName: "",
     emergencyContactName: "",
     emergencyContactPhone: "",
@@ -462,12 +574,19 @@ export default function PilgrimsView({
     const hasVis = Boolean(p.visaNumber && p.visaNumber.trim() !== "");
     setEditFormData({
       packageId: p.packageId || "",
+      title: p.title || "Bpk",
       name: p.name || "",
+      fatherName: p.fatherName || "",
+      identityType: p.identityType || "KTP",
       nik: p.nik || "",
       hasPassport: hasPass,
+      passportName: p.passportName || p.name || "",
       passportNumber: p.passportNumber || "",
+      passportIssuedDate: p.passportIssuedDate ? p.passportIssuedDate.split("T")[0] : "",
+      passportIssuedCity: p.passportIssuedCity || "",
       passportExpiry: p.passportExpiry ? p.passportExpiry.split("T")[0] : "",
       hasVisa: hasVis,
+      visaProvider: p.visaProvider || "",
       visaNumber: p.visaNumber || "",
       visaIssueDate: p.visaIssueDate ? p.visaIssueDate.split("T")[0] : "",
       visaExpiryDate: p.visaExpiryDate ? p.visaExpiryDate.split("T")[0] : "",
@@ -477,12 +596,18 @@ export default function PilgrimsView({
       placeOfBirth: p.placeOfBirth || "",
       dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split("T")[0] : "",
       gender: p.gender || "MALE",
-      phone: p.phone || "",
-      email: p.email || "",
       address: p.address || "",
+      subDistrict: p.subDistrict || "",
+      district: p.district || "",
       city: p.city || "",
       province: p.province || "",
-      fatherName: p.fatherName || "",
+      telephone: p.telephone || "",
+      phone: p.phone || "",
+      email: p.email || "",
+      citizenship: p.citizenship || "WNI",
+      maritalStatus: p.maritalStatus || "MENIKAH",
+      education: p.education || "SMA",
+      job: p.job || "SWASTA",
       motherName: p.motherName || "",
       emergencyContactName: p.emergencyContactName || "",
       emergencyContactPhone: p.emergencyContactPhone || "",
@@ -511,8 +636,12 @@ export default function PilgrimsView({
     try {
       const payload = {
         ...editFormData,
+        passportName: editFormData.hasPassport ? editFormData.passportName : null,
         passportNumber: editFormData.hasPassport ? editFormData.passportNumber : null,
+        passportIssuedDate: editFormData.hasPassport && editFormData.passportIssuedDate ? editFormData.passportIssuedDate : null,
+        passportIssuedCity: editFormData.hasPassport ? editFormData.passportIssuedCity : null,
         passportExpiry: editFormData.hasPassport && editFormData.passportExpiry ? editFormData.passportExpiry : null,
+        visaProvider: editFormData.hasVisa ? editFormData.visaProvider : null,
         visaNumber: editFormData.hasVisa ? editFormData.visaNumber : null,
         visaIssueDate: editFormData.hasVisa && editFormData.visaIssueDate ? editFormData.visaIssueDate : null,
         visaExpiryDate: editFormData.hasVisa && editFormData.visaExpiryDate ? editFormData.visaExpiryDate : null,
@@ -635,8 +764,12 @@ export default function PilgrimsView({
     try {
       const payload = {
         ...formData,
+        passportName: formData.hasPassport ? formData.passportName : null,
         passportNumber: formData.hasPassport ? formData.passportNumber : null,
+        passportIssuedDate: formData.hasPassport && formData.passportIssuedDate ? formData.passportIssuedDate : null,
+        passportIssuedCity: formData.hasPassport ? formData.passportIssuedCity : null,
         passportExpiry: formData.hasPassport && formData.passportExpiry ? formData.passportExpiry : null,
+        visaProvider: formData.hasVisa ? formData.visaProvider : null,
         visaNumber: formData.hasVisa ? formData.visaNumber : null,
         visaIssueDate: formData.hasVisa && formData.visaIssueDate ? formData.visaIssueDate : null,
         visaExpiryDate: formData.hasVisa && formData.visaExpiryDate ? formData.visaExpiryDate : null,
@@ -653,12 +786,19 @@ export default function PilgrimsView({
         setIsAddModalOpen(false);
         setFormData({
           packageId: packages[0]?.id || "",
+          title: "Bpk",
           name: "",
+          fatherName: "",
+          identityType: "KTP",
           nik: "",
           hasPassport: false,
+          passportName: "",
           passportNumber: "",
+          passportIssuedDate: "",
+          passportIssuedCity: "",
           passportExpiry: "",
           hasVisa: false,
+          visaProvider: "",
           visaNumber: "",
           visaIssueDate: "",
           visaExpiryDate: "",
@@ -668,12 +808,18 @@ export default function PilgrimsView({
           placeOfBirth: "",
           dateOfBirth: "",
           gender: "MALE",
-          phone: "",
-          email: "",
           address: "",
+          subDistrict: "",
+          district: "",
           city: "",
           province: "",
-          fatherName: "",
+          telephone: "",
+          phone: "",
+          email: "",
+          citizenship: "WNI",
+          maritalStatus: "MENIKAH",
+          education: "SMA",
+          job: "SWASTA",
           motherName: "",
           emergencyContactName: "",
           emergencyContactPhone: "",
@@ -842,49 +988,168 @@ export default function PilgrimsView({
         </button>
       </div>
 
-      {/* Filter Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div className="relative md:col-span-2">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Cari nama, NIK, nomor paspor, atau no HP..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-          />
+      {/* Filter Bar & Column Selector */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="relative md:col-span-2">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Cari nama, NIK, nomor paspor, nama ayah, no HP, alamat..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+            />
+          </div>
+
+          <div>
+            <select
+              value={selectedPackageId}
+              onChange={(e) => setSelectedPackageId(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            >
+              <option value="ALL">Semua Jadwal Paket</option>
+              {packages.map((pkg) => (
+                <option key={pkg.id} value={pkg.id}>
+                  {pkg.name} ({formatDate(pkg.departureDate, "dd MMM")})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            >
+              <option value="ALL">Semua Status Perjalanan</option>
+              <option value="REGISTERED">Terdaftar</option>
+              <option value="DP_PAID">DP Terbayar</option>
+              <option value="FULLY_PAID">Lunas</option>
+              <option value="DOCUMENTS_READY">Berkas Lengkap</option>
+              <option value="VISA_ISSUED">Visa Terbit</option>
+              <option value="DEPARTED">Di Tanah Suci</option>
+              <option value="RETURNED">Selesai / Pulang</option>
+            </select>
+          </div>
         </div>
 
-        <div>
-          <select
-            value={selectedPackageId}
-            onChange={(e) => setSelectedPackageId(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-          >
-            <option value="ALL">Semua Jadwal Paket</option>
-            {packages.map((pkg) => (
-              <option key={pkg.id} value={pkg.id}>
-                {pkg.name} ({formatDate(pkg.departureDate, "dd MMM")})
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Toolbar Baris 2: Preset Kolom & Toggle Dropdown */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-slate-100">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="font-bold text-slate-700 flex items-center gap-1 mr-1">
+              <Filter className="w-3.5 h-3.5 text-emerald-600" /> Filter Kolom:
+            </span>
+            <button
+              type="button"
+              onClick={() => setPresetColumns("SISKOPATUH")}
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-all border border-emerald-200 cursor-pointer"
+            >
+              🌟 Standar SISKOPATUH
+            </button>
+            <button
+              type="button"
+              onClick={() => setPresetColumns("PASSPORT_VISA")}
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-800 hover:bg-blue-100 transition-all border border-blue-200 cursor-pointer"
+            >
+              ✈️ Paspor & Visa
+            </button>
+            <button
+              type="button"
+              onClick={() => setPresetColumns("IDENTITY_CONTACT")}
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-800 hover:bg-purple-100 transition-all border border-purple-200 cursor-pointer"
+            >
+              🪪 Identitas & Kontak
+            </button>
+            <button
+              type="button"
+              onClick={() => setPresetColumns("ALL")}
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all border border-slate-200 cursor-pointer"
+            >
+              📋 Tampilkan Semua
+            </button>
+          </div>
 
-        <div>
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-          >
-            <option value="ALL">Semua Status Perjalanan</option>
-            <option value="REGISTERED">Terdaftar</option>
-            <option value="DP_PAID">DP Terbayar</option>
-            <option value="FULLY_PAID">Lunas</option>
-            <option value="DOCUMENTS_READY">Berkas Lengkap</option>
-            <option value="VISA_ISSUED">Visa Terbit</option>
-            <option value="DEPARTED">Di Tanah Suci</option>
-            <option value="RETURNED">Selesai / Pulang</option>
-          </select>
+          {/* Popover Toggle Button */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsColumnFilterOpen(!isColumnFilterOpen)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-800 border border-slate-300 text-xs font-bold hover:bg-slate-200 transition-all cursor-pointer shadow-2xs"
+            >
+              <span>⚙️ Sesuaikan Kolom ({Object.values(columns).filter(Boolean).length}/13)</span>
+            </button>
+
+            {isColumnFilterOpen && (
+              <div className="absolute right-0 top-9 z-40 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 w-72 space-y-2.5 animate-in fade-in zoom-in-95 duration-100">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <p className="font-bold text-slate-900 text-xs">Pilih Kolom Tampilan</p>
+                  <button
+                    type="button"
+                    onClick={() => setIsColumnFilterOpen(false)}
+                    className="text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] max-h-60 overflow-y-auto pr-1">
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.title} onChange={(e) => setColumns({ ...columns, title: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Title / Sapaan</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.name} onChange={(e) => setColumns({ ...columns, name: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Nama Jamaah</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.fatherName} onChange={(e) => setColumns({ ...columns, fatherName: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Nama Ayah</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.identity} onChange={(e) => setColumns({ ...columns, identity: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>No. Identitas / NIK</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.passport} onChange={(e) => setColumns({ ...columns, passport: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Paspor Lengkap</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.birth} onChange={(e) => setColumns({ ...columns, birth: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Tempat & Tgl Lahir</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.address} onChange={(e) => setColumns({ ...columns, address: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Alamat Lengkap</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.phone} onChange={(e) => setColumns({ ...columns, phone: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Kontak (Telp/HP)</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.demography} onChange={(e) => setColumns({ ...columns, demography: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Demografi & Kerja</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.visa} onChange={(e) => setColumns({ ...columns, visa: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Visa Saudi</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.package} onChange={(e) => setColumns({ ...columns, package: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Paket & Jadwal</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.room} onChange={(e) => setColumns({ ...columns, room: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Kamar & Ukuran</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.status} onChange={(e) => setColumns({ ...columns, status: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Status Jamaah</span>
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -894,19 +1159,26 @@ export default function PilgrimsView({
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200">
               <tr>
-                <th className="py-3 px-4">Nama Jamaah & NIK</th>
-                <th className="py-3 px-4">No Paspor & Exp</th>
-                <th className="py-3 px-4">Paket & Keberangkatan</th>
-                <th className="py-3 px-4">Kamar & Seragam</th>
-                <th className="py-3 px-4">Kontak & Mahram</th>
-                <th className="py-3 px-4">Status</th>
+                {columns.title && <th className="py-3 px-3">Title</th>}
+                {columns.name && <th className="py-3 px-4">Nama (Kartu Vaksin) & NIK</th>}
+                {columns.fatherName && <th className="py-3 px-3">Nama Ayah</th>}
+                {columns.identity && <th className="py-3 px-3">Identitas</th>}
+                {columns.passport && <th className="py-3 px-4">Paspor RI & Exp</th>}
+                {columns.birth && <th className="py-3 px-3">Tempat & Tgl Lahir</th>}
+                {columns.address && <th className="py-3 px-4">Alamat Domisili</th>}
+                {columns.phone && <th className="py-3 px-3">Kontak (HP/Telp)</th>}
+                {columns.demography && <th className="py-3 px-3">Demografi & Kerja</th>}
+                {columns.visa && <th className="py-3 px-4">Visa Saudi</th>}
+                {columns.package && <th className="py-3 px-4">Paket & Keberangkatan</th>}
+                {columns.room && <th className="py-3 px-3">Kamar & Seragam</th>}
+                {columns.status && <th className="py-3 px-3">Status</th>}
                 <th className="py-3 px-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {filteredPilgrims.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-slate-400">
+                  <td colSpan={Object.values(columns).filter(Boolean).length + 1} className="py-10 text-center text-slate-400">
                     Tidak ada data jamaah ditemukan
                   </td>
                 </tr>
@@ -917,99 +1189,184 @@ export default function PilgrimsView({
 
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                      {/* Title */}
+                      {columns.title && (
+                        <td className="py-3.5 px-3">
+                          <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                            {p.title || "Bpk"}
+                          </span>
+                        </td>
+                      )}
+
                       {/* Name & NIK */}
-                      <td className="py-3.5 px-4">
-                        <p className="font-bold text-slate-900">{p.name}</p>
-                        <p className="font-mono text-[11px] text-slate-400">NIK: {p.nik}</p>
-                      </td>
+                      {columns.name && (
+                        <td className="py-3.5 px-4">
+                          <p className="font-bold text-slate-900">{p.name}</p>
+                          <p className="font-mono text-[11px] text-slate-400">NIK: {p.nik}</p>
+                        </td>
+                      )}
+
+                      {/* Father Name */}
+                      {columns.fatherName && (
+                        <td className="py-3.5 px-3">
+                          <p className="font-bold text-slate-800">{p.fatherName || "-"}</p>
+                        </td>
+                      )}
+
+                      {/* Identity */}
+                      {columns.identity && (
+                        <td className="py-3.5 px-3">
+                          <span className="font-bold text-slate-700">{p.identityType || "KTP"}:</span>
+                          <p className="font-mono text-[11px] text-slate-600">{p.nik}</p>
+                        </td>
+                      )}
 
                       {/* Passport & Visa */}
-                      <td className="py-3.5 px-4">
-                        <div className="space-y-1">
-                          {p.passportNumber ? (
-                            <div>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1.5 py-0.2 rounded text-[11px]">
-                                  {p.passportNumber}
-                                </span>
-                                {expInfo && expInfo.isWarning && (
-                                  <span
-                                    className={`inline-flex items-center text-[9px] px-1.5 py-0.5 rounded border shadow-2xs ${expInfo.badgeClass}`}
-                                    title={expInfo.recommendation}
-                                  >
-                                    {expInfo.shortBadge}
+                      {columns.passport && (
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-1">
+                            {p.passportNumber ? (
+                              <div>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1.5 py-0.2 rounded text-[11px]">
+                                    {p.passportNumber}
                                   </span>
+                                  {expInfo && expInfo.isWarning && (
+                                    <span
+                                      className={`inline-flex items-center text-[9px] px-1.5 py-0.5 rounded border shadow-2xs ${expInfo.badgeClass}`}
+                                      title={expInfo.recommendation}
+                                    >
+                                      {expInfo.shortBadge}
+                                    </span>
+                                  )}
+                                </div>
+                                {p.passportName && p.passportName !== p.name && (
+                                  <p className="text-[10px] text-slate-600 font-semibold mt-0.5">
+                                    Nama: {p.passportName}
+                                  </p>
                                 )}
+                                <p className="text-[10px] text-slate-500 mt-0.5">
+                                  Exp: {p.passportExpiry ? formatDate(p.passportExpiry, "dd/MM/yyyy") : "-"}
+                                  {p.passportIssuedCity ? ` • Kota: ${p.passportIssuedCity}` : ""}
+                                </p>
                               </div>
-                              <p className="text-[10px] text-slate-500 mt-0.5">
-                                Exp: {p.passportExpiry ? formatDate(p.passportExpiry, "dd/MM/yyyy") : "-"}
-                              </p>
+                            ) : (
+                              <span className="inline-block text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 font-medium">
+                                Paspor Belum Ada
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      )}
+
+                      {/* Place & Date of Birth */}
+                      {columns.birth && (
+                        <td className="py-3.5 px-3">
+                          <p className="font-bold text-slate-800">{p.placeOfBirth || "-"}</p>
+                          <p className="text-[10px] text-slate-500">{p.dateOfBirth ? formatDate(p.dateOfBirth, "dd/MM/yyyy") : "-"}</p>
+                        </td>
+                      )}
+
+                      {/* Full Address */}
+                      {columns.address && (
+                        <td className="py-3.5 px-4 max-w-[200px]">
+                          <p className="text-slate-800 font-medium line-clamp-1">{p.address || "-"}</p>
+                          <p className="text-[10px] text-slate-500 line-clamp-1">
+                            {[p.subDistrict, p.district, p.city, p.province].filter(Boolean).join(", ") || "-"}
+                          </p>
+                        </td>
+                      )}
+
+                      {/* Phone & Telephone */}
+                      {columns.phone && (
+                        <td className="py-3.5 px-3">
+                          <p className="text-slate-800 font-bold">{p.phone}</p>
+                          {p.telephone && <p className="text-[10px] text-slate-500">Telp: {p.telephone}</p>}
+                          {p.mahramName && (
+                            <p className="text-[10px] text-slate-500 mt-0.5">
+                              Mahram: {p.mahramName}
+                            </p>
+                          )}
+                        </td>
+                      )}
+
+                      {/* Demography & Job */}
+                      {columns.demography && (
+                        <td className="py-3.5 px-3">
+                          <p className="font-bold text-slate-800">{p.job || "-"}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {p.maritalStatus || "-"} • {p.citizenship || "WNI"}
+                          </p>
+                        </td>
+                      )}
+
+                      {/* Visa Saudi */}
+                      {columns.visa && (
+                        <td className="py-3.5 px-4">
+                          {p.visaNumber ? (
+                            <div className="space-y-0.5">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                                <span>🎫</span>
+                                <span className="font-mono">{p.visaNumber}</span>
+                              </span>
+                              {p.visaProvider && (
+                                <p className="text-[10px] text-slate-500">Provider: {p.visaProvider}</p>
+                              )}
+                              {p.visaExpiryDate && (
+                                <p className="text-[10px] text-slate-400">
+                                  Exp: {formatDate(p.visaExpiryDate, "dd/MM/yyyy")}
+                                </p>
+                              )}
                             </div>
                           ) : (
-                            <span className="inline-block text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 font-medium">
-                              Paspor Belum Ada
-                            </span>
-                          )}
-
-                          {/* Visa Info Badge */}
-                          {p.visaNumber ? (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                              <span>🎫 Visa:</span>
-                              <span className="font-mono">{p.visaNumber}</span>
-                            </span>
-                          ) : (
                             <span className="inline-flex items-center gap-1 text-[9px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
-                              🎫 Visa: Belum Terbit
+                              🎫 Belum Terbit
                             </span>
                           )}
-                        </div>
-                      </td>
+                        </td>
+                      )}
 
                       {/* Package */}
-                      <td className="py-3.5 px-4">
-                        <p className="font-semibold text-slate-800 line-clamp-1">{p.package?.name}</p>
-                        <p className="text-[11px] text-emerald-700 font-bold mt-0.5">
-                          🛫 {formatDate(p.package?.departureDate, "dd MMM yyyy")}
-                        </p>
-                      </td>
+                      {columns.package && (
+                        <td className="py-3.5 px-4">
+                          <p className="font-semibold text-slate-800 line-clamp-1">{p.package?.name}</p>
+                          <p className="text-[11px] text-emerald-700 font-bold mt-0.5">
+                            🛫 {formatDate(p.package?.departureDate, "dd MMM yyyy")}
+                          </p>
+                        </td>
+                      )}
 
                       {/* Room & Uniform */}
-                      <td className="py-3.5 px-4">
-                        <span className="inline-block text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                          {p.roomType} Room
-                        </span>
-                        <span className="inline-block ml-1 text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                          Size: {p.uniformSize}
-                        </span>
-                      </td>
-
-                      {/* Contact & Mahram */}
-                      <td className="py-3.5 px-4">
-                        <p className="text-slate-800 font-semibold">{p.phone}</p>
-                        {p.mahramName && (
-                          <p className="text-[10px] text-slate-500">
-                            Mahram: {p.mahramName} ({p.mahramRelation || "Keluarga"})
-                          </p>
-                        )}
-                      </td>
+                      {columns.room && (
+                        <td className="py-3.5 px-3">
+                          <span className="inline-block text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                            {p.roomType} Room
+                          </span>
+                          <span className="inline-block ml-1 text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                            Size: {p.uniformSize}
+                          </span>
+                        </td>
+                      )}
 
                       {/* Status (Interactive Inline Selector) */}
-                      <td className="py-3.5 px-4">
-                        <select
-                          value={p.status || "REGISTERED"}
-                          onChange={(e) => handleInlineStatusChange(p.id, e.target.value, p.name)}
-                          className={`text-[10px] font-bold rounded-xl px-2.5 py-1 border cursor-pointer focus:outline-none transition-all ${badge.bg} ${badge.text} ${badge.border}`}
-                          title="Klik untuk langsung mengubah status jamaah di tabel"
-                        >
-                          <option value="REGISTERED" className="bg-white text-slate-800">📋 Terdaftar Baru</option>
-                          <option value="DP_PAID" className="bg-white text-slate-800">💳 DP Terbayar (Locked)</option>
-                          <option value="FULLY_PAID" className="bg-white text-slate-800">💰 Lunas 100%</option>
-                          <option value="DOCUMENTS_READY" className="bg-white text-slate-800">📑 Berkas Lengkap</option>
-                          <option value="VISA_ISSUED" className="bg-white text-slate-800">🎫 Visa Terbit</option>
-                          <option value="DEPARTED" className="bg-white text-slate-800">✈️ Di Tanah Suci (Berangkat)</option>
-                          <option value="RETURNED" className="bg-white text-slate-800">🕋 Selesai / Pulang (Alumni)</option>
-                        </select>
-                      </td>
+                      {columns.status && (
+                        <td className="py-3.5 px-3">
+                          <select
+                            value={p.status || "REGISTERED"}
+                            onChange={(e) => handleInlineStatusChange(p.id, e.target.value, p.name)}
+                            className={`text-[10px] font-bold rounded-xl px-2.5 py-1 border cursor-pointer focus:outline-none transition-all ${badge.bg} ${badge.text} ${badge.border}`}
+                            title="Klik untuk langsung mengubah status jamaah di tabel"
+                          >
+                            <option value="REGISTERED" className="bg-white text-slate-800">📋 Terdaftar Baru</option>
+                            <option value="DP_PAID" className="bg-white text-slate-800">💳 DP Terbayar (Locked)</option>
+                            <option value="FULLY_PAID" className="bg-white text-slate-800">💰 Lunas 100%</option>
+                            <option value="DOCUMENTS_READY" className="bg-white text-slate-800">📑 Berkas Lengkap</option>
+                            <option value="VISA_ISSUED" className="bg-white text-slate-800">🎫 Visa Terbit</option>
+                            <option value="DEPARTED" className="bg-white text-slate-800">✈️ Di Tanah Suci (Berangkat)</option>
+                            <option value="RETURNED" className="bg-white text-slate-800">🕋 Selesai / Pulang (Alumni)</option>
+                          </select>
+                        </td>
+                      )}
 
                       {/* Action */}
                       <td className="py-3.5 px-4 text-center">
@@ -1181,105 +1538,143 @@ export default function PilgrimsView({
               </div>
             </div>
 
-            {/* Grid 3 Columns Details */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Grid 4 Columns Standard SISKOPATUH Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Kolom 1: Identitas Pribadi */}
-              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200/80 space-y-2 text-xs">
+              <div className="rounded-2xl bg-slate-50 p-3.5 border border-slate-200/80 space-y-2 text-xs">
                 <p className="font-bold text-slate-900 flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
-                  <UserCheck className="w-4 h-4 text-emerald-600" /> Identitas Diri
+                  <UserCheck className="w-4 h-4 text-emerald-600" /> 1. Identitas & Ayah
                 </p>
                 <div>
-                  <span className="text-[10px] text-slate-400">NIK (KTP):</span>
-                  <p className="font-mono font-bold text-slate-800">{selectedPilgrim.nik}</p>
+                  <span className="text-[10px] text-slate-400">Title / Sapaan:</span>
+                  <p className="font-bold text-slate-800">{selectedPilgrim.title || "Bpk"}</p>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400">Tempat, Tanggal Lahir:</span>
-                  <p className="text-slate-800">
-                    {selectedPilgrim.placeOfBirth || "-"},{" "}
-                    {selectedPilgrim.dateOfBirth ? formatDate(selectedPilgrim.dateOfBirth) : "-"}
+                  <span className="text-[10px] text-slate-400">Nama (Kartu Vaksin):</span>
+                  <p className="font-bold text-slate-900">{selectedPilgrim.name}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Nama Ayah Kandung:</span>
+                  <p className="font-bold text-slate-800">{selectedPilgrim.fatherName || "-"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Jenis & No. Identitas:</span>
+                  <p className="font-mono font-bold text-slate-800">
+                    {selectedPilgrim.identityType || "KTP"}: {selectedPilgrim.nik}
                   </p>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400">Jenis Kelamin / Gol. Darah:</span>
-                  <p className="text-slate-800">
-                    {selectedPilgrim.gender === "MALE" ? "Laki-laki" : "Perempuan"} • Gol: {selectedPilgrim.bloodType === "TIDAK_TAHU" ? "Tidak Tahu" : (selectedPilgrim.bloodType || "-")}
+                  <p className="text-slate-800 font-semibold">
+                    {selectedPilgrim.gender === "MALE" ? "Laki-laki" : "Perempuan"} • Gol: {selectedPilgrim.bloodType || "-"}
                   </p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400">Alamat Tempat Tinggal:</span>
-                  <p className="text-slate-800">{selectedPilgrim.address || "-"}</p>
                 </div>
               </div>
 
-              {/* Kolom 2: Paspor & Mahram */}
-              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200/80 space-y-2 text-xs">
+              {/* Kolom 2: Paspor RI */}
+              <div className="rounded-2xl bg-slate-50 p-3.5 border border-slate-200/80 space-y-2 text-xs">
                 <p className="font-bold text-slate-900 flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
-                  <Plane className="w-4 h-4 text-emerald-600" /> Paspor & Mahram
+                  <FileText className="w-4 h-4 text-blue-600" /> 2. Paspor RI
                 </p>
                 <div>
-                  <span className="text-[10px] text-slate-400">Nomor Paspor:</span>
-                  <p className="font-mono font-bold text-slate-800">{selectedPilgrim.passportNumber || "Belum Ada"}</p>
+                  <span className="text-[10px] text-slate-400">Nama di Paspor:</span>
+                  <p className="font-bold text-slate-800">{selectedPilgrim.passportName || selectedPilgrim.name || "-"}</p>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400">Masa Berlaku Paspor:</span>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <p className="text-slate-900 font-bold">
-                      {selectedPilgrim.passportExpiry ? formatDate(selectedPilgrim.passportExpiry) : "-"}
-                    </p>
+                  <span className="text-[10px] text-slate-400">Nomor Paspor:</span>
+                  <p className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 inline-block">
+                    {selectedPilgrim.passportNumber || "Belum Ada"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Tgl Dikeluarkan Paspor:</span>
+                  <p className="text-slate-800 font-semibold">
+                    {selectedPilgrim.passportIssuedDate ? formatDate(selectedPilgrim.passportIssuedDate, "dd/MM/yyyy") : "-"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Kota Kanim Penerbit:</span>
+                  <p className="text-slate-800 font-semibold">{selectedPilgrim.passportIssuedCity || "-"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Masa Berlaku Paspor (Exp):</span>
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    <span className="text-slate-900 font-bold">
+                      {selectedPilgrim.passportExpiry ? formatDate(selectedPilgrim.passportExpiry, "dd/MM/yyyy") : "-"}
+                    </span>
                     {(() => {
                       const expInfo = getPassportExpiryStatus(selectedPilgrim.passportExpiry, selectedPilgrim.package?.departureDate);
                       if (expInfo && expInfo.isWarning) {
                         return (
-                          <span className={`text-[10px] px-2 py-0.5 rounded border ${expInfo.badgeClass}`}>
-                            {expInfo.label}
+                          <span className={`text-[9px] px-1.5 py-0.2 rounded border ${expInfo.badgeClass}`}>
+                            {expInfo.shortBadge}
                           </span>
                         );
                       }
                       return null;
                     })()}
                   </div>
-                  {(() => {
-                    const expInfo = getPassportExpiryStatus(selectedPilgrim.passportExpiry, selectedPilgrim.package?.departureDate);
-                    if (expInfo && expInfo.isWarning) {
-                      return (
-                        <div className="mt-1.5 p-2 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-900 leading-snug">
-                          <strong>💡 Rekomendasi PPIU:</strong> {expInfo.recommendation}
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
                 </div>
+              </div>
+
+              {/* Kolom 3: TTL & Alamat */}
+              <div className="rounded-2xl bg-slate-50 p-3.5 border border-slate-200/80 space-y-2 text-xs">
+                <p className="font-bold text-slate-900 flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+                  <MapPin className="w-4 h-4 text-rose-600" /> 3. TTL & Domisili
+                </p>
                 <div>
-                  <span className="text-[10px] text-slate-400">Mahram / Pendamping:</span>
+                  <span className="text-[10px] text-slate-400">Tempat, Tanggal Lahir:</span>
                   <p className="text-slate-800 font-semibold">
-                    {selectedPilgrim.mahramName || "-"} {selectedPilgrim.mahramRelation ? `(${selectedPilgrim.mahramRelation})` : ""}
+                    {selectedPilgrim.placeOfBirth || "-"},{" "}
+                    {selectedPilgrim.dateOfBirth ? formatDate(selectedPilgrim.dateOfBirth, "dd/MM/yyyy") : "-"}
                   </p>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400">Kontak Darurat Keluarga:</span>
-                  <p className="text-slate-800">
-                    {selectedPilgrim.emergencyContactName || "-"} ({selectedPilgrim.emergencyContactPhone || "-"})
+                  <span className="text-[10px] text-slate-400">Alamat Lengkap:</span>
+                  <p className="text-slate-800 leading-tight">{selectedPilgrim.address || "-"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Kelurahan / Desa:</span>
+                  <p className="text-slate-800 font-semibold">{selectedPilgrim.subDistrict || "-"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Kecamatan:</span>
+                  <p className="text-slate-800 font-semibold">{selectedPilgrim.district || "-"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Kabupaten & Provinsi:</span>
+                  <p className="text-slate-800 font-semibold">
+                    {[selectedPilgrim.city, selectedPilgrim.province].filter(Boolean).join(", ") || "-"}
                   </p>
                 </div>
               </div>
 
-              {/* Kolom 3: Fasilitas & Kesehatan */}
-              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200/80 space-y-2 text-xs">
+              {/* Kolom 4: Kontak & Demografi */}
+              <div className="rounded-2xl bg-slate-50 p-3.5 border border-slate-200/80 space-y-2 text-xs">
                 <p className="font-bold text-slate-900 flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
-                  <Shield className="w-4 h-4 text-emerald-600" /> Fasilitas & Catatan
+                  <Phone className="w-4 h-4 text-teal-600" /> 4. Kontak & Pekerjaan
                 </p>
                 <div>
-                  <span className="text-[10px] text-slate-400">Tipe Kamar Hotel:</span>
-                  <p className="font-bold text-slate-800">{selectedPilgrim.roomType} Room</p>
+                  <span className="text-[10px] text-slate-400">Nomor HP / WA:</span>
+                  <p className="font-bold text-emerald-800">{selectedPilgrim.phone}</p>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400">Ukuran Seragam / Batik:</span>
-                  <p className="font-bold text-slate-800">Size {selectedPilgrim.uniformSize}</p>
+                  <span className="text-[10px] text-slate-400">No. Telepon:</span>
+                  <p className="text-slate-800 font-semibold">{selectedPilgrim.telephone || "-"}</p>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400">Catatan Khusus Kesehatan:</span>
-                  <p className="text-slate-800">{selectedPilgrim.healthNotes || "Tidak ada keluhan"}</p>
+                  <span className="text-[10px] text-slate-400">Kewarganegaraan:</span>
+                  <p className="text-slate-800 font-semibold">{selectedPilgrim.citizenship || "WNI"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Status Pernikahan:</span>
+                  <p className="text-slate-800 font-semibold">{selectedPilgrim.maritalStatus || "-"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400">Pendidikan & Pekerjaan:</span>
+                  <p className="text-slate-800 font-semibold">
+                    {selectedPilgrim.education || "-"} • {selectedPilgrim.job || "-"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -1289,7 +1684,7 @@ export default function PilgrimsView({
               <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
                 <p className="font-bold text-emerald-950 flex items-center gap-1.5">
                   <Shield className="w-4 h-4 text-emerald-700" />
-                  Status Dokumen E-Visa Umroh & Syarikah Saudi
+                  Status Dokumen E-Visa Umroh & Provider Saudi
                 </p>
                 {selectedPilgrim.visaNumber ? (
                   <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-bold">
@@ -1304,33 +1699,131 @@ export default function PilgrimsView({
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
                 <div>
+                  <span className="text-[10px] text-emerald-800">Provider Visa:</span>
+                  <p className="font-bold text-emerald-950">{selectedPilgrim.visaProvider || "-"}</p>
+                </div>
+                <div>
                   <span className="text-[10px] text-emerald-800">Nomor E-Visa (MoFA):</span>
                   <p className="font-mono font-bold text-emerald-950">
                     {selectedPilgrim.visaNumber || "-"}
                   </p>
                 </div>
                 <div>
-                  <span className="text-[10px] text-emerald-800">Nomor MOFA:</span>
-                  <p className="font-mono font-bold text-emerald-950">
-                    {selectedPilgrim.mofaNumber || "-"}
+                  <span className="text-[10px] text-emerald-800">Tanggal Berlaku Visa:</span>
+                  <p className="font-bold text-emerald-950">
+                    {selectedPilgrim.visaIssueDate ? formatDate(selectedPilgrim.visaIssueDate, "dd/MM/yyyy") : "-"}
                   </p>
                 </div>
                 <div>
-                  <span className="text-[10px] text-emerald-800">Syarikah Penjamin:</span>
+                  <span className="text-[10px] text-emerald-800">Tanggal Akhir Visa:</span>
                   <p className="font-bold text-emerald-950">
-                    {selectedPilgrim.muassasahName || "PT Sulthan Haramain Travel"}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-emerald-800">Masa Berlaku Visa:</span>
-                  <p className="font-bold text-emerald-950">
-                    {selectedPilgrim.visaExpiryDate ? formatDate(selectedPilgrim.visaExpiryDate, "dd MMM yyyy") : "-"}
+                    {selectedPilgrim.visaExpiryDate ? formatDate(selectedPilgrim.visaExpiryDate, "dd/MM/yyyy") : "-"}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Riwayat Dokumen & Keuangan Mini Preview */}
+            {/* Kartu Status Keuangan, DP & Kekurangan Pelunasan */}
+            {(() => {
+              const pkgPrice = (() => {
+                if (!selectedPilgrim.package) return 0;
+                if (selectedPilgrim.roomType === "TRIPLE") return selectedPilgrim.package.priceTriple || selectedPilgrim.package.priceQuad || 0;
+                if (selectedPilgrim.roomType === "DOUBLE") return selectedPilgrim.package.priceDouble || selectedPilgrim.package.priceQuad || 0;
+                return selectedPilgrim.package.priceQuad || 0;
+              })();
+
+              const invoicesList = selectedPilgrim.invoices || [];
+              const paidInvoices = invoicesList.filter((inv: any) => inv.status === "PAID");
+              const totalPaid = paidInvoices.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
+              const pendingInvoices = invoicesList.filter((inv: any) => inv.status !== "PAID");
+              const totalPending = pendingInvoices.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
+              const remainingBalance = pkgPrice > 0 ? Math.max(0, pkgPrice - totalPaid) : totalPending;
+              const isFullySettled = remainingBalance === 0 && totalPaid > 0;
+
+              return (
+                <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-emerald-950 text-white p-4.5 space-y-3.5 shadow-md">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-amber-400" />
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-white">
+                        Status Pembayaran Paket, DP & Sisa Pelunasan
+                      </h4>
+                    </div>
+                    {isFullySettled ? (
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold">
+                        ✅ LUNAS 100%
+                      </span>
+                    ) : totalPaid > 0 ? (
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-bold">
+                        💳 DP TERBAYAR (Belum Lunas)
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                        ❌ BELUM ADA PEMBAYARAN
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 3 Metric Summary Boxes */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="bg-white/10 rounded-xl p-3 border border-white/10">
+                      <span className="text-[10px] text-emerald-200 block">Total Biaya Paket ({selectedPilgrim.roomType || "QUAD"}):</span>
+                      <strong className="text-base font-mono font-black text-white mt-0.5 block">
+                        {formatCurrency(pkgPrice)}
+                      </strong>
+                      <p className="text-[10px] text-slate-300 mt-0.5 line-clamp-1">
+                        {selectedPilgrim.package?.name || "Program Umroh"}
+                      </p>
+                    </div>
+
+                    <div className="bg-white/10 rounded-xl p-3 border border-white/10">
+                      <span className="text-[10px] text-emerald-200 block">Total DP / Sudah Terbayar:</span>
+                      <strong className="text-base font-mono font-black text-emerald-300 mt-0.5 block">
+                        {formatCurrency(totalPaid)}
+                      </strong>
+                      <p className="text-[10px] text-emerald-200/80 mt-0.5">
+                        {paidInvoices.length} Transaksi Diterima
+                      </p>
+                    </div>
+
+                    <div className={`rounded-xl p-3 border ${remainingBalance > 0 ? "bg-amber-500/20 border-amber-400/40" : "bg-emerald-500/20 border-emerald-400/40"}`}>
+                      <span className="text-[10px] text-amber-200 font-bold block">Kekurangan Pelunasan (Sisa):</span>
+                      <strong className={`text-base font-mono font-black mt-0.5 block ${remainingBalance > 0 ? "text-amber-300" : "text-emerald-300"}`}>
+                        {formatCurrency(remainingBalance)}
+                      </strong>
+                      <p className="text-[10px] text-slate-300 mt-0.5">
+                        {remainingBalance > 0 ? "⚠️ Wajib dilunasi H-30 sebelum berangkat" : "✨ Sudah Lunas Penuh"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Riwayat Invoice Terbit */}
+                  {invoicesList.length > 0 && (
+                    <div className="pt-2 border-t border-white/10 space-y-1.5">
+                      <p className="text-[11px] font-bold text-slate-300">Rincian Invoice Terdaftar:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {invoicesList.map((inv: any) => (
+                          <div key={inv.id} className="p-2 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between text-xs">
+                            <div>
+                              <span className="font-mono font-bold text-amber-300">{inv.invoiceNumber}</span>
+                              <span className="text-[10px] text-slate-400 block">{inv.title}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="font-mono font-bold">{formatCurrency(inv.amount)}</span>
+                              <span className={`text-[9px] font-bold block ${inv.status === "PAID" ? "text-emerald-300" : "text-amber-300"}`}>
+                                {inv.status === "PAID" ? "✅ Lunas" : "⏳ Pending"}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Riwayat Dokumen & Ceklis Syarat */}
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold text-slate-900">Dokumen Ceklis Persyaratan Umroh</p>
@@ -1697,32 +2190,69 @@ export default function PilgrimsView({
             </div>
 
             <form onSubmit={handleAddPilgrim} className="space-y-4 text-xs">
-              {/* SEKSI 1: NAMA JAMAAH & NIK (DATA IDENTITAS SESUAI KTP) */}
+              {/* SEKSI 1: NAMA JAMAAH & IDENTITAS (STANDAR SISKOPATUH) */}
               <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
                   <UserCheck className="w-4 h-4 text-emerald-600" />
-                  <span>1. NAMA JAMAAH & NIK (DATA IDENTITAS KTP)</span>
+                  <span>1. IDENTITAS JAMAAH & KELUARGA (STANDAR SISKOPATUH)</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div>
-                    <label className="font-bold text-slate-700">Nama Lengkap Sesuai KTP/Paspor *</label>
+                    <label className="font-bold text-slate-700">Title / Sapaan</label>
+                    <select
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold text-slate-900"
+                    >
+                      <option value="Bpk">Bpk (Tuan)</option>
+                      <option value="Ibu">Ibu (Nyonya)</option>
+                      <option value="Sdr">Sdr (Saudara)</option>
+                      <option value="Sdri">Sdri (Saudari / Nona)</option>
+                      <option value="H.">H. (Haji)</option>
+                      <option value="Hj.">Hj. (Hajjah)</option>
+                      <option value="Ustadz">Ustadz</option>
+                      <option value="Ustadzah">Ustadzah</option>
+                      <option value="Dr.">Dr.</option>
+                      <option value="Prof.">Prof.</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-3">
+                    <label className="font-bold text-slate-700">Nama Lengkap (Sesuai Kartu Vaksin & Paspor) *</label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. H. Bambang Sulistyo"
+                      placeholder="e.g. H. BAMBANG SULISTYO"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
                       className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="font-bold text-slate-700">Nomor Induk Kependudukan (NIK) *</label>
+                    <label className="font-bold text-slate-700">Jenis Identitas</label>
+                    <select
+                      value={formData.identityType}
+                      onChange={(e) => setFormData({ ...formData, identityType: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="KTP">e-KTP (WNI)</option>
+                      <option value="PASPOR">Paspor</option>
+                      <option value="KITAS">KITAS / WNA</option>
+                      <option value="SIM">SIM</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="font-bold text-slate-700">Nomor Identitas (NIK) *</label>
                     <input
                       type="text"
                       required
                       maxLength={16}
-                      placeholder="16 Digit NIK KTP"
+                      placeholder="16 Digit NIK e-KTP"
                       value={formData.nik}
                       onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
                       className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-mono font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
@@ -1730,7 +2260,42 @@ export default function PilgrimsView({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
+                  <div>
+                    <label className="font-bold text-slate-800 flex items-center justify-between">
+                      <span>Nama Ayah Kandung (Pria) *</span>
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                        Otomatis Saran Endos 3 Kata
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. H. AHMAD DAHLAN"
+                      value={formData.fatherName}
+                      onChange={(e) => setFormData({ ...formData, fatherName: e.target.value.toUpperCase() })}
+                      className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Digunakan sistem untuk rekomendasi otomatis penambahan 3 kata di paspor / surat endorsement.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-800">Nama Ibu Kandung (Wanita)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. HJ. SITI AMINAH"
+                      value={formData.motherName}
+                      onChange={(e) => setFormData({ ...formData, motherName: e.target.value.toUpperCase() })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold text-slate-800"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Kelengkapan data keluarga untuk manifes SISKOPATUH Kemenag RI.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1 border-t border-slate-200/60">
                   <div>
                     <label className="font-bold text-slate-700">Jenis Kelamin</label>
                     <select
@@ -1757,60 +2322,15 @@ export default function PilgrimsView({
                     </select>
                   </div>
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="font-bold text-slate-700">Kota / Domisili</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Jakarta Selatan"
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700">Alamat Lengkap KTP</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Jl. Melati No. 12 RT 04/RW 02, Kebayoran Baru"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
-                  <div>
-                    <label className="font-bold text-slate-800 flex items-center justify-between">
-                      <span>Nama Ayah Kandung (Pria) *</span>
-                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                        Otomatis Saran Endos 3 Kata
-                      </span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. H. Ahmad Dahlan"
-                      value={formData.fatherName}
-                      onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Digunakan sistem untuk rekomendasi otomatis penambahan 3 kata di paspor / surat endos.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-800">Nama Ibu Kandung (Wanita)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Hj. Siti Aminah"
-                      value={formData.motherName}
-                      onChange={(e) => setFormData({ ...formData, motherName: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold text-slate-800"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Kelengkapan data keluarga untuk manifes SISKOPATUH Kemenag RI.
-                    </p>
+                    <label className="font-bold text-slate-700">Kewarganegaraan</label>
+                    <select
+                      value={formData.citizenship}
+                      onChange={(e) => setFormData({ ...formData, citizenship: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="WNI">WNI (Indonesia)</option>
+                      <option value="WNA">WNA (Asing)</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -1854,7 +2374,7 @@ export default function PilgrimsView({
               <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3.5">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
                   <FileText className="w-4 h-4 text-blue-600" />
-                  <span>3. PASPOR, VISA SAUDI & TTL (DOKUMEN PERJALANAN)</span>
+                  <span>3. PASPOR, VISA SAUDI & TEMPAT TANGGAL LAHIR</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1862,15 +2382,15 @@ export default function PilgrimsView({
                     <label className="font-bold text-slate-700">Tempat Lahir</label>
                     <input
                       type="text"
-                      placeholder="e.g. Surabaya"
+                      placeholder="e.g. Tebing Tinggi / Medan"
                       value={formData.placeOfBirth}
-                      onChange={(e) => setFormData({ ...formData, placeOfBirth: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, placeOfBirth: e.target.value.toUpperCase() })}
                       className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
                     />
                   </div>
                   <div>
                     <label className="font-bold text-slate-700 flex items-center justify-between">
-                      <span>Tanggal Lahir</span>
+                      <span>Tanggal Lahir (yyyy-mm-dd)</span>
                       {calculateAge(formData.dateOfBirth) !== null && (
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
@@ -1911,11 +2431,14 @@ export default function PilgrimsView({
                           setFormData({
                             ...formData,
                             hasPassport: false,
+                            passportName: "",
                             passportNumber: "",
+                            passportIssuedDate: "",
+                            passportIssuedCity: "",
                             passportExpiry: "",
                           })
                         }
-                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                           !formData.hasPassport
                             ? "bg-white text-slate-900 shadow-xs border border-slate-200"
                             : "text-slate-500 hover:text-slate-800"
@@ -1925,8 +2448,8 @@ export default function PilgrimsView({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setFormData({ ...formData, hasPassport: true })}
-                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        onClick={() => setFormData({ ...formData, hasPassport: true, passportName: formData.passportName || formData.name })}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                           formData.hasPassport
                             ? "bg-emerald-600 text-white shadow-xs"
                             : "text-slate-500 hover:text-slate-800"
@@ -1938,50 +2461,68 @@ export default function PilgrimsView({
                   </div>
 
                   {formData.hasPassport ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                      <div>
-                        <label className="font-bold text-slate-700">Nomor Paspor RI *</label>
-                        <input
-                          type="text"
-                          required={formData.hasPassport}
-                          placeholder="e.g. C8921475"
-                          value={formData.passportNumber}
-                          onChange={(e) =>
-                            setFormData({ ...formData, passportNumber: e.target.value.toUpperCase() })
-                          }
-                          className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-mono font-bold text-slate-900 focus:bg-white"
-                        />
+                    <div className="space-y-3 pt-1">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="font-bold text-slate-700">Nama Paspor (Sesuai Buku Paspor) *</label>
+                          <input
+                            type="text"
+                            required={formData.hasPassport}
+                            placeholder="e.g. BAMBANG SULISTYO AHMAD"
+                            value={formData.passportName}
+                            onChange={(e) => setFormData({ ...formData, passportName: e.target.value.toUpperCase() })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-bold text-slate-900 focus:bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700">Nomor Paspor RI *</label>
+                          <input
+                            type="text"
+                            required={formData.hasPassport}
+                            placeholder="e.g. C8921475"
+                            value={formData.passportNumber}
+                            onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value.toUpperCase() })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-mono font-bold text-slate-900 focus:bg-white"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="font-bold text-slate-700">Masa Berlaku Paspor (Expiry) *</label>
-                        <input
-                          type="date"
-                          required={formData.hasPassport}
-                          value={formData.passportExpiry}
-                          onChange={(e) => setFormData({ ...formData, passportExpiry: e.target.value })}
-                          className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
-                        />
-                        {(() => {
-                          const expInfo = getPassportExpiryStatus(formData.passportExpiry);
-                          if (formData.hasPassport && expInfo && expInfo.isWarning) {
-                            return (
-                              <div className="mt-1.5 p-2 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-950 flex items-start gap-1.5 leading-snug">
-                                <span className="shrink-0 text-amber-600 font-bold">⚠️</span>
-                                <div>
-                                  <p className="font-bold">{expInfo.label}</p>
-                                  <p className="text-[10px] text-amber-800 mt-0.5">{expInfo.recommendation}</p>
-                                </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="font-bold text-slate-700">Tanggal Dikeluarkan Paspor</label>
+                          <input
+                            type="date"
+                            value={formData.passportIssuedDate}
+                            onChange={(e) => setFormData({ ...formData, passportIssuedDate: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700">Kota / Kantor Imigrasi Paspor</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Kanim Medan / Pematangsiantar"
+                            value={formData.passportIssuedCity}
+                            onChange={(e) => setFormData({ ...formData, passportIssuedCity: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700">Masa Berlaku Paspor (Expiry) *</label>
+                          <input
+                            type="date"
+                            required={formData.hasPassport}
+                            value={formData.passportExpiry}
+                            onChange={(e) => setFormData({ ...formData, passportExpiry: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
+                          />
+                        </div>
                       </div>
                     </div>
                   ) : (
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
                       <span className="text-base">⏳</span>
-                      <span>Paspor belum ada / sedang proses di kantor Imigrasi. Kolom nomor paspor disembunyikan dan dapat dilengkapi menyusul saat edit data.</span>
+                      <span>Paspor belum ada / sedang proses di kantor Imigrasi. Kolom data paspor disembunyikan dan dapat dilengkapi menyusul saat edit data.</span>
                     </div>
                   )}
                 </div>
@@ -2004,6 +2545,7 @@ export default function PilgrimsView({
                           setFormData({
                             ...formData,
                             hasVisa: false,
+                            visaProvider: "",
                             visaNumber: "",
                             visaIssueDate: "",
                             visaExpiryDate: "",
@@ -2012,7 +2554,7 @@ export default function PilgrimsView({
                             insuranceNumber: "",
                           })
                         }
-                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                           !formData.hasVisa
                             ? "bg-white text-slate-900 shadow-xs border border-slate-200"
                             : "text-slate-500 hover:text-slate-800"
@@ -2023,7 +2565,7 @@ export default function PilgrimsView({
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, hasVisa: true })}
-                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                           formData.hasVisa
                             ? "bg-emerald-600 text-white shadow-xs"
                             : "text-slate-500 hover:text-slate-800"
@@ -2038,6 +2580,16 @@ export default function PilgrimsView({
                     <div className="space-y-3 pt-1">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
+                          <label className="font-bold text-slate-700">Provider Visa</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. PT Barokah Sulthan Haramain / Dallah"
+                            value={formData.visaProvider}
+                            onChange={(e) => setFormData({ ...formData, visaProvider: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-emerald-50/40 font-semibold text-emerald-900 focus:bg-white"
+                          />
+                        </div>
+                        <div>
                           <label className="font-bold text-slate-700">Nomor E-Visa Saudi (MoFA) *</label>
                           <input
                             type="text"
@@ -2046,6 +2598,27 @@ export default function PilgrimsView({
                             value={formData.visaNumber}
                             onChange={(e) => setFormData({ ...formData, visaNumber: e.target.value })}
                             className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-emerald-50/40 font-mono font-bold text-emerald-900 focus:bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="font-bold text-slate-700">Tanggal Berlaku Visa</label>
+                          <input
+                            type="date"
+                            value={formData.visaIssueDate}
+                            onChange={(e) => setFormData({ ...formData, visaIssueDate: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700">Tanggal Akhir Visa</label>
+                          <input
+                            type="date"
+                            value={formData.visaExpiryDate}
+                            onChange={(e) => setFormData({ ...formData, visaExpiryDate: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
                           />
                         </div>
                         <div>
@@ -2059,28 +2632,6 @@ export default function PilgrimsView({
                           />
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="font-bold text-slate-700">Syarikah / Muassasah Penjamin</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Dallah / Al-Riyadah / Rawafina"
-                            value={formData.muassasahName}
-                            onChange={(e) => setFormData({ ...formData, muassasahName: e.target.value })}
-                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50"
-                          />
-                        </div>
-                        <div>
-                          <label className="font-bold text-slate-700">Masa Berlaku E-Visa</label>
-                          <input
-                            type="date"
-                            value={formData.visaExpiryDate}
-                            onChange={(e) => setFormData({ ...formData, visaExpiryDate: e.target.value })}
-                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-semibold"
-                          />
-                        </div>
-                      </div>
                     </div>
                   ) : (
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
@@ -2091,54 +2642,78 @@ export default function PilgrimsView({
                 </div>
               </div>
 
-              {/* SEKSI 4: KAMAR & SERAGAM */}
-              <div className="bg-amber-50/50 p-3.5 rounded-2xl border border-amber-200/80 space-y-3">
-                <div className="flex items-center gap-1.5 font-bold text-amber-900 border-b border-amber-200 pb-2">
-                  <Boxes className="w-4 h-4 text-amber-700" />
-                  <span>4. KAMAR & SERAGAM</span>
+              {/* SEKSI 4: ALAMAT LENGKAP & DOMISILI */}
+              <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
+                  <MapPin className="w-4 h-4 text-rose-600" />
+                  <span>4. ALAMAT LENGKAP DOMISILI</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700">Alamat Jalan / Dusun / RT RW</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Jl. Pahlawan No. 10 J RT 02/RW 03"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
-                    <label className="font-bold text-slate-800">Tipe Kamar Hotel</label>
-                    <select
-                      value={formData.roomType}
-                      onChange={(e) => setFormData({ ...formData, roomType: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-amber-200 p-2.5 bg-white font-semibold"
-                    >
-                      <option value="QUAD">Quad (Sekamar Ber-4)</option>
-                      <option value="TRIPLE">Triple (Sekamar Ber-3)</option>
-                      <option value="DOUBLE">Double (Sekamar Ber-2)</option>
-                    </select>
+                    <label className="font-bold text-slate-700">Kelurahan / Desa</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Pasar Gambir"
+                      value={formData.subDistrict}
+                      onChange={(e) => setFormData({ ...formData, subDistrict: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-800">Ukuran Seragam / Batik</label>
-                    <select
-                      value={formData.uniformSize}
-                      onChange={(e) => setFormData({ ...formData, uniformSize: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-amber-200 p-2.5 bg-white font-semibold"
-                    >
-                      <option value="S">S</option>
-                      <option value="M">M</option>
-                      <option value="L">L</option>
-                      <option value="XL">XL</option>
-                      <option value="XXL">XXL</option>
-                      <option value="XXXL">XXXL</option>
-                    </select>
+                    <label className="font-bold text-slate-700">Kecamatan</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Tebing Tinggi Kota"
+                      value={formData.district}
+                      onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Kabupaten / Kota</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Tebing Tinggi"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Provinsi</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Sumatera Utara"
+                      value={formData.province}
+                      onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* SEKSI 5: KONTAK & MAHRAM */}
+              {/* SEKSI 5: KONTAK & DEMOGRAFI */}
               <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
                   <Phone className="w-4 h-4 text-teal-600" />
-                  <span>5. KONTAK & MAHRAM</span>
+                  <span>5. KONTAK, DEMOGRAFI & MAHRAM</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="font-bold text-slate-700">Nomor WhatsApp / HP *</label>
+                    <label className="font-bold text-slate-700">Nomor HP / WhatsApp *</label>
                     <input
                       type="tel"
                       required
@@ -2146,6 +2721,16 @@ export default function PilgrimsView({
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">No. Telepon (Rumah/Kantor)</label>
+                    <input
+                      type="tel"
+                      placeholder="0621-123456"
+                      value={formData.telephone}
+                      onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
                     />
                   </div>
                   <div>
@@ -2157,6 +2742,59 @@ export default function PilgrimsView({
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 border-t border-slate-200/60">
+                  <div>
+                    <label className="font-bold text-slate-700">Status Pernikahan</label>
+                    <select
+                      value={formData.maritalStatus}
+                      onChange={(e) => setFormData({ ...formData, maritalStatus: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="MENIKAH">Menikah</option>
+                      <option value="BELUM_MENIKAH">Belum Menikah</option>
+                      <option value="CERAI_HIDUP">Cerai Hidup</option>
+                      <option value="CERAI_MATI">Cerai Mati</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Pendidikan Terakhir</label>
+                    <select
+                      value={formData.education}
+                      onChange={(e) => setFormData({ ...formData, education: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="SMA">SMA / SMK / MA</option>
+                      <option value="S1">Sarjana (S1)</option>
+                      <option value="S2">Magister (S2)</option>
+                      <option value="S3">Doktor (S3)</option>
+                      <option value="D3">Diploma (D3)</option>
+                      <option value="SMP">SMP / MTs</option>
+                      <option value="SD">SD / MI</option>
+                      <option value="LAINNYA">Lainnya</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Pekerjaan</label>
+                    <select
+                      value={formData.job}
+                      onChange={(e) => setFormData({ ...formData, job: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="SWASTA">Karyawan Swasta</option>
+                      <option value="WIRASWASTA">Wiraswasta / Usaha</option>
+                      <option value="PNS">PNS / ASN</option>
+                      <option value="TNI_POLRI">TNI / POLRI</option>
+                      <option value="IBU_RUMAH_TANGGA">Ibu Rumah Tangga</option>
+                      <option value="PENSIUNAN">Pensiunan</option>
+                      <option value="BUMN">BUMN / BUMD</option>
+                      <option value="DOKTER_MEDIS">Tenaga Medis / Dokter</option>
+                      <option value="GURU_DOSEN">Guru / Dosen</option>
+                      <option value="PELAJAR_MAHASISWA">Pelajar / Mahasiswa</option>
+                      <option value="LAINNYA">Lainnya</option>
+                    </select>
                   </div>
                 </div>
 
@@ -2625,32 +3263,69 @@ export default function PilgrimsView({
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
-              {/* SEKSI 1: IDENTITAS KTP */}
+              {/* SEKSI 1: IDENTITAS JAMAAH & KELUARGA (STANDAR SISKOPATUH) */}
               <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
                   <UserCheck className="w-4 h-4 text-emerald-600" />
-                  <span>1. NAMA JAMAAH & NIK (DATA IDENTITAS KTP)</span>
+                  <span>1. IDENTITAS JAMAAH & KELUARGA (STANDAR SISKOPATUH)</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div>
-                    <label className="font-bold text-slate-700">Nama Lengkap Sesuai KTP/Paspor *</label>
+                    <label className="font-bold text-slate-700">Title / Sapaan</label>
+                    <select
+                      value={editFormData.title}
+                      onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold text-slate-900"
+                    >
+                      <option value="Bpk">Bpk (Tuan)</option>
+                      <option value="Ibu">Ibu (Nyonya)</option>
+                      <option value="Sdr">Sdr (Saudara)</option>
+                      <option value="Sdri">Sdri (Saudari / Nona)</option>
+                      <option value="H.">H. (Haji)</option>
+                      <option value="Hj.">Hj. (Hajjah)</option>
+                      <option value="Ustadz">Ustadz</option>
+                      <option value="Ustadzah">Ustadzah</option>
+                      <option value="Dr.">Dr.</option>
+                      <option value="Prof.">Prof.</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-3">
+                    <label className="font-bold text-slate-700">Nama Lengkap (Sesuai Kartu Vaksin & Paspor) *</label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. H. Bambang Sulistyo"
+                      placeholder="e.g. H. BAMBANG SULISTYO"
                       value={editFormData.name}
-                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value.toUpperCase() })}
                       className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="font-bold text-slate-700">Nomor Induk Kependudukan (NIK) *</label>
+                    <label className="font-bold text-slate-700">Jenis Identitas</label>
+                    <select
+                      value={editFormData.identityType}
+                      onChange={(e) => setEditFormData({ ...editFormData, identityType: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="KTP">e-KTP (WNI)</option>
+                      <option value="PASPOR">Paspor</option>
+                      <option value="KITAS">KITAS / WNA</option>
+                      <option value="SIM">SIM</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="font-bold text-slate-700">Nomor Identitas (NIK) *</label>
                     <input
                       type="text"
                       required
                       maxLength={16}
-                      placeholder="16 Digit NIK KTP"
+                      placeholder="16 Digit NIK e-KTP"
                       value={editFormData.nik}
                       onChange={(e) => setEditFormData({ ...editFormData, nik: e.target.value })}
                       className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-mono font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
@@ -2658,7 +3333,42 @@ export default function PilgrimsView({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
+                  <div>
+                    <label className="font-bold text-slate-800 flex items-center justify-between">
+                      <span>Nama Ayah Kandung (Pria) *</span>
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                        Otomatis Saran Endos 3 Kata
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. H. AHMAD DAHLAN"
+                      value={editFormData.fatherName}
+                      onChange={(e) => setEditFormData({ ...editFormData, fatherName: e.target.value.toUpperCase() })}
+                      className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Digunakan sistem untuk rekomendasi otomatis penambahan 3 kata di paspor / surat endorsement.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-800">Nama Ibu Kandung (Wanita)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. HJ. SITI AMINAH"
+                      value={editFormData.motherName}
+                      onChange={(e) => setEditFormData({ ...editFormData, motherName: e.target.value.toUpperCase() })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold text-slate-800"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Kelengkapan data keluarga untuk manifes SISKOPATUH Kemenag RI.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1 border-t border-slate-200/60">
                   <div>
                     <label className="font-bold text-slate-700">Jenis Kelamin</label>
                     <select
@@ -2685,60 +3395,15 @@ export default function PilgrimsView({
                     </select>
                   </div>
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="font-bold text-slate-700">Kota / Domisili</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Jakarta Selatan"
-                      value={editFormData.city}
-                      onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700">Alamat Lengkap KTP</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Jl. Melati No. 12 RT 04/RW 02"
-                    value={editFormData.address}
-                    onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
-                  <div>
-                    <label className="font-bold text-slate-800 flex items-center justify-between">
-                      <span>Nama Ayah Kandung (Pria) *</span>
-                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                        Otomatis Saran Endos 3 Kata
-                      </span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. H. Ahmad Dahlan"
-                      value={editFormData.fatherName}
-                      onChange={(e) => setEditFormData({ ...editFormData, fatherName: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Digunakan sistem untuk rekomendasi otomatis penambahan 3 kata di paspor / surat endos.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-800">Nama Ibu Kandung (Wanita)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Hj. Siti Aminah"
-                      value={editFormData.motherName}
-                      onChange={(e) => setEditFormData({ ...editFormData, motherName: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold text-slate-800"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Kelengkapan data keluarga untuk manifes SISKOPATUH Kemenag RI.
-                    </p>
+                    <label className="font-bold text-slate-700">Kewarganegaraan</label>
+                    <select
+                      value={editFormData.citizenship}
+                      onChange={(e) => setEditFormData({ ...editFormData, citizenship: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="WNI">WNI (Indonesia)</option>
+                      <option value="WNA">WNA (Asing)</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -2789,7 +3454,7 @@ export default function PilgrimsView({
               <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3.5">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
                   <FileText className="w-4 h-4 text-blue-600" />
-                  <span>3. PASPOR, VISA SAUDI & TTL (DOKUMEN PERJALANAN)</span>
+                  <span>3. PASPOR, VISA SAUDI & TEMPAT TANGGAL LAHIR</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2797,15 +3462,15 @@ export default function PilgrimsView({
                     <label className="font-bold text-slate-700">Tempat Lahir</label>
                     <input
                       type="text"
-                      placeholder="e.g. Surabaya"
+                      placeholder="e.g. Tebing Tinggi / Medan"
                       value={editFormData.placeOfBirth}
-                      onChange={(e) => setEditFormData({ ...editFormData, placeOfBirth: e.target.value })}
+                      onChange={(e) => setEditFormData({ ...editFormData, placeOfBirth: e.target.value.toUpperCase() })}
                       className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
                     />
                   </div>
                   <div>
                     <label className="font-bold text-slate-700 flex items-center justify-between">
-                      <span>Tanggal Lahir</span>
+                      <span>Tanggal Lahir (yyyy-mm-dd)</span>
                       {calculateAge(editFormData.dateOfBirth) !== null && (
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
@@ -2846,11 +3511,14 @@ export default function PilgrimsView({
                           setEditFormData({
                             ...editFormData,
                             hasPassport: false,
+                            passportName: "",
                             passportNumber: "",
+                            passportIssuedDate: "",
+                            passportIssuedCity: "",
                             passportExpiry: "",
                           })
                         }
-                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                           !editFormData.hasPassport
                             ? "bg-white text-slate-900 shadow-xs border border-slate-200"
                             : "text-slate-500 hover:text-slate-800"
@@ -2860,8 +3528,8 @@ export default function PilgrimsView({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setEditFormData({ ...editFormData, hasPassport: true })}
-                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        onClick={() => setEditFormData({ ...editFormData, hasPassport: true, passportName: editFormData.passportName || editFormData.name })}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                           editFormData.hasPassport
                             ? "bg-emerald-600 text-white shadow-xs"
                             : "text-slate-500 hover:text-slate-800"
@@ -2873,44 +3541,64 @@ export default function PilgrimsView({
                   </div>
 
                   {editFormData.hasPassport ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                      <div>
-                        <label className="font-bold text-slate-700">Nomor Paspor RI *</label>
-                        <input
-                          type="text"
-                          required={editFormData.hasPassport}
-                          placeholder="e.g. C8921475"
-                          value={editFormData.passportNumber}
-                          onChange={(e) =>
-                            setEditFormData({ ...editFormData, passportNumber: e.target.value.toUpperCase() })
-                          }
-                          className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-mono font-bold text-slate-900 focus:bg-white"
-                        />
+                    <div className="space-y-3 pt-1">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="font-bold text-slate-700">Nama Paspor (Sesuai Buku Paspor) *</label>
+                          <input
+                            type="text"
+                            required={editFormData.hasPassport}
+                            placeholder="e.g. BAMBANG SULISTYO AHMAD"
+                            value={editFormData.passportName}
+                            onChange={(e) => setEditFormData({ ...editFormData, passportName: e.target.value.toUpperCase() })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-bold text-slate-900 focus:bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700">Nomor Paspor RI *</label>
+                          <input
+                            type="text"
+                            required={editFormData.hasPassport}
+                            placeholder="e.g. C8921475"
+                            value={editFormData.passportNumber}
+                            onChange={(e) =>
+                              setEditFormData({ ...editFormData, passportNumber: e.target.value.toUpperCase() })
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-mono font-bold text-slate-900 focus:bg-white"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="font-bold text-slate-700">Masa Berlaku Paspor (Expiry) *</label>
-                        <input
-                          type="date"
-                          required={editFormData.hasPassport}
-                          value={editFormData.passportExpiry}
-                          onChange={(e) => setEditFormData({ ...editFormData, passportExpiry: e.target.value })}
-                          className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
-                        />
-                        {(() => {
-                          const expInfo = getPassportExpiryStatus(editFormData.passportExpiry);
-                          if (editFormData.hasPassport && expInfo && expInfo.isWarning) {
-                            return (
-                              <div className="mt-1.5 p-2 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-950 flex items-start gap-1.5 leading-snug">
-                                <span className="shrink-0 text-amber-600 font-bold">⚠️</span>
-                                <div>
-                                  <p className="font-bold">{expInfo.label}</p>
-                                  <p className="text-[10px] text-amber-800 mt-0.5">{expInfo.recommendation}</p>
-                                </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="font-bold text-slate-700">Tanggal Dikeluarkan Paspor</label>
+                          <input
+                            type="date"
+                            value={editFormData.passportIssuedDate}
+                            onChange={(e) => setEditFormData({ ...editFormData, passportIssuedDate: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700">Kota / Kantor Imigrasi Paspor</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Kanim Medan / Pematangsiantar"
+                            value={editFormData.passportIssuedCity}
+                            onChange={(e) => setEditFormData({ ...editFormData, passportIssuedCity: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700">Masa Berlaku Paspor (Expiry) *</label>
+                          <input
+                            type="date"
+                            required={editFormData.hasPassport}
+                            value={editFormData.passportExpiry}
+                            onChange={(e) => setEditFormData({ ...editFormData, passportExpiry: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
+                          />
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -2939,6 +3627,7 @@ export default function PilgrimsView({
                           setEditFormData({
                             ...editFormData,
                             hasVisa: false,
+                            visaProvider: "",
                             visaNumber: "",
                             visaIssueDate: "",
                             visaExpiryDate: "",
@@ -2947,7 +3636,7 @@ export default function PilgrimsView({
                             insuranceNumber: "",
                           })
                         }
-                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                           !editFormData.hasVisa
                             ? "bg-white text-slate-900 shadow-xs border border-slate-200"
                             : "text-slate-500 hover:text-slate-800"
@@ -2958,7 +3647,7 @@ export default function PilgrimsView({
                       <button
                         type="button"
                         onClick={() => setEditFormData({ ...editFormData, hasVisa: true })}
-                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                           editFormData.hasVisa
                             ? "bg-emerald-600 text-white shadow-xs"
                             : "text-slate-500 hover:text-slate-800"
@@ -2973,6 +3662,16 @@ export default function PilgrimsView({
                     <div className="space-y-3 pt-1">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
+                          <label className="font-bold text-slate-700">Provider Visa</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. PT Barokah Sulthan Haramain / Dallah"
+                            value={editFormData.visaProvider}
+                            onChange={(e) => setEditFormData({ ...editFormData, visaProvider: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-emerald-50/40 font-semibold text-emerald-900 focus:bg-white"
+                          />
+                        </div>
+                        <div>
                           <label className="font-bold text-slate-700">Nomor E-Visa Saudi (MoFA) *</label>
                           <input
                             type="text"
@@ -2981,6 +3680,27 @@ export default function PilgrimsView({
                             value={editFormData.visaNumber}
                             onChange={(e) => setEditFormData({ ...editFormData, visaNumber: e.target.value })}
                             className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-emerald-50/40 font-mono font-bold text-emerald-900 focus:bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="font-bold text-slate-700">Tanggal Berlaku Visa</label>
+                          <input
+                            type="date"
+                            value={editFormData.visaIssueDate}
+                            onChange={(e) => setEditFormData({ ...editFormData, visaIssueDate: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700">Tanggal Akhir Visa</label>
+                          <input
+                            type="date"
+                            value={editFormData.visaExpiryDate}
+                            onChange={(e) => setEditFormData({ ...editFormData, visaExpiryDate: e.target.value })}
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 text-slate-900 focus:bg-white font-semibold"
                           />
                         </div>
                         <div>
@@ -2994,28 +3714,6 @@ export default function PilgrimsView({
                           />
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="font-bold text-slate-700">Syarikah / Muassasah Penjamin</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Dallah / Al-Riyadah / Rawafina"
-                            value={editFormData.muassasahName}
-                            onChange={(e) => setEditFormData({ ...editFormData, muassasahName: e.target.value })}
-                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50"
-                          />
-                        </div>
-                        <div>
-                          <label className="font-bold text-slate-700">Masa Berlaku E-Visa</label>
-                          <input
-                            type="date"
-                            value={editFormData.visaExpiryDate}
-                            onChange={(e) => setEditFormData({ ...editFormData, visaExpiryDate: e.target.value })}
-                            className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-semibold"
-                          />
-                        </div>
-                      </div>
                     </div>
                   ) : (
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
@@ -3026,52 +3724,76 @@ export default function PilgrimsView({
                 </div>
               </div>
 
-              {/* SEKSI 4: KAMAR & SERAGAM */}
-              <div className="bg-amber-50/50 p-3.5 rounded-2xl border border-amber-200/80 space-y-3">
-                <div className="flex items-center gap-1.5 font-bold text-amber-900 border-b border-amber-200 pb-2">
-                  <Boxes className="w-4 h-4 text-amber-700" />
-                  <span>4. KAMAR & SERAGAM</span>
+              {/* SEKSI 4: ALAMAT LENGKAP & DOMISILI */}
+              <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
+                  <MapPin className="w-4 h-4 text-rose-600" />
+                  <span>4. ALAMAT LENGKAP DOMISILI</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700">Alamat Jalan / Dusun / RT RW</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Jl. Pahlawan No. 10 J RT 02/RW 03"
+                    value={editFormData.address}
+                    onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
-                    <label className="font-bold text-slate-800">Tipe Kamar Hotel</label>
-                    <select
-                      value={editFormData.roomType}
-                      onChange={(e) => setEditFormData({ ...editFormData, roomType: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
-                    >
-                      <option value="QUAD">Quad Room (Ber-4)</option>
-                      <option value="TRIPLE">Triple Room (Ber-3)</option>
-                      <option value="DOUBLE">Double Room (Ber-2)</option>
-                    </select>
+                    <label className="font-bold text-slate-700">Kelurahan / Desa</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Pasar Gambir"
+                      value={editFormData.subDistrict}
+                      onChange={(e) => setEditFormData({ ...editFormData, subDistrict: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-800">Ukuran Seragam / Batik</label>
-                    <select
-                      value={editFormData.uniformSize}
-                      onChange={(e) => setEditFormData({ ...editFormData, uniformSize: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
-                    >
-                      <option value="S">S</option>
-                      <option value="M">M</option>
-                      <option value="L">L</option>
-                      <option value="XL">XL</option>
-                      <option value="XXL">XXL</option>
-                      <option value="XXXL">XXXL</option>
-                    </select>
+                    <label className="font-bold text-slate-700">Kecamatan</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Tebing Tinggi Kota"
+                      value={editFormData.district}
+                      onChange={(e) => setEditFormData({ ...editFormData, district: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Kabupaten / Kota</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Tebing Tinggi"
+                      value={editFormData.city}
+                      onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Provinsi</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Sumatera Utara"
+                      value={editFormData.province}
+                      onChange={(e) => setEditFormData({ ...editFormData, province: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* SEKSI 5: KONTAK & MAHRAM */}
+              {/* SEKSI 5: KONTAK & DEMOGRAFI */}
               <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200/70 pb-2">
                   <Phone className="w-4 h-4 text-teal-600" />
-                  <span>5. KONTAK & MAHRAM / PENDAMPING</span>
+                  <span>5. KONTAK, DEMOGRAFI & MAHRAM / PENDAMPING</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="font-bold text-slate-700">Nomor WhatsApp Jamaah *</label>
                     <input
@@ -3084,6 +3806,16 @@ export default function PilgrimsView({
                     />
                   </div>
                   <div>
+                    <label className="font-bold text-slate-700">No. Telepon (Rumah/Kantor)</label>
+                    <input
+                      type="tel"
+                      placeholder="0621-123456"
+                      value={editFormData.telephone}
+                      onChange={(e) => setEditFormData({ ...editFormData, telephone: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    />
+                  </div>
+                  <div>
                     <label className="font-bold text-slate-700">Email Jamaah (Opsional)</label>
                     <input
                       type="email"
@@ -3092,6 +3824,59 @@ export default function PilgrimsView({
                       onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
                       className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white"
                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 border-t border-slate-200/60">
+                  <div>
+                    <label className="font-bold text-slate-700">Status Pernikahan</label>
+                    <select
+                      value={editFormData.maritalStatus}
+                      onChange={(e) => setEditFormData({ ...editFormData, maritalStatus: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="MENIKAH">Menikah</option>
+                      <option value="BELUM_MENIKAH">Belum Menikah</option>
+                      <option value="CERAI_HIDUP">Cerai Hidup</option>
+                      <option value="CERAI_MATI">Cerai Mati</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Pendidikan Terakhir</label>
+                    <select
+                      value={editFormData.education}
+                      onChange={(e) => setEditFormData({ ...editFormData, education: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="SMA">SMA / SMK / MA</option>
+                      <option value="S1">Sarjana (S1)</option>
+                      <option value="S2">Magister (S2)</option>
+                      <option value="S3">Doktor (S3)</option>
+                      <option value="D3">Diploma (D3)</option>
+                      <option value="SMP">SMP / MTs</option>
+                      <option value="SD">SD / MI</option>
+                      <option value="LAINNYA">Lainnya</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700">Pekerjaan</label>
+                    <select
+                      value={editFormData.job}
+                      onChange={(e) => setEditFormData({ ...editFormData, job: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                    >
+                      <option value="SWASTA">Karyawan Swasta</option>
+                      <option value="WIRASWASTA">Wiraswasta / Usaha</option>
+                      <option value="PNS">PNS / ASN</option>
+                      <option value="TNI_POLRI">TNI / POLRI</option>
+                      <option value="IBU_RUMAH_TANGGA">Ibu Rumah Tangga</option>
+                      <option value="PENSIUNAN">Pensiunan</option>
+                      <option value="BUMN">BUMN / BUMD</option>
+                      <option value="DOKTER_MEDIS">Tenaga Medis / Dokter</option>
+                      <option value="GURU_DOSEN">Guru / Dosen</option>
+                      <option value="PELAJAR_MAHASISWA">Pelajar / Mahasiswa</option>
+                      <option value="LAINNYA">Lainnya</option>
+                    </select>
                   </div>
                 </div>
 

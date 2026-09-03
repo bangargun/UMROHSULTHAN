@@ -389,13 +389,66 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                   onChange={(e) => setFormData({ ...formData, pilgrimId: e.target.value })}
                   className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white focus:ring-2 focus:ring-emerald-500/20"
                 >
+                  <option value="">-- Pilih Jamaah Terdaftar --</option>
                   {pilgrims.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} - ({p.package?.name}) - HP: {p.phone}
+                      {p.name} - ({p.package?.name || "Belum Pilih Paket"}) - HP: {p.phone}
                     </option>
                   ))}
                 </select>
               </div>
+
+              {/* Smart Financial Indicator Box for Selected Pilgrim */}
+              {(() => {
+                const selPilgrim = pilgrims.find((p) => p.id === formData.pilgrimId);
+                if (!selPilgrim) return null;
+
+                const pkgPrice = (() => {
+                  if (!selPilgrim.package) return 0;
+                  if (selPilgrim.roomType === "TRIPLE") return selPilgrim.package.priceTriple || selPilgrim.package.priceQuad || 0;
+                  if (selPilgrim.roomType === "DOUBLE") return selPilgrim.package.priceDouble || selPilgrim.package.priceQuad || 0;
+                  return selPilgrim.package.priceQuad || 0;
+                })();
+
+                const paidInvoices = (selPilgrim.invoices || []).filter((inv: any) => inv.status === "PAID");
+                const totalPaid = paidInvoices.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
+                const remaining = Math.max(0, pkgPrice - totalPaid);
+
+                return (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500">Harga Paket ({selPilgrim.roomType || "QUAD"}):</span>
+                      <span className="font-mono font-bold text-slate-900">{formatCurrency(pkgPrice)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500">Sudah Dibayar (DP):</span>
+                      <span className="font-mono font-bold text-emerald-700">{formatCurrency(totalPaid)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200">
+                      <span className="font-bold text-amber-900">Kekurangan Pelunasan:</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-black text-amber-700 text-xs">{formatCurrency(remaining)}</span>
+                        {remaining > 0 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                amount: String(remaining),
+                                type: "FULL_PAYMENT",
+                                title: `Pelunasan Akhir Biaya Paket Umroh - ${selPilgrim.name}`,
+                              })
+                            }
+                            className="px-2 py-0.5 rounded bg-emerald-600 text-white font-bold text-[10px] hover:bg-emerald-700 shadow-2xs"
+                          >
+                            Pakai Sisa
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

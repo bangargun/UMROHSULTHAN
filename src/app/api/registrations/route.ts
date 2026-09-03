@@ -50,18 +50,32 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
+      title = "Bpk",
       fullName,
-      phone,
-      email,
+      fatherName,
+      identityType = "KTP",
       nik,
+      hasPassport = false,
+      passportName,
       passportNumber,
+      passportIssuedDate,
+      passportIssuedCity,
       passportExpiry,
       placeOfBirth,
       dateOfBirth,
-      gender,
+      gender = "MALE",
       address,
+      subDistrict,
+      district,
       city,
       province,
+      telephone,
+      phone,
+      email,
+      citizenship = "WNI",
+      maritalStatus,
+      education,
+      job,
       packageId,
       roomType = "QUAD",
       uniformSize = "L",
@@ -76,7 +90,10 @@ export async function POST(request: Request) {
       agentName,
       referralName,
       ktpBase64,
+      familyCardBase64,
       passportBase64,
+      diplomaBase64,
+      marriageBookBase64,
       notes,
     } = body;
 
@@ -154,7 +171,7 @@ export async function POST(request: Request) {
           status: "CLOSING_DP", // Status prospek siap bayar DP
           budget: pricePackage,
           estimatedPax: 1,
-          notes: `[Pendaftaran Online ${regNumber}] ID Jamaah: ${idJamaah} | Paket: ${pkg.name} | Kamar: ${roomType} | Baju: ${uniformSize} | Umroh: ${expLabel}${alumniText} | Riwayat Penyakit: ${chronicDiseases || "Tidak Ada"} ${wheelchairAssistance ? `| Kursi Roda: ${wheelchairNotes || "Ya"}` : ""}`.trim(),
+          notes: `[Pendaftaran Online ${regNumber}] ID Jamaah: ${idJamaah} | Paket: ${pkg.name} | Kamar: ${roomType} | Baju: ${uniformSize} | Umroh: ${expLabel}${alumniText} | Ayah: ${fatherName || "-"} | Paspor: ${hasPassport ? (passportNumber || "Ada") : "Belum Ada"} | Riwayat Penyakit: ${chronicDiseases || "Tidak Ada"} ${wheelchairAssistance ? `| Kursi Roda: ${wheelchairNotes || "Ya"}` : ""}`.trim(),
           interactions: {
             create: {
               type: "WHATSAPP",
@@ -168,7 +185,7 @@ export async function POST(request: Request) {
       console.error("Gagal sinkronisasi Lead CRM:", leadErr);
     }
 
-    // Upload KTP jika ada
+    // 1. Upload KTP (Wajib)
     let ktpFileUrl: string | null = null;
     if (ktpBase64) {
       try {
@@ -183,7 +200,22 @@ export async function POST(request: Request) {
       }
     }
 
-    // Upload Paspor jika ada
+    // 2. Upload Kartu Keluarga (Wajib)
+    let familyCardFileUrl: string | null = null;
+    if (familyCardBase64) {
+      try {
+        const saved = await saveUploadedFile({
+          fileBase64: familyCardBase64,
+          fileName: `KK_${fullName.replace(/\s+/g, "_")}_${nik.slice(-4)}.jpg`,
+          subFolder: "kk",
+        });
+        familyCardFileUrl = saved.fileUrl;
+      } catch (err) {
+        console.error("Gagal simpan Kartu Keluarga:", err);
+      }
+    }
+
+    // 3. Upload Paspor (Kondisional jika ada)
     let passportFileUrl: string | null = null;
     if (passportBase64) {
       try {
@@ -198,23 +230,67 @@ export async function POST(request: Request) {
       }
     }
 
+    // 4. Upload Ijazah (Kondisional jika ada)
+    let diplomaFileUrl: string | null = null;
+    if (diplomaBase64) {
+      try {
+        const saved = await saveUploadedFile({
+          fileBase64: diplomaBase64,
+          fileName: `IJAZAH_${fullName.replace(/\s+/g, "_")}_${nik.slice(-4)}.jpg`,
+          subFolder: "ijazah",
+        });
+        diplomaFileUrl = saved.fileUrl;
+      } catch (err) {
+        console.error("Gagal simpan Ijazah:", err);
+      }
+    }
+
+    // 5. Upload Buku Nikah (Kondisional jika ada)
+    let marriageBookFileUrl: string | null = null;
+    if (marriageBookBase64) {
+      try {
+        const saved = await saveUploadedFile({
+          fileBase64: marriageBookBase64,
+          fileName: `BUKUNIKAH_${fullName.replace(/\s+/g, "_")}_${nik.slice(-4)}.jpg`,
+          subFolder: "buku_nikah",
+        });
+        marriageBookFileUrl = saved.fileUrl;
+      } catch (err) {
+        console.error("Gagal simpan Buku Nikah:", err);
+      }
+    }
+
     // Buat data pendaftaran di database dengan status NEW
     const newReg = await prisma.registration.create({
       data: {
         regNumber,
         idJamaah,
+        title: title || "Bpk",
         fullName: fullName.trim().toUpperCase(),
-        phone: phone.trim(),
-        email: email ? email.trim() : null,
+        fatherName: fatherName ? fatherName.trim().toUpperCase() : null,
+        identityType: identityType || "KTP",
         nik: nik.trim(),
+        hasPassport: Boolean(hasPassport),
+        passportName: passportName ? passportName.trim().toUpperCase() : null,
         passportNumber: passportNumber ? passportNumber.trim().toUpperCase() : null,
+        passportIssuedDate: passportIssuedDate ? new Date(passportIssuedDate) : null,
+        passportIssuedCity: passportIssuedCity ? passportIssuedCity.trim() : null,
         passportExpiry: passportExpiry ? new Date(passportExpiry) : null,
         placeOfBirth: placeOfBirth ? placeOfBirth.trim() : null,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         gender: gender || "MALE",
         address: address ? address.trim() : null,
+        subDistrict: subDistrict ? subDistrict.trim() : null,
+        district: district ? district.trim() : null,
         city: city ? city.trim() : null,
         province: province ? province.trim() : null,
+        telephone: telephone ? telephone.trim() : null,
+        phone: phone.trim(),
+        email: email ? email.trim() : null,
+        citizenship: citizenship || "WNI",
+        maritalStatus: maritalStatus || null,
+        education: education || null,
+        job: job || null,
         packageId,
         roomType,
         pricePackage,
@@ -232,7 +308,10 @@ export async function POST(request: Request) {
         referralName: referralName || null,
         leadId,
         ktpFileUrl,
+        familyCardFileUrl,
         passportFileUrl,
+        diplomaFileUrl,
+        marriageBookFileUrl,
         googleDriveFolderId: GOOGLE_DRIVE_MAIN_FOLDER_ID,
         status: "NEW",
         notes: notes || null,

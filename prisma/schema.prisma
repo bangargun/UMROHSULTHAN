@@ -13,7 +13,7 @@ model User {
   username      String    @unique @default("master")
   password      String    @default("1234")
   plainPassword String?   @default("1234")
-  email         String?   @unique
+  email         String?
   phone         String?
   role          String    @default("SUPERADMIN") // SUPERADMIN, ADMIN_OPERASIONAL, ADMIN_FINANCE, ADMIN_MARKETING, STAF_LOGISTIK, PILGRIM
   avatar        String?
@@ -121,28 +121,53 @@ model Pilgrim {
   packageId             String
   package               Package               @relation(fields: [packageId], references: [id])
   
-  // Data Pribadi
-  name                  String
-  nik                   String                @unique
-  passportNumber        String?
-  passportExpiry        DateTime?
+  // Data Identitas & Pribadi (Standar SISKOPATUH)
+  title                 String?   @default("Bpk") // Bpk, Ibu, Sdr, Sdri, H., Hj., Ustadz, Dr., dll
+  name                  String    // Nama Sesuai Kartu Vaksin & Paspor
+  fatherName            String?   // Nama Ayah Kandung (untuk endorsement 3 kata & paspor)
+  identityType          String?   @default("KTP") // KTP, PASPOR, KITAS, SIM
+  nik                   String    @unique // No Identitas / NIK
+
+  // Data Paspor RI
+  passportName          String?   // Nama Lengkap pada Paspor
+  passportNumber        String?   // Nomor Paspor RI
+  passportIssuedDate    DateTime? // Tanggal Dikeluarkan Paspor
+  passportIssuedCity    String?   // Kota / Kantor Imigrasi Penerbit Paspor
+  passportExpiry        DateTime? // Tanggal Habis Berlaku Paspor
+
+  // Data Kelahiran
+  placeOfBirth          String?   // Tempat Lahir
+  dateOfBirth           DateTime? // Tanggal Lahir
+  gender                String    @default("MALE") // MALE, FEMALE
+
+  // Alamat Lengkap Domisili
+  address               String?   // Alamat Jalan / Dusun / RT RW
+  subDistrict           String?   // Kelurahan / Desa
+  district              String?   // Kecamatan
+  city                  String?   // Kabupaten / Kota
+  province              String?   // Provinsi
+
+  // Kontak
+  telephone             String?   // Nomor Telepon Rumah / Kantor
+  phone                 String    // Nomor Handphone / WhatsApp Utama
+  email                 String?   // Email
+
+  // Demografi & Sosial
+  citizenship           String?   @default("WNI") // Kewarganegaraan: WNI / WNA
+  maritalStatus         String?   // Status Pernikahan: Belum Menikah, Menikah, Cerai Hidup, Cerai Mati
+  education             String?   // Pendidikan: SD, SMP, SMA, D3, S1, S2, S3, Lainnya
+  job                   String?   // Pekerjaan: PNS, TNI/POLRI, Swasta, Wiraswasta, Ibu Rumah Tangga, Pensiunan, dll
+
+  // Data Visa & Legalitas Saudi
+  visaProvider          String?   // Provider / Penjamin Visa Umroh
   visaNumber            String?   // Nomor E-Visa Umroh / Visa MoFA Saudi
-  visaIssueDate         DateTime? // Tanggal Terbit Visa
-  visaExpiryDate        DateTime? // Tanggal Masa Berlaku Visa
+  visaIssueDate         DateTime? // Tanggal Terbit / Berlaku Visa
+  visaExpiryDate        DateTime? // Tanggal Akhir Masa Berlaku Visa
   mofaNumber            String?   // Nomor MOFA Saudi
   muassasahName         String?   // Nama Syarikah / Muassasah Penjamin di Arab Saudi
   insuranceNumber       String?   // Nomor Asuransi Kesehatan Saudi
-  placeOfBirth          String?
-  dateOfBirth           DateTime?
-  gender                String                @default("MALE") // MALE, FEMALE
-  phone                 String
-  email                 String?
-  address               String?
-  city                  String?
-  province              String?
-  
+
   // Orang Tua Kandung & Mahram
-  fatherName            String?   // Nama Ayah Kandung (untuk endorsement 3 kata & paspor)
   motherName            String?   // Nama Ibu Kandung
   emergencyContactName  String?
   emergencyContactPhone String?
@@ -553,18 +578,40 @@ model Registration {
   id                  String    @id @default(uuid())
   regNumber           String    @unique // REG-2608-0001
   idJamaah            String    // JAM-2608-0001
-  fullName            String
-  phone               String
-  email               String?
-  nik                 String
-  passportNumber      String?
-  passportExpiry      DateTime?
+  
+  // Data Identitas & Pribadi (Standar SISKOPATUH)
+  title               String?   @default("Bpk") // Bpk, Ibu, Sdr, Sdri, H., Hj., Ustadz, Dr., dll
+  fullName            String    // Nama Sesuai Kartu Vaksin & Paspor
+  fatherName          String?   // Nama Ayah Kandung
+  identityType        String?   @default("KTP") // KTP, PASPOR, KITAS, SIM
+  nik                 String    // No Identitas / NIK
+  
+  // Data Paspor RI (Kondisional)
+  hasPassport         Boolean   @default(false) // Apakah paspor sudah ada?
+  passportName        String?   // Nama pada Paspor
+  passportNumber      String?   // Nomor Paspor RI
+  passportIssuedDate  DateTime? // Tanggal Dikeluarkan Paspor
+  passportIssuedCity  String?   // Kota / Kantor Imigrasi Penerbit Paspor
+  passportExpiry      DateTime? // Tanggal Habis Berlaku Paspor
+
+  // Data Kelahiran & Alamat
   placeOfBirth        String?
   dateOfBirth         DateTime?
   gender              String    @default("MALE") // MALE, FEMALE
-  address             String?
-  city                String?
-  province            String?
+  address             String?   // Alamat Jalan / RT RW
+  subDistrict         String?   // Kelurahan / Desa
+  district            String?   // Kecamatan
+  city                String?   // Kabupaten / Kota
+  province            String?   // Provinsi
+  
+  // Kontak & Demografi
+  telephone           String?   // Nomor Telepon Rumah / Kantor
+  phone               String    // Nomor HP / WhatsApp
+  email               String?
+  citizenship         String?   @default("WNI") // Kewarganegaraan
+  maritalStatus       String?   // Status Pernikahan
+  education           String?   // Pendidikan
+  job                 String?   // Pekerjaan
   
   // Paket & Kamar
   packageId           String
@@ -591,10 +638,13 @@ model Registration {
   referralName        String?
   leadId              String?   // Terkoneksi ke Leads CRM
 
-  // Dokumen & Bukti Google Drive
-  ktpFileUrl          String?
-  passportFileUrl     String?
-  transferProofUrl    String?
+  // Dokumen Unggahan Google Drive (5 Berkas)
+  ktpFileUrl          String?   // 1. Berkas KTP
+  familyCardFileUrl   String?   // 2. Berkas Kartu Keluarga (KK)
+  passportFileUrl     String?   // 3. Berkas Paspor (jika ada)
+  diplomaFileUrl      String?   // 4. Berkas Ijazah (jika ada)
+  marriageBookFileUrl String?   // 5. Berkas Buku Nikah (jika ada)
+  transferProofUrl    String?   // Bukti Transfer DP
   googleDriveFolderId String?
   
   // Lifecycle Status
