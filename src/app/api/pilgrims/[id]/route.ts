@@ -130,6 +130,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         portalPassword: body.portalPassword !== undefined ? body.portalPassword : undefined,
         status: status !== undefined ? status : undefined,
         packageId: packageId !== undefined ? packageId : undefined,
+        discountAmount: body.discountAmount !== undefined ? (parseFloat(body.discountAmount) || 0) : undefined,
+        discountReason: body.discountReason !== undefined ? body.discountReason : undefined,
       },
       include: {
         package: true,

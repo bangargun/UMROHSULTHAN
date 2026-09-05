@@ -183,6 +183,10 @@ model Pilgrim {
   // Status
   status                String                @default("REGISTERED") // REGISTERED, DP_PAID, FULLY_PAID, DOCUMENTS_READY, VISA_ISSUED, DEPARTED, RETURNED
 
+  // Diskon & Potongan Harga Khusus
+  discountAmount        Float?                @default(0)
+  discountReason        String?               // misal: "Promo Spesial September", "Diskon Tokoh", "Diskon Keluarga / Referral"
+
   // Berkas Dokumen Google Drive
   ktpFileUrl            String?   // 1. Berkas KTP (Wajib)
   familyCardFileUrl     String?   // 2. Berkas Kartu Keluarga (Wajib)
@@ -221,6 +225,8 @@ model Invoice {
   payerName     String?   // Nama Pembayar / Penyetor (misal: "Hamba Allah", "Bpk Ahmad", "Sponsor")
   payerPhone    String?   // Nomor HP / WA Pembayar
   proofUrl      String?
+  discountAmount Float?   @default(0)
+  discountReason String?
   notes         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

@@ -20,6 +20,7 @@ import {
   MapPin,
   Package,
 } from "lucide-react";
+import Pagination from "@/components/common/Pagination";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -67,6 +68,8 @@ export default function BadalUmrohView() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [selectedForCert, setSelectedForCert] = useState<any | null>(null);
@@ -115,6 +118,14 @@ export default function BadalUmrohView() {
     const matchStatus = filterStatus === "ALL" || o.status === filterStatus;
     return matchSearch && matchStatus;
   });
+
+  // Reset page when search or status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterStatus]);
+
+  // Paginated orders
+  const paginatedOrders = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // Stats
   const totalRevenue = orders.filter((o) => o.status !== "PENDING_PAYMENT").reduce((s, o) => s + o.price, 0);
@@ -266,7 +277,7 @@ export default function BadalUmrohView() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((o) => {
+                paginatedOrders.map((o) => {
                   const badge = getStatusBadge(o.status);
                   const pkg = PACKAGE_INFO[o.packageType];
                   const isCompleted = ["COMPLETED", "CERTIFICATE_ISSUED"].includes(o.status);
@@ -331,6 +342,21 @@ export default function BadalUmrohView() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {!loading && filtered.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filtered.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+            itemLabel="pesanan badal"
+          />
+        )}
       </div>
 
       {/* ── Modal 1: Form Pendaftaran Badal Baru ── */}

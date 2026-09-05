@@ -22,6 +22,7 @@ import {
   Building,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import Pagination from "@/components/common/Pagination";
 
 interface BranchAgentViewProps {
   packages: any[];
@@ -31,6 +32,8 @@ interface BranchAgentViewProps {
 export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentViewProps) {
   const [activeTab, setActiveTab] = useState<"AGENTS" | "BRANCHES" | "PUBLIC_FORM">("AGENTS");
   const [searchTerm, setSearchTerm] = useState("");
+  const [agentPage, setAgentPage] = useState(1);
+  const [agentPageSize, setAgentPageSize] = useState(10);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false);
   const [isAddBranchOpen, setIsAddBranchOpen] = useState(false);
@@ -327,6 +330,13 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
       (a.city && a.city.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Reset page when search changes
+  useEffect(() => {
+    setAgentPage(1);
+  }, [searchTerm]);
+
+  const paginatedAgents = filteredAgents.slice((agentPage - 1) * agentPageSize, agentPage * agentPageSize);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -443,7 +453,7 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
                       </td>
                     </tr>
                   ) : (
-                    filteredAgents.map((ag) => (
+                    paginatedAgents.map((ag) => (
                       <tr key={ag.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3 px-4">
                           <p className="font-bold text-slate-900">{ag.name}</p>
@@ -531,6 +541,21 @@ export default function BranchAgentView({ packages, onRefreshAll }: BranchAgentV
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination */}
+            {filteredAgents.length > 0 && (
+              <Pagination
+                currentPage={agentPage}
+                totalItems={filteredAgents.length}
+                pageSize={agentPageSize}
+                onPageChange={setAgentPage}
+                onPageSizeChange={(newSize) => {
+                  setAgentPageSize(newSize);
+                  setAgentPage(1);
+                }}
+                itemLabel="agen"
+              />
+            )}
           </div>
         </div>
       )}

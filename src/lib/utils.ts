@@ -122,6 +122,12 @@ export function generateWhatsAppReminderUrl({
   title,
   amount,
   dueDate,
+  discountAmount,
+  discountReason,
+  companyName,
+  bankBSI,
+  bankBCA,
+  bankMandiri,
 }: {
   phone: string;
   pilgrimName: string;
@@ -129,6 +135,12 @@ export function generateWhatsAppReminderUrl({
   title: string;
   amount: number;
   dueDate: string | Date;
+  discountAmount?: number | null;
+  discountReason?: string | null;
+  companyName?: string;
+  bankBSI?: string;
+  bankBCA?: string;
+  bankMandiri?: string;
 }): string {
   // Normalize phone number to Indonesian international format (62)
   let cleanPhone = phone.replace(/\D/g, "");
@@ -140,18 +152,26 @@ export function generateWhatsAppReminderUrl({
 
   const formattedAmount = formatCurrency(amount);
   const formattedDueDate = formatDate(dueDate);
+  const company = companyName || "PT BAROKAH SULTHAN HARAMAIN";
+
+  let discountInfo = "";
+  if (discountAmount && discountAmount > 0) {
+    discountInfo = `🏷️ *Potongan Diskon Khusus:* ${formatCurrency(discountAmount)} (${discountReason || "Promo Spesial"})\n`;
+  }
 
   const message = `*Bismillah, Assalamu'alaikum Wr. Wb.*\n\n` +
     `Yth. Bapak/Ibu *${pilgrimName}*,\n\n` +
     `Semoga senantiasa dalam limpahan rahmat & kesehatan Allah SWT.\n\n` +
-    `Kami dari *Travel Umroh Berkah* bermaksud menginformasikan tagihan *${title}* dengan rincian sebagai berikut:\n\n` +
+    `Kami dari *${company}* bermaksud menginformasikan tagihan *${title}* dengan rincian:\n\n` +
     `📄 *No. Invoice:* ${invoiceNumber}\n` +
-    `💰 *Nominal:* ${formattedAmount}\n` +
+    discountInfo +
+    `💰 *Nominal Tagihan:* ${formattedAmount}\n` +
     `🗓 *Jatuh Tempo:* ${formattedDueDate}\n\n` +
     `Pembayaran dapat ditransfer melalui rekening resmi travel kami:\n` +
-    `🏦 *Bank Syariah Indonesia (BSI)* : 7123-4567-89\n` +
-    `🏦 *Bank Central Asia (BCA)* : 731-008-899\n` +
-    `a.n *PT TRAVEL UMROH BERKAH NUSANTARA*\n\n` +
+    `🏦 *Bank BSI* : ${bankBSI || "7123-4567-89"}\n` +
+    `🏦 *Bank BCA* : ${bankBCA || "731-008-899"}\n` +
+    `🏦 *Bank Mandiri* : ${bankMandiri || "137-00-9876543-2"}\n` +
+    `a.n *${company}*\n\n` +
     `Mohon mengirimkan bukti transfer setelah melakukan pembayaran. Jika Bapak/Ibu sudah melakukan pembayaran, mohon abaikan pesan ini.\n\n` +
     `_Jazakumullah Khairan Katsiran._\n` +
     `Wassalamu'alaikum Wr. Wb.`;

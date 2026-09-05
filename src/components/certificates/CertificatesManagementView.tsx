@@ -24,6 +24,7 @@ import {
   Check,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import Pagination from "@/components/common/Pagination";
 
 interface CertificatesManagementViewProps {
   pilgrims: any[];
@@ -48,6 +49,8 @@ export default function CertificatesManagementView({
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPackageFilter, setSelectedPackageFilter] = useState("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [selectedCertForPrint, setSelectedCertForPrint] = useState<any | null>(null);
@@ -110,6 +113,14 @@ export default function CertificatesManagementView({
     const matchPackage = selectedPackageFilter === "ALL" || c.packageId === selectedPackageFilter;
     return matchSearch && matchPackage;
   });
+
+  // Reset page when search or package filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedPackageFilter]);
+
+  // Paginated certificates
+  const paginatedCertificates = filteredCertificates.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleCreateSingle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,7 +321,7 @@ Wassalamu'alaikum Wr. Wb.`;
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredCertificates.map((cert) => (
+                {paginatedCertificates.map((cert) => (
                   <tr key={cert.id} className="hover:bg-amber-50/40 transition-colors">
                     <td className="py-3.5 px-4 font-mono font-bold text-amber-900">
                       {cert.certificateNumber}
@@ -365,6 +376,21 @@ Wassalamu'alaikum Wr. Wb.`;
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && filteredCertificates.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredCertificates.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+            itemLabel="piagam"
+          />
         )}
       </div>
 

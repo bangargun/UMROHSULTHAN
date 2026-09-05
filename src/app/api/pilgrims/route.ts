@@ -157,6 +157,8 @@ export async function POST(request: Request) {
         diplomaFileUrl: diplomaFileUrl || null,
         marriageBookFileUrl: marriageBookFileUrl || null,
         status: status || (initialDpAmount ? "DP_PAID" : "REGISTERED"),
+        discountAmount: body.discountAmount ? (parseFloat(body.discountAmount) || 0) : 0,
+        discountReason: body.discountReason || null,
       },
     });
 

@@ -32,8 +32,15 @@ import {
   Shirt,
   Utensils,
   ChevronRight,
+  Luggage,
+  RotateCcw,
+  CheckSquare,
+  Square,
+  Filter,
+  Info,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
+import { MEN_PACKING_LIST, WOMEN_PACKING_LIST, PackingItem } from "@/lib/packing-list";
 
 interface PilgrimPortalViewProps {
   pilgrims: any[];
@@ -50,7 +57,7 @@ export default function PilgrimPortalView({
   onLogout,
   invoices = [],
 }: PilgrimPortalViewProps) {
-  const [activeTab, setActiveTab] = useState<"TIMELINE" | "MANASIK" | "CARD" | "FINANCE" | "SOS">("TIMELINE");
+  const [activeTab, setActiveTab] = useState<"TIMELINE" | "MANASIK" | "PACKING" | "CARD" | "FINANCE" | "SOS">("TIMELINE");
   const [selectedPilgrimId, setSelectedPilgrimId] = useState<string>(
     currentUser?.pilgrimId || pilgrims[0]?.id || ""
   );
@@ -62,6 +69,11 @@ export default function PilgrimPortalView({
   const [itineraries, setItineraries] = useState<any[]>([]);
   const [loadingItinerary, setLoadingItinerary] = useState(false);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
+
+  // Packing Checklist State
+  const [packingGender, setPackingGender] = useState<"MALE" | "FEMALE">("MALE");
+  const [checkedPackingItems, setCheckedPackingItems] = useState<Record<string, boolean>>({});
+  const [packingCategoryFilter, setPackingCategoryFilter] = useState<string>("ALL");
 
   // Auto-sync if currentUser has specific pilgrimId
   useEffect(() => {
@@ -78,6 +90,48 @@ export default function PilgrimPortalView({
 
   // Pilgrim lookup
   const currentPilgrim = pilgrims.find((p) => p.id === selectedPilgrimId) || pilgrims[0];
+
+  // Auto-detect gender for packing
+  useEffect(() => {
+    if (currentPilgrim?.gender) {
+      setPackingGender(currentPilgrim.gender === "FEMALE" ? "FEMALE" : "MALE");
+    }
+  }, [currentPilgrim?.gender, currentPilgrim?.id]);
+
+  // Load packing items from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined" && currentPilgrim?.id) {
+      const saved = localStorage.getItem(`packing_portal_${currentPilgrim.id}`);
+      if (saved) {
+        try {
+          setCheckedPackingItems(JSON.parse(saved));
+        } catch (e) {
+          console.error("Error reading saved packing list:", e);
+        }
+      } else {
+        setCheckedPackingItems({});
+      }
+    }
+  }, [currentPilgrim?.id]);
+
+  const togglePackingItem = (id: string) => {
+    setCheckedPackingItems((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      if (typeof window !== "undefined" && currentPilgrim?.id) {
+        localStorage.setItem(`packing_portal_${currentPilgrim.id}`, JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
+  const resetPackingList = () => {
+    if (confirm("Reset centang checklist perlengkapan koper Anda?")) {
+      setCheckedPackingItems({});
+      if (typeof window !== "undefined" && currentPilgrim?.id) {
+        localStorage.removeItem(`packing_portal_${currentPilgrim.id}`);
+      }
+    }
+  };
 
   // Fetch package itinerary
   useEffect(() => {
@@ -282,11 +336,11 @@ export default function PilgrimPortalView({
             </div>
             <div className="flex items-center gap-2">
               <a
-                href="/manifest.webmanifest"
-                download="sulthan-umroh.webmanifest"
-                className="px-3 py-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[11px] flex items-center gap-1 shadow-xs transition-all"
+                href="/sulthan-umroh.apk"
+                download="sulthan-umroh.apk"
+                className="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5" /> Pasang / Download APK
+                <Download className="w-4 h-4" /> Download File APK (Android)
               </a>
               <button
                 onClick={() => setShowPwaInstallPrompt(false)}
@@ -300,7 +354,7 @@ export default function PilgrimPortalView({
       </div>
 
       {/* Top / Mobile Tab Bar */}
-      <div className="grid grid-cols-5 gap-1 sm:gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs">
         <button
           onClick={() => setActiveTab("TIMELINE")}
           className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all ${
@@ -326,6 +380,18 @@ export default function PilgrimPortalView({
         </button>
 
         <button
+          onClick={() => setActiveTab("PACKING")}
+          className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all ${
+            activeTab === "PACKING"
+              ? "bg-emerald-600 text-white shadow-xs"
+              : "text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <Luggage className="w-4 h-4" />
+          <span className="text-[10px] sm:text-xs">Packing</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab("CARD")}
           className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === "CARD"
@@ -334,7 +400,7 @@ export default function PilgrimPortalView({
           }`}
         >
           <QrCode className="w-4 h-4" />
-          <span className="text-[10px] sm:text-xs">ID Card QR</span>
+          <span className="text-[10px] sm:text-xs">ID Card</span>
         </button>
 
         <button
@@ -776,6 +842,238 @@ export default function PilgrimPortalView({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* TAB: CHECKLIST PACKING PERLENGKAPAN KOPER JAMAAH */}
+      {activeTab === "PACKING" && (
+        <div className="space-y-5">
+          {(() => {
+            const currentItems = packingGender === "MALE" ? MEN_PACKING_LIST : WOMEN_PACKING_LIST;
+            const totalItems = currentItems.length;
+            const completedCount = currentItems.filter((it) => !!checkedPackingItems[it.id]).length;
+            const percent = Math.round((completedCount / totalItems) * 100);
+
+            const filteredItems =
+              packingCategoryFilter === "ALL"
+                ? currentItems
+                : currentItems.filter((it) => it.category === packingCategoryFilter);
+
+            const categories = [
+              { id: "ALL", label: "Semua" },
+              { id: "PAKAIAN", label: "Pakaian" },
+              { id: "IBADAH", label: "Ibadah" },
+              { id: "PRIBADI", label: "Pribadi" },
+              { id: "ELEKTRONIK", label: "Elektronik" },
+              { id: "KESEHATAN", label: "Kesehatan" },
+              { id: "LAUNDRY", label: "Laundry" },
+              { id: "AKSESORIS", label: "Aksesoris" },
+            ];
+
+            return (
+              <div className="space-y-5">
+                {/* Header Progress Card */}
+                <div className="bg-gradient-to-br from-emerald-900 via-teal-900 to-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-xl space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-400/20 border border-amber-300/30 flex items-center justify-center text-amber-300 shrink-0">
+                        <Luggage className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-widest bg-amber-400/20 text-amber-300 px-2.5 py-0.5 rounded border border-amber-400/30">
+                          🧳 Panduan Koper Jamaah
+                        </span>
+                        <h3 className="text-lg font-black text-white mt-1">
+                          Checklist Perlengkapan Umroh
+                        </h3>
+                        <p className="text-xs text-emerald-200">
+                          Tersimpan otomatis di HP Anda. Centang saat memasukkan barang ke koper.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
+                      <button
+                        onClick={resetPackingList}
+                        className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1.5 border border-white/20 transition-all"
+                        title="Reset Checklist"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Reset</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="space-y-1.5 pt-2 border-t border-white/10">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-emerald-200">
+                        Kelengkapan Koper: <strong className="text-white">{completedCount}</strong> dari {totalItems} Item
+                      </span>
+                      <span className={percent === 100 ? "text-emerald-300 font-black" : "text-amber-300 font-black"}>
+                        {percent}% {percent === 100 ? "🎉 Siap Berangkat!" : "Sedang Packing"}
+                      </span>
+                    </div>
+                    <div className="w-full bg-black/40 rounded-full h-3 p-0.5 overflow-hidden border border-white/10">
+                      <div
+                        className="bg-gradient-to-r from-amber-400 to-emerald-400 h-full rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Gender Toggle Selector */}
+                <div className="bg-slate-100 p-1.5 rounded-2xl flex gap-2 border border-slate-200">
+                  <button
+                    onClick={() => setPackingGender("FEMALE")}
+                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      packingGender === "FEMALE"
+                        ? "bg-rose-600 text-white shadow-md"
+                        : "text-slate-600 hover:bg-white/60"
+                    }`}
+                  >
+                    <span>🧕 Perlengkapan Wanita</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                      packingGender === "FEMALE" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                    }`}>
+                      24 Item
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setPackingGender("MALE")}
+                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      packingGender === "MALE"
+                        ? "bg-emerald-700 text-white shadow-md"
+                        : "text-slate-600 hover:bg-white/60"
+                    }`}
+                  >
+                    <span>👨 Perlengkapan Pria</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                      packingGender === "MALE" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                    }`}>
+                      22 Item
+                    </span>
+                  </button>
+                </div>
+
+                {/* Important Rules / Airline Notice */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 space-y-1">
+                    <span className="font-black text-amber-900 flex items-center gap-1.5 text-[11px]">
+                      🧴 Skincare & Cairan &lt; 100ml
+                    </span>
+                    <p className="text-[11px] text-amber-800 leading-tight">
+                      Cairan di kabin max 100ml/botol dalam kantong transparan. Botol spray wudhu 100ml sangat praktis di saf masjid.
+                    </p>
+                  </div>
+
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 space-y-1">
+                    <span className="font-black text-emerald-900 flex items-center gap-1.5 text-[11px]">
+                      🧳 Koper Bagasi (25-30 kg)
+                    </span>
+                    <p className="text-[11px] text-emerald-800 leading-tight">
+                      Gamis, baju ganti, hanger, laundry, cairan &gt; 100ml, dan perlengkapan mandi masuk ke koper bagasi besar.
+                    </p>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3.5 space-y-1">
+                    <span className="font-black text-blue-900 flex items-center gap-1.5 text-[11px]">
+                      🎒 Tas Paspor & Jinjing (&lt; 7 kg)
+                    </span>
+                    <p className="text-[11px] text-blue-800 leading-tight">
+                      Paspor, tiket, dompet, charger/adaptor kaki 3, obat pribadi darurat, & 1 set kain ihram/gamis cadangan.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Category Filters */}
+                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setPackingCategoryFilter(cat.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                        packingCategoryFilter === cat.id
+                          ? "bg-slate-900 text-white shadow-xs"
+                          : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Item List */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {filteredItems.map((item, idx) => {
+                    const isChecked = !!checkedPackingItems[item.id];
+
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => togglePackingItem(item.id)}
+                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                          isChecked
+                            ? "bg-emerald-50/80 border-emerald-300 text-slate-500 shadow-xs"
+                            : "bg-white border-slate-200 hover:border-slate-300 text-slate-800 shadow-xs hover:shadow-sm"
+                        }`}
+                      >
+                        <div className="mt-0.5 shrink-0">
+                          {isChecked ? (
+                            <div className="w-5 h-5 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                              <CheckCircle2 className="w-4 h-4" />
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded-lg border-2 border-slate-300 hover:border-emerald-500 bg-white" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
+                            <span
+                              className={`text-xs font-bold ${
+                                isChecked ? "line-through text-slate-400" : "text-slate-900"
+                              }`}
+                            >
+                              {item.name}
+                            </span>
+                            {item.isEssential && (
+                              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 border border-rose-200 shrink-0">
+                                Wajib
+                              </span>
+                            )}
+                          </div>
+
+                          {item.notes && (
+                            <p
+                              className={`text-[11px] mt-0.5 ${
+                                isChecked ? "text-slate-400" : "text-slate-500"
+                              }`}
+                            >
+                              {item.notes}
+                            </p>
+                          )}
+
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded">
+                              {item.category}
+                            </span>
+                            {isChecked && (
+                              <span className="text-[10px] font-black text-emerald-700">
+                                ✓ Sudah Masuk Koper
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 

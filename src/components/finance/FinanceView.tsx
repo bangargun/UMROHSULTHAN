@@ -19,8 +19,18 @@ import {
   Sparkles,
   User,
   Users,
+  Calculator,
+  Wallet,
+  Coins,
+  Receipt,
+  ArrowRight,
+  Pencil,
+  Trash2,
+  Tag,
+  Percent,
 } from "lucide-react";
 import { formatCurrency, formatDate, getStatusBadge, generateWhatsAppReminderUrl, formatRupiahWithWords } from "@/lib/utils";
+import Pagination from "@/components/common/Pagination";
 
 interface FinanceViewProps {
   invoices: any[];
@@ -33,9 +43,28 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [selectedType, setSelectedType] = useState<string>("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedInvoiceForReceipt, setSelectedInvoiceForReceipt] = useState<any | null>(null);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<any | null>(null);
+  const [selectedInvoiceForEdit, setSelectedInvoiceForEdit] = useState<any | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    pilgrimId: "",
+    type: "INSTALLMENT",
+    title: "",
+    amount: "",
+    dueDate: new Date().toISOString().split("T")[0],
+    status: "PAID",
+    paymentMethod: "BANK_TRANSFER",
+    paymentDate: new Date().toISOString().split("T")[0],
+    payerName: "",
+    payerPhone: "",
+    notes: "",
+    discountAmount: "",
+    discountReason: "",
+    hasDiscount: false,
+  });
   const [travelSettings, setTravelSettings] = useState<any>({
     companyName: "PT TRAVEL UMROH BERKAH NUSANTARA",
     licenseNumber: "SK Kemenag RI No. 892 Tahun 2021",
@@ -67,10 +96,16 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
     type: "INSTALLMENT",
     title: "Pelunasan Biaya Paket Umroh",
     amount: "",
-    dueDate: "",
+    dueDate: new Date().toISOString().split("T")[0],
     payerName: "",
     payerPhone: "",
     notes: "",
+    isDirectPayment: true,
+    paymentMethod: "BANK_TRANSFER",
+    paymentDate: new Date().toISOString().split("T")[0],
+    discountAmount: "",
+    discountReason: "",
+    hasDiscount: false,
   });
 
   const [paymentData, setPaymentData] = useState({
@@ -83,17 +118,116 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
 
   const [loading, setLoading] = useState(false);
 
-  // Financial calculations helper for single or multi-pilgrim
-  const getPilgrimFinancials = (p: any) => {
-    if (!p) return { pkgPrice: 0, totalPaid: 0, remaining: 0 };
-    let pkgPrice = p.package ? (p.package.priceQuad || 0) : 0;
-    if (p.roomType === "TRIPLE" && p.package?.priceTriple) pkgPrice = p.package.priceTriple;
-    if (p.roomType === "DOUBLE" && p.package?.priceDouble) pkgPrice = p.package.priceDouble;
+  interface PilgrimFinancials {
+    grossPrice: number;
+    discountAmount: number;
+    discountReason: string;
+    netPrice: number;
+    pkgPrice: number;
+    totalPaid: number;
+    remaining: number;
+    paidInvoicesCount: number;
+    isDiscounted: boolean;
+  }
 
-    const paidInvoices = (p.invoices || []).filter((inv: any) => inv.status === "PAID");
+  // Financial calculations helper for single or multi-pilgrim with discount support
+  const getPilgrimFinancials = (p: any, customDiscount?: number): PilgrimFinancials => {
+    if (!p) {
+      return {
+        grossPrice: 0,
+        discountAmount: 0,
+        discountReason: "",
+        netPrice: 0,
+        pkgPrice: 0,
+        totalPaid: 0,
+        remaining: 0,
+        paidInvoicesCount: 0,
+        isDiscounted: false,
+      };
+    }
+    let grossPrice = p.package ? (p.package.priceQuad || 0) : 0;
+    if (p.roomType === "TRIPLE" && p.package?.priceTriple) grossPrice = p.package.priceTriple;
+    if (p.roomType === "DOUBLE" && p.package?.priceDouble) grossPrice = p.package.priceDouble;
+
+    const discountAmount = customDiscount !== undefined ? customDiscount : (p.discountAmount || 0);
+    const discountReason = p.discountReason || "";
+    const netPrice = Math.max(0, grossPrice - discountAmount);
+
+    const pilgrimInvoices = p.invoices && p.invoices.length > 0 ? p.invoices : invoices.filter((inv: any) => inv.pilgrimId === p.id);
+    const paidInvoices = pilgrimInvoices.filter((inv: any) => inv.status === "PAID");
     const totalPaid = paidInvoices.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
-    const remaining = Math.max(0, pkgPrice - totalPaid);
-    return { pkgPrice, totalPaid, remaining };
+    const remaining = Math.max(0, netPrice - totalPaid);
+    return {
+      grossPrice,
+      discountAmount,
+      discountReason,
+      netPrice,
+      pkgPrice: netPrice, // backward compatibility
+      totalPaid,
+      remaining,
+      paidInvoicesCount: paidInvoices.length,
+      isDiscounted: discountAmount > 0,
+    };
+  };
+
+  // Detailed breakdown helper for a specific invoice and pilgrim with discount support
+  const getInvoiceBreakdown = (inv: any) => {
+    if (!inv) return null;
+    const pilgrim = pilgrims.find((p) => p.id === inv.pilgrimId) || inv.pilgrim;
+    if (!pilgrim) return null;
+
+    let grossPrice = pilgrim.package ? (pilgrim.package.priceQuad || 0) : 0;
+    if (pilgrim.roomType === "TRIPLE" && pilgrim.package?.priceTriple) grossPrice = pilgrim.package.priceTriple;
+    if (pilgrim.roomType === "DOUBLE" && pilgrim.package?.priceDouble) grossPrice = pilgrim.package.priceDouble;
+
+    const discountAmount = inv.discountAmount !== undefined && inv.discountAmount !== null && inv.discountAmount > 0
+      ? inv.discountAmount
+      : (pilgrim.discountAmount || 0);
+    const discountReason = inv.discountReason || pilgrim.discountReason || "";
+    const netPrice = Math.max(0, grossPrice - discountAmount);
+
+    const pInvoices = pilgrim.invoices && pilgrim.invoices.length > 0 ? pilgrim.invoices : invoices.filter((i: any) => i.pilgrimId === pilgrim.id);
+    const allPaidInvoices = pInvoices.filter((i: any) => i.status === "PAID");
+    const totalPaidAll = allPaidInvoices.reduce((sum: number, i: any) => sum + (i.amount || 0), 0);
+
+    if (inv.status === "PAID") {
+      const isIncluded = allPaidInvoices.some((i: any) => i.id === inv.id);
+      const priorPaid = isIncluded ? Math.max(0, totalPaidAll - inv.amount) : totalPaidAll;
+      const totalAfterThis = priorPaid + inv.amount;
+      const finalRemaining = Math.max(0, netPrice - totalAfterThis);
+      return {
+        grossPrice,
+        discountAmount,
+        discountReason,
+        netPrice,
+        pkgPrice: netPrice,
+        priorPaid,
+        currentAmount: inv.amount,
+        totalAfterThis,
+        finalRemaining,
+        isFullySettled: finalRemaining === 0 && netPrice > 0,
+        progressPercent: netPrice > 0 ? Math.min(100, Math.round((totalAfterThis / netPrice) * 100)) : 100,
+        isDiscounted: discountAmount > 0,
+      };
+    } else {
+      const priorPaid = totalPaidAll;
+      const totalAfterThis = priorPaid + inv.amount;
+      const finalRemaining = Math.max(0, netPrice - totalAfterThis);
+      return {
+        grossPrice,
+        discountAmount,
+        discountReason,
+        netPrice,
+        pkgPrice: netPrice,
+        priorPaid,
+        currentAmount: inv.amount,
+        totalAfterThis,
+        finalRemaining,
+        isFullySettled: finalRemaining === 0 && netPrice > 0,
+        progressPercent: netPrice > 0 ? Math.min(100, Math.round((priorPaid / netPrice) * 100)) : 0,
+        isDiscounted: discountAmount > 0,
+      };
+    }
   };
 
   // Financial calculations
@@ -119,11 +253,26 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
     return matchSearch && matchStatus && matchType;
   });
 
+  // Reset page when search or filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedStatus, selectedType]);
+
+  // Paginated invoices
+  const paginatedInvoices = filteredInvoices.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const handleAddInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      let payload: any = { ...formData };
+      let payload: any = {
+        ...formData,
+        discountAmount: formData.hasDiscount && formData.discountAmount ? parseFloat(formData.discountAmount) : 0,
+        discountReason: formData.hasDiscount ? formData.discountReason : null,
+        isPaid: formData.isDirectPayment,
+        paymentMethod: formData.isDirectPayment ? formData.paymentMethod : undefined,
+        paymentDate: formData.isDirectPayment ? formData.paymentDate : undefined,
+      };
 
       if (formData.isMultiPilgrim) {
         const pList = pilgrims.filter((p) => formData.selectedPilgrimIds.includes(p.id));
@@ -158,7 +307,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
         }
 
         payload = {
-          ...formData,
+          ...payload,
           allocations: allocationsArray,
         };
       }
@@ -170,7 +319,15 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
       });
 
       if (res.ok) {
+        const data = await res.json();
         setIsAddModalOpen(false);
+        const createdInv = data.invoice || (Array.isArray(data.invoices) ? data.invoices[0] : data);
+
+        // If direct payment is checked, immediately show printable Kwitansi!
+        if (formData.isDirectPayment && createdInv) {
+          setSelectedInvoiceForReceipt(createdInv);
+        }
+
         setFormData({
           pilgrimId: pilgrims[0]?.id || "",
           isMultiPilgrim: false,
@@ -179,10 +336,16 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
           type: "INSTALLMENT",
           title: "Pelunasan Biaya Paket Umroh",
           amount: "",
-          dueDate: "",
+          dueDate: new Date().toISOString().split("T")[0],
           payerName: "",
           payerPhone: "",
           notes: "",
+          isDirectPayment: true,
+          paymentMethod: "BANK_TRANSFER",
+          paymentDate: new Date().toISOString().split("T")[0],
+          discountAmount: "",
+          discountReason: "",
+          hasDiscount: false,
         });
         onRefresh();
       } else {
@@ -207,10 +370,66 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
         body: JSON.stringify(paymentData),
       });
       if (res.ok) {
+        const updatedInvoice = await res.json();
         setIsInvoicePaymentModal(false);
         setSelectedInvoiceForPayment(null);
         alert("Pembayaran berhasil dicatat!");
         onRefresh();
+        // Immediately show printable Kwitansi!
+        setSelectedInvoiceForReceipt(updatedInvoice);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvoiceForEdit) return;
+    setLoading(true);
+    try {
+      const payload = {
+        ...editFormData,
+        discountAmount: editFormData.hasDiscount && editFormData.discountAmount ? parseFloat(editFormData.discountAmount) : 0,
+        discountReason: editFormData.hasDiscount ? editFormData.discountReason : null,
+      };
+      const res = await fetch(`/api/invoices/${selectedInvoiceForEdit.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        alert("Data invoice berhasil diperbarui / dikoreksi!");
+        setSelectedInvoiceForEdit(null);
+        onRefresh();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Gagal mengupdate invoice");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteInvoice = async (id: string, invoiceNumber: string) => {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus invoice ${invoiceNumber}? Tindakan ini akan menghapus tagihan secara permanen.`)) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/invoices/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        alert(`Invoice ${invoiceNumber} berhasil dihapus.`);
+        onRefresh();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Gagal menghapus invoice");
       }
     } catch (err) {
       console.error(err);
@@ -224,6 +443,8 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
   };
 
   const handleSendWhatsApp = (inv: any) => {
+    const discAmt = inv.discountAmount || inv.pilgrim?.discountAmount || 0;
+    const discReason = inv.discountReason || inv.pilgrim?.discountReason || "";
     const url = generateWhatsAppReminderUrl({
       phone: inv.pilgrim?.phone || "",
       pilgrimName: inv.pilgrim?.name || "Jamaah",
@@ -231,6 +452,12 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
       title: inv.title,
       amount: inv.amount,
       dueDate: inv.dueDate,
+      discountAmount: discAmt,
+      discountReason: discReason,
+      companyName: travelSettings.companyName,
+      bankBSI: travelSettings.bankBSI,
+      bankBCA: travelSettings.bankBCA,
+      bankMandiri: travelSettings.bankMandiri,
     });
     window.open(url, "_blank");
   };
@@ -338,7 +565,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                   </td>
                 </tr>
               ) : (
-                filteredInvoices.map((inv) => {
+                paginatedInvoices.map((inv) => {
                   const badge = getStatusBadge(inv.status);
                   const isPaid = inv.status === "PAID";
 
@@ -354,16 +581,43 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                       <td className="py-3.5 px-4">
                         <p className="font-bold text-slate-900">{inv.pilgrim?.name}</p>
                         <p className="text-[11px] text-slate-500 line-clamp-1">{inv.pilgrim?.package?.name}</p>
+                        {(() => {
+                          const pFin = inv.pilgrim ? getPilgrimFinancials(inv.pilgrim) : null;
+                          if (!pFin || pFin.pkgPrice === 0) return null;
+                          return (
+                            <div className="flex items-center gap-1 mt-0.5">
+                              {pFin.remaining === 0 ? (
+                                <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded">
+                                  ✨ Lunas Penuh
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-bold bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded">
+                                  Sisa Paket: {formatCurrency(pFin.remaining)}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="font-black text-slate-900 text-sm">{formatCurrency(inv.amount)}</p>
-                          {(inv.notes?.toLowerCase().includes("promo") || inv.notes?.toLowerCase().includes("diskon") || inv.title?.toLowerCase().includes("promo")) && (
-                            <span className="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
-                              Diskon 4 Jt
-                            </span>
-                          )}
+                          {(() => {
+                            const discAmt = inv.discountAmount || inv.pilgrim?.discountAmount || 0;
+                            const discReason = inv.discountReason || inv.pilgrim?.discountReason || "";
+                            if (discAmt > 0) {
+                              return (
+                                <span
+                                  className="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-black px-1.5 py-0.5 rounded uppercase"
+                                  title={discReason ? `Diskon Khusus: ${discReason} (${formatCurrency(discAmt)})` : `Diskon: ${formatCurrency(discAmt)}`}
+                                >
+                                  🏷️ Diskon {formatCurrency(discAmt)}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                         <p className="text-[10px] text-slate-400">{inv.title}</p>
                       </td>
@@ -389,12 +643,12 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
+                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
                           {/* Follow-up WA Reminder */}
                           {!isPaid && (
                             <button
                               onClick={() => handleSendWhatsApp(inv)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold transition-colors"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold transition-colors cursor-pointer"
                               title="Kirim Tagihan via WhatsApp"
                             >
                               <MessageSquare className="w-3.5 h-3.5" />
@@ -402,11 +656,23 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                             </button>
                           )}
 
+                          {/* Print Invoice / Tagihan (Pending) */}
+                          {!isPaid && (
+                            <button
+                              onClick={() => setSelectedInvoiceForReceipt(inv)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                              title="Cetak Surat Tagihan / Invoice"
+                            >
+                              <Printer className="w-3.5 h-3.5 text-slate-600" />
+                              Tagihan
+                            </button>
+                          )}
+
                           {/* Record Payment */}
                           {!isPaid ? (
                             <button
                               onClick={() => setSelectedInvoiceForPayment(inv)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors cursor-pointer"
                               title="Konfirmasi Pembayaran Diterima"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -415,13 +681,54 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                           ) : (
                             <button
                               onClick={() => setSelectedInvoiceForReceipt(inv)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
-                              title="Cetak Kwitansi Pembayaran"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                              title="Cetak Kwitansi Pembayaran Sah"
                             >
-                              <Printer className="w-3.5 h-3.5" />
+                              <Printer className="w-3.5 h-3.5 text-amber-600" />
                               Kwitansi
                             </button>
                           )}
+
+                          {/* Edit / Koreksi Data Invoice */}
+                          <button
+                            onClick={() => {
+                              const invDisc = (inv.discountAmount !== undefined && inv.discountAmount !== null && inv.discountAmount > 0)
+                                ? inv.discountAmount
+                                : (inv.pilgrim?.discountAmount || 0);
+                              const invReason = inv.discountReason || inv.pilgrim?.discountReason || "";
+                              setSelectedInvoiceForEdit(inv);
+                              setEditFormData({
+                                pilgrimId: inv.pilgrimId,
+                                type: inv.type,
+                                title: inv.title,
+                                amount: String(inv.amount),
+                                dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+                                status: inv.status,
+                                paymentMethod: inv.paymentMethod || "BANK_TRANSFER",
+                                paymentDate: inv.paymentDate ? new Date(inv.paymentDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+                                payerName: inv.payerName || "",
+                                payerPhone: inv.payerPhone || "",
+                                notes: inv.notes || "",
+                                hasDiscount: invDisc > 0,
+                                discountAmount: invDisc > 0 ? String(invDisc) : "",
+                                discountReason: invReason,
+                              });
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition-colors cursor-pointer"
+                            title="Koreksi / Edit Data Tagihan & Pembayaran"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-amber-700" />
+                            Edit
+                          </button>
+
+                          {/* Hapus Invoice */}
+                          <button
+                            onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
+                            className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
+                            title="Hapus Invoice / Tagihan"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -431,6 +738,19 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredInvoices.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+          itemLabel="invoice"
+        />
       </div>
 
       {/* Modal 1: Form Buat Invoice Baru */}
@@ -482,10 +802,15 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                     onChange={(e) => {
                       const pId = e.target.value;
                       const sel = pilgrims.find((p) => p.id === pId);
+                      const pDisc = sel?.discountAmount || 0;
+                      const pReason = sel?.discountReason || "";
                       setFormData({
                         ...formData,
                         pilgrimId: pId,
                         payerName: formData.payerName === "Hamba Allah" ? "Hamba Allah" : (sel?.name || ""),
+                        hasDiscount: pDisc > 0,
+                        discountAmount: pDisc > 0 ? String(pDisc) : formData.discountAmount,
+                        discountReason: pReason || formData.discountReason,
                       });
                     }}
                     className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white focus:ring-2 focus:ring-emerald-500/20"
@@ -537,6 +862,119 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                   </div>
                 </div>
               )}
+
+              {/* Box Opsi Potongan Harga / Diskon Khusus */}
+              <div className="p-3 bg-amber-50/70 border border-amber-300/80 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={formData.hasDiscount}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFormData({
+                          ...formData,
+                          hasDiscount: checked,
+                          discountAmount: checked ? (formData.discountAmount || "4000000") : "",
+                          discountReason: checked ? (formData.discountReason || "Promo Spesial Keberangkatan") : "",
+                        });
+                      }}
+                      className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                    />
+                    <span className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-amber-700" />
+                      Berikan Potongan Harga / Diskon Khusus Jamaah
+                    </span>
+                  </label>
+                  {formData.hasDiscount && (
+                    <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
+                      Diskon Aktif
+                    </span>
+                  )}
+                </div>
+
+                {formData.hasDiscount && (
+                  <div className="space-y-2 pt-1 border-t border-amber-200">
+                    {/* Preset Chips */}
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-semibold block mb-1">Pilihan Cepat Diskon Promo:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, discountAmount: "4000000", discountReason: "Promo Spesial Keberangkatan" })}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                            formData.discountAmount === "4000000"
+                              ? "bg-amber-600 text-white border-amber-700 shadow-2xs"
+                              : "bg-white text-slate-700 border-amber-200 hover:bg-amber-100"
+                          }`}
+                        >
+                          🔥 Promo Rp 4 Jt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, discountAmount: "3000000", discountReason: "Diskon Khusus Tokoh / Ustadz" })}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                            formData.discountAmount === "3000000"
+                              ? "bg-amber-600 text-white border-amber-700 shadow-2xs"
+                              : "bg-white text-slate-700 border-amber-200 hover:bg-amber-100"
+                          }`}
+                        >
+                          👳 Tokoh / Ustadz Rp 3 Jt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, discountAmount: "2000000", discountReason: "Diskon Keluarga / Mitra" })}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                            formData.discountAmount === "2000000"
+                              ? "bg-amber-600 text-white border-amber-700 shadow-2xs"
+                              : "bg-white text-slate-700 border-amber-200 hover:bg-amber-100"
+                          }`}
+                        >
+                          👨‍👩‍👧 Keluarga Rp 2 Jt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, discountAmount: "1000000", discountReason: "Early Bird / Booking Awal" })}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                            formData.discountAmount === "1000000"
+                              ? "bg-amber-600 text-white border-amber-700 shadow-2xs"
+                              : "bg-white text-slate-700 border-amber-200 hover:bg-amber-100"
+                          }`}
+                        >
+                          ⚡ Early Bird Rp 1 Jt
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 block mb-0.5">Nominal Potongan Diskon (Rp) *</label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                          <input
+                            type="number"
+                            placeholder="4000000"
+                            value={formData.discountAmount}
+                            onChange={(e) => setFormData({ ...formData, discountAmount: e.target.value })}
+                            className="w-full pl-8 pr-2.5 py-1.5 rounded-xl border border-amber-300 font-bold text-amber-900 bg-white text-xs focus:ring-2 focus:ring-amber-500/20"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 block mb-0.5">Keterangan / Alasan Diskon *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Promo Spesial Keberangkatan"
+                          value={formData.discountReason}
+                          onChange={(e) => setFormData({ ...formData, discountReason: e.target.value })}
+                          className="w-full px-2.5 py-1.5 rounded-xl border border-amber-300 font-medium text-slate-800 bg-white text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Box Info Pembayar / Donatur (Hamba Allah / Suami / Sponsor) */}
               <div className="p-3 bg-emerald-50/50 border border-emerald-200 rounded-2xl space-y-2.5">
@@ -619,6 +1057,9 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                     totalRemaining += fin.remaining;
                   });
 
+                  const currentTotalInput = parseFloat(formData.amount || "0") || 0;
+                  const projectedTotalRemaining = Math.max(0, totalRemaining - currentTotalInput);
+
                   return (
                     <div className="p-3.5 bg-amber-50/80 border border-amber-300 rounded-2xl space-y-2.5 shadow-2xs">
                       <div className="flex items-center justify-between border-b border-amber-200 pb-1.5">
@@ -630,16 +1071,40 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                           Multi-Jamaah
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
                         <div>
-                          <span className="text-slate-600 block">Total Harga Paket ({selPilgrims.length} Org):</span>
+                          <span className="text-slate-600 block">Total Harga Paket:</span>
                           <span className="font-mono font-bold text-slate-900 text-xs">{formatCurrency(totalPkgPrice)}</span>
                         </div>
                         <div>
-                          <span className="text-slate-600 block">Total Sudah Terbayar (DP):</span>
+                          <span className="text-slate-600 block">Total Sudah Terbayar:</span>
                           <span className="font-mono font-bold text-emerald-700 text-xs">{formatCurrency(totalPaid)}</span>
                         </div>
+                        <div>
+                          <span className="text-slate-600 block">Sisa Kewajiban Saat Ini:</span>
+                          <span className="font-mono font-bold text-amber-800 text-xs">{formatCurrency(totalRemaining)}</span>
+                        </div>
                       </div>
+
+                      {/* Live Dynamic Simulation Banner for Multi-Jamaah */}
+                      {currentTotalInput > 0 && (
+                        <div className="p-2.5 bg-white rounded-xl border border-amber-300 space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-600 font-semibold">Total Nominal Yang Disetor:</span>
+                            <span className="font-mono font-bold text-emerald-700">{formatCurrency(currentTotalInput)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                            <span className="font-black text-amber-950">Sisa Tagihan Setelah Pembayaran Ini:</span>
+                            <span className="font-mono font-black text-amber-700 text-sm">{formatCurrency(projectedTotalRemaining)}</span>
+                          </div>
+                          {currentTotalInput === totalRemaining && totalRemaining > 0 && (
+                            <p className="text-[10px] font-bold text-emerald-700 mt-1 flex items-center gap-1">
+                              🎉 Pembayaran ini akan melunasi seluruh total biaya paket ke-{selPilgrims.length} jamaah terpilih!
+                            </p>
+                          )}
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between text-xs pt-2 border-t border-amber-200">
                         <div>
                           <span className="font-black text-amber-950 block">Total Kekurangan Pelunasan ({selPilgrims.length} Jamaah):</span>
@@ -674,40 +1139,183 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                   const selPilgrim = pilgrims.find((p) => p.id === formData.pilgrimId);
                   if (!selPilgrim) return null;
 
-                  const { pkgPrice, totalPaid, remaining } = getPilgrimFinancials(selPilgrim);
+                  const customDisc = formData.hasDiscount && formData.discountAmount ? parseFloat(formData.discountAmount) : 0;
+                  const { grossPrice, discountAmount, discountReason, netPrice, totalPaid, remaining } = getPilgrimFinancials(selPilgrim, customDisc);
+                  const currentInputAmt = parseFloat(formData.amount || "0") || 0;
+                  const projectedRemaining = Math.max(0, remaining - currentInputAmt);
+                  const isExactSettle = currentInputAmt === remaining && remaining > 0;
+                  const isOverpaid = currentInputAmt > remaining && remaining > 0;
+                  const currentPercent = netPrice > 0 ? Math.min(100, Math.round(((totalPaid + currentInputAmt) / netPrice) * 100)) : 100;
 
                   return (
-                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-500">Harga Paket ({selPilgrim.roomType || "QUAD"}):</span>
-                        <span className="font-mono font-bold text-slate-900">{formatCurrency(pkgPrice)}</span>
+                    <div className="p-3.5 bg-gradient-to-br from-slate-50 to-emerald-50/40 border border-emerald-200/80 rounded-2xl space-y-2.5 shadow-2xs">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                        <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                          <Calculator className="w-4 h-4 text-emerald-600" />
+                          Kalkulator Sisa Pembayaran ({selPilgrim.name})
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                          Kamar: {selPilgrim.roomType || "QUAD"}
+                        </span>
                       </div>
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-500">Sudah Dibayar (DP):</span>
-                        <span className="font-mono font-bold text-emerald-700">{formatCurrency(totalPaid)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200">
-                        <span className="font-bold text-amber-900">Kekurangan Pelunasan:</span>
-                        <div className="flex items-center gap-1.5">
+
+                      {/* Breakdown Kartu Dinamis */}
+                      <div className={`grid gap-2 text-[11px] ${discountAmount > 0 ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-3"}`}>
+                        <div className="p-2 bg-white rounded-xl border border-slate-200">
+                          <span className="text-slate-500 block text-[10px]">Harga Normal:</span>
+                          <span className="font-mono font-bold text-slate-900 text-xs">{formatCurrency(grossPrice)}</span>
+                        </div>
+                        {discountAmount > 0 && (
+                          <div className="p-2 bg-amber-50 rounded-xl border border-amber-300">
+                            <span className="text-amber-900 block text-[10px] font-bold">Diskon Khusus:</span>
+                            <span className="font-mono font-bold text-amber-800 text-xs">- {formatCurrency(discountAmount)}</span>
+                          </div>
+                        )}
+                        {discountAmount > 0 && (
+                          <div className="p-2 bg-emerald-50/50 rounded-xl border border-emerald-200">
+                            <span className="text-slate-600 block text-[10px]">Kewajiban Bersih:</span>
+                            <span className="font-mono font-bold text-emerald-800 text-xs">{formatCurrency(netPrice)}</span>
+                          </div>
+                        )}
+                        <div className="p-2 bg-white rounded-xl border border-slate-200">
+                          <span className="text-slate-500 block text-[10px]">Sudah Terbayar:</span>
+                          <span className="font-mono font-bold text-emerald-700 text-xs">{formatCurrency(totalPaid)}</span>
+                        </div>
+                        <div className="p-2 bg-amber-50 rounded-xl border border-amber-200">
+                          <span className="text-amber-900 block text-[10px] font-bold">Sisa Kewajiban:</span>
                           <span className="font-mono font-black text-amber-700 text-xs">{formatCurrency(remaining)}</span>
-                          {remaining > 0 && (
+                        </div>
+                      </div>
+
+                      {/* Live Dynamic Reaction */}
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-600 font-semibold flex items-center gap-1">
+                            <ArrowRight className="w-3.5 h-3.5 text-emerald-600" />
+                            Nominal Tagihan Ini:
+                          </span>
+                          <span className="font-mono font-black text-emerald-700 text-sm">
+                            {currentInputAmt > 0 ? formatCurrency(currentInputAmt) : "Rp 0 (Ketik nominal di bawah)"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100">
+                          <span className="font-black text-slate-900">
+                            Estimasi Sisa Setelah Pembayaran Ini:
+                          </span>
+                          <span className={`font-mono font-black text-sm ${projectedRemaining === 0 && netPrice > 0 ? "text-emerald-700" : "text-amber-700"}`}>
+                            {projectedRemaining === 0 && netPrice > 0 ? "🎉 LUNAS 100% (Rp 0)" : formatCurrency(projectedRemaining)}
+                          </span>
+                        </div>
+
+                        {/* Progres Pelunasan */}
+                        {netPrice > 0 && (
+                          <div className="space-y-1 pt-1">
+                            <div className="flex justify-between text-[10px] text-slate-500">
+                              <span>Progres Pelunasan Paket</span>
+                              <span className="font-bold text-slate-700">{currentPercent}%</span>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                              <div
+                                className={`h-full transition-all duration-300 ${currentPercent >= 100 ? "bg-emerald-500" : "bg-emerald-600"}`}
+                                style={{ width: `${Math.min(100, currentPercent)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Informative Status Badges */}
+                        {isExactSettle && (
+                          <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-900 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                            Tagihan ini akan MELUNASI 100% seluruh biaya paket jamaah!
+                          </div>
+                        )}
+                        {isOverpaid && (
+                          <div className="p-1.5 rounded-lg bg-amber-50 border border-amber-300 text-[10px] font-bold text-amber-900 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                            Nominal melebihi sisa kekurangan sebesar {formatCurrency(currentInputAmt - remaining)}
+                          </div>
+                        )}
+                        {remaining === 0 && netPrice > 0 && (
+                          <div className="p-1.5 rounded-lg bg-emerald-100 text-[10px] font-bold text-emerald-900 flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                            Jamaah ini sudah Lunas Penuh (100%).
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tombol Cepat (Quick Fill Actions) */}
+                      {remaining > 0 && (
+                        <div className="pt-1 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-slate-500 font-semibold">Tombol Cepat:</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                amount: String(remaining),
+                                type: "FULL_PAYMENT",
+                                title: discountAmount > 0
+                                  ? `Pelunasan Biaya Paket (${discountReason || "Diskon"}) - ${selPilgrim.name}`
+                                  : `Pelunasan Akhir Biaya Paket Umroh - ${selPilgrim.name}`,
+                              })
+                            }
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[10px] hover:bg-emerald-700 shadow-2xs transition-all flex items-center gap-1"
+                          >
+                            🌟 Lunas Penuh ({formatCurrency(remaining)})
+                          </button>
+                          {remaining > 5000000 && (
                             <button
                               type="button"
                               onClick={() =>
                                 setFormData({
                                   ...formData,
-                                  amount: String(remaining),
-                                  type: "FULL_PAYMENT",
-                                  title: `Pelunasan Akhir Biaya Paket Umroh - ${selPilgrim.name}`,
+                                  amount: "5000000",
+                                  type: totalPaid === 0 ? "DP" : "INSTALLMENT",
+                                  title: totalPaid === 0 ? `Uang Muka (DP) Paket Umroh - ${selPilgrim.name}` : `Cicilan Tahap Biaya Paket Umroh - ${selPilgrim.name}`,
                                 })
                               }
-                              className="px-2 py-0.5 rounded bg-emerald-600 text-white font-bold text-[10px] hover:bg-emerald-700 shadow-2xs"
+                              className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[10px] hover:bg-slate-50"
                             >
-                              Pakai Sisa
+                              ⚡ DP Rp 5 Jt
+                            </button>
+                          )}
+                          {remaining > 10000000 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFormData({
+                                  ...formData,
+                                  amount: "10000000",
+                                  type: totalPaid === 0 ? "DP" : "INSTALLMENT",
+                                  title: totalPaid === 0 ? `Uang Muka (DP) Paket Umroh - ${selPilgrim.name}` : `Cicilan Tahap Biaya Paket Umroh - ${selPilgrim.name}`,
+                                })
+                              }
+                              className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[10px] hover:bg-slate-50"
+                            >
+                              ⚡ DP Rp 10 Jt
+                            </button>
+                          )}
+                          {remaining > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const half = Math.round(remaining / 2);
+                                setFormData({
+                                  ...formData,
+                                  amount: String(half),
+                                  type: "INSTALLMENT",
+                                  title: `Cicilan 50% Sisa Biaya Paket Umroh - ${selPilgrim.name}`,
+                                });
+                              }}
+                              className="px-2 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-[10px] hover:bg-slate-200"
+                            >
+                              ⚡ 50% Sisa ({formatCurrency(Math.round(remaining / 2))})
                             </button>
                           )}
                         </div>
-                      </div>
+                      )}
                     </div>
                   );
                 }
@@ -939,6 +1547,52 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 />
               </div>
 
+              {/* Opsi Langsung Terima Pembayaran & Cetak Kwitansi */}
+              <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl space-y-2.5">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={formData.isDirectPayment}
+                    onChange={(e) => setFormData({ ...formData, isDirectPayment: e.target.checked })}
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <span className="font-bold text-emerald-950 text-xs">
+                    ✅ Langsung Tandai Lunas & Buka Kwitansi Sah
+                  </span>
+                </label>
+
+                {formData.isDirectPayment && (
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-emerald-200">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 block mb-1">
+                        Metode Pembayaran:
+                      </label>
+                      <select
+                        value={formData.paymentMethod}
+                        onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white font-bold text-slate-900"
+                      >
+                        <option value="BANK_TRANSFER">🏦 Transfer Bank (Mandiri / BSI)</option>
+                        <option value="CASH">💵 Tunai / Kas Kantor</option>
+                        <option value="EDC">💳 Kartu Debit / EDC</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 block mb-1">
+                        Tanggal Diterima:
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.paymentDate}
+                        onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white font-bold text-slate-900"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="font-bold text-slate-700">Catatan Tambahan</label>
                 <textarea
@@ -961,9 +1615,9 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-md flex items-center gap-1.5"
                 >
-                  {loading ? "Menerbitkan..." : "Terbitkan Invoice"}
+                  {loading ? "Memproses..." : (formData.isDirectPayment ? "Terbitkan & Buka Kwitansi" : "Terbitkan Invoice")}
                 </button>
               </div>
             </form>
@@ -1099,27 +1753,28 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
       {selectedInvoiceForReceipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl space-y-6 max-h-[95vh] overflow-y-auto">
+            {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 no-print">
               <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
-                Dokumen Resmi Kwitansi
+                {selectedInvoiceForReceipt.status === "PAID" ? "Dokumen Resmi Kwitansi Pembayaran" : "Dokumen Resmi Surat Tagihan (Invoice)"}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handlePrintReceipt}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 cursor-pointer"
                 >
-                  <Printer className="w-4 h-4" /> Cetak Kwitansi
+                  <Printer className="w-4 h-4" /> {selectedInvoiceForReceipt.status === "PAID" ? "Cetak Kwitansi (Print/PDF)" : "Cetak Invoice (Print/PDF)"}
                 </button>
                 <button
                   onClick={() => setSelectedInvoiceForReceipt(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Printable Receipt Template */}
+            {/* Printable Receipt / Invoice Template */}
             <div className="border border-slate-300 p-8 rounded-2xl bg-white text-slate-900 relative space-y-4">
               {/* Header Travel */}
               <div className="flex items-center justify-between gap-4 pb-1">
@@ -1154,11 +1809,13 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <span className="inline-block bg-slate-900 text-white font-bold text-xs px-3 py-1 rounded">
-                    KWITANSI PEMBAYARAN
+                  <span className={`inline-block text-white font-bold text-xs px-3 py-1 rounded ${
+                    selectedInvoiceForReceipt.status === "PAID" ? "bg-slate-900" : "bg-amber-700"
+                  }`}>
+                    {selectedInvoiceForReceipt.status === "PAID" ? "KWITANSI PEMBAYARAN" : "SURAT TAGIHAN (INVOICE)"}
                   </span>
                   <p className="font-mono text-xs font-bold text-amber-900 mt-1">
-                    No: KW-{selectedInvoiceForReceipt.invoiceNumber}
+                    {selectedInvoiceForReceipt.status === "PAID" ? `No: KW-${selectedInvoiceForReceipt.invoiceNumber}` : `No: ${selectedInvoiceForReceipt.invoiceNumber}`}
                   </p>
                 </div>
               </div>
@@ -1175,10 +1832,12 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 <div className="w-20 h-3 bg-slate-900 -skew-x-25 -mr-3" />
               </div>
 
-              {/* Receipt Body */}
+              {/* Receipt / Invoice Body */}
               <div className="py-5 space-y-3.5 text-xs">
                 <div className="flex items-start">
-                  <span className="w-36 text-slate-500 font-semibold pt-0.5">Telah Terima Dari:</span>
+                  <span className="w-36 text-slate-500 font-semibold pt-0.5">
+                    {selectedInvoiceForReceipt.status === "PAID" ? "Telah Terima Dari:" : "Ditagihkan Kepada:"}
+                  </span>
                   <div className="flex-1">
                     <span className="font-bold text-slate-900 text-sm">
                       {selectedInvoiceForReceipt.payerName || selectedInvoiceForReceipt.pilgrim?.name}
@@ -1197,14 +1856,18 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 </div>
 
                 <div className="flex items-start">
-                  <span className="w-36 text-slate-500 font-semibold pt-1">Uang Sejumlah:</span>
+                  <span className="w-36 text-slate-500 font-semibold pt-1">
+                    {selectedInvoiceForReceipt.status === "PAID" ? "Uang Sejumlah:" : "Nominal Tagihan:"}
+                  </span>
                   <span className="flex-1 font-bold text-slate-900 bg-emerald-50/90 p-2.5 rounded-xl border border-emerald-200 text-xs sm:text-sm leading-relaxed">
                     "{formatRupiahWithWords(selectedInvoiceForReceipt.amount)}"
                   </span>
                 </div>
 
                 <div className="flex">
-                  <span className="w-36 text-slate-500 font-semibold">Untuk Pembayaran:</span>
+                  <span className="w-36 text-slate-500 font-semibold">
+                    {selectedInvoiceForReceipt.status === "PAID" ? "Untuk Pembayaran:" : "Peruntukan Tagihan:"}
+                  </span>
                   <span className="flex-1 text-slate-800">
                     {selectedInvoiceForReceipt.title}
                     {selectedInvoiceForReceipt.pilgrim && (
@@ -1214,24 +1877,103 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 </div>
 
                 {/* Keterangan Potongan Harga / Diskon Promo Resmi */}
-                {(selectedInvoiceForReceipt.notes?.toLowerCase().includes("promo") || selectedInvoiceForReceipt.notes?.toLowerCase().includes("diskon") || selectedInvoiceForReceipt.title?.toLowerCase().includes("promo")) && (
-                  <div className="flex items-start">
-                    <span className="w-36 text-slate-500 font-semibold pt-1">Keterangan Diskon:</span>
-                    <div className="flex-1 bg-amber-50 p-2.5 rounded-xl border border-amber-300 text-xs space-y-1">
-                      <p className="font-bold text-amber-950 flex items-center gap-1">
-                        🏷️ {selectedInvoiceForReceipt.notes || "Program Promo Spesial Keberangkatan September 2026 - Diskon Tunai Rp 4.000.000,-"}
-                      </p>
-                      <p className="text-[10px] text-slate-600">
-                        Potongan harga resmi telah diperhitungkan secara sah dalam total nilai tagihan / pelunasan kuitansi ini.
-                      </p>
+                {(() => {
+                  const breakdown = getInvoiceBreakdown(selectedInvoiceForReceipt);
+                  const isDisc = (breakdown && breakdown.isDiscounted) ||
+                    (selectedInvoiceForReceipt.discountAmount && selectedInvoiceForReceipt.discountAmount > 0) ||
+                    (selectedInvoiceForReceipt.notes?.toLowerCase().includes("promo") || selectedInvoiceForReceipt.notes?.toLowerCase().includes("diskon") || selectedInvoiceForReceipt.title?.toLowerCase().includes("promo"));
+
+                  if (!isDisc) return null;
+
+                  const discAmt = breakdown?.discountAmount || selectedInvoiceForReceipt.discountAmount || 4000000;
+                  const discReason = breakdown?.discountReason || selectedInvoiceForReceipt.discountReason || selectedInvoiceForReceipt.notes || "Program Promo Spesial Diskon Khusus";
+
+                  return (
+                    <div className="flex items-start">
+                      <span className="w-36 text-slate-500 font-semibold pt-1">Keterangan Diskon:</span>
+                      <div className="flex-1 bg-amber-50 p-2.5 rounded-xl border border-amber-300 text-xs space-y-1">
+                        <p className="font-bold text-amber-950 flex items-center gap-1">
+                          🏷️ {discReason} ({formatCurrency(discAmt)})
+                        </p>
+                        <p className="text-[10px] text-slate-600">
+                          Potongan harga khusus telah dikurangkan dari harga paket normal ({formatCurrency(breakdown?.grossPrice || 0)}) sehingga total kewajiban bersih menjadi {formatCurrency(breakdown?.netPrice || 0)}.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
+
+                {/* Rincian Akumulasi Finansial & Sisa Pembayaran Paket */}
+                {(() => {
+                  const breakdown = getInvoiceBreakdown(selectedInvoiceForReceipt);
+                  if (!breakdown || (breakdown.pkgPrice === 0 && breakdown.grossPrice === 0)) return null;
+
+                  return (
+                    <div className="bg-slate-50/90 p-3.5 rounded-2xl border border-slate-200 text-xs space-y-2.5">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-800 pb-1.5 border-b border-slate-200">
+                        <span className="flex items-center gap-1.5 font-bold text-slate-900">
+                          <Calculator className="w-3.5 h-3.5 text-emerald-600" />
+                          Rincian Status Finansial & Sisa Pembayaran Paket
+                        </span>
+                        <span className="font-mono text-emerald-700 text-[10.5px]">
+                          Progres Pelunasan: {breakdown.progressPercent}%
+                        </span>
+                      </div>
+
+                      <div className={`grid gap-2 text-center ${breakdown.isDiscounted ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4"}`}>
+                        <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                          <span className="text-[9.5px] text-slate-500 block uppercase font-semibold">Harga Normal</span>
+                          <span className="font-mono font-black text-slate-900 text-xs">{formatCurrency(breakdown.grossPrice)}</span>
+                        </div>
+                        {breakdown.isDiscounted && (
+                          <div className="p-2 bg-amber-50 rounded-xl border border-amber-300 shadow-2xs">
+                            <span className="text-[9.5px] text-amber-900 block uppercase font-bold">Diskon Khusus</span>
+                            <span className="font-mono font-bold text-amber-800 text-xs">- {formatCurrency(breakdown.discountAmount)}</span>
+                          </div>
+                        )}
+                        <div className="p-2 bg-emerald-50/50 rounded-xl border border-emerald-200 shadow-2xs">
+                          <span className="text-[9.5px] text-slate-600 block uppercase font-semibold">
+                            {breakdown.isDiscounted ? "Kewajiban Bersih" : "Terbayar Sblmnya"}
+                          </span>
+                          <span className="font-mono font-black text-slate-700 text-xs">
+                            {breakdown.isDiscounted ? formatCurrency(breakdown.netPrice) : formatCurrency(breakdown.priorPaid)}
+                          </span>
+                        </div>
+                        {breakdown.isDiscounted && (
+                          <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                            <span className="text-[9.5px] text-slate-500 block uppercase font-semibold">Terbayar Sblmnya</span>
+                            <span className="font-mono font-black text-slate-700 text-xs">{formatCurrency(breakdown.priorPaid)}</span>
+                          </div>
+                        )}
+                        <div className="p-2 bg-emerald-50 rounded-xl border border-emerald-300 shadow-2xs">
+                          <span className="text-[9.5px] text-emerald-900 block uppercase font-black">
+                            {selectedInvoiceForReceipt.status === "PAID" ? "Kwitansi Ini" : "Invoice Ini"}
+                          </span>
+                          <span className="font-mono font-black text-emerald-800 text-xs">{formatCurrency(breakdown.currentAmount)}</span>
+                        </div>
+                        <div className={`p-2 rounded-xl border shadow-2xs ${breakdown.finalRemaining === 0 ? "bg-emerald-100 border-emerald-400" : "bg-amber-50 border-amber-300"}`}>
+                          <span className={`text-[9.5px] block uppercase font-black ${breakdown.finalRemaining === 0 ? "text-emerald-950" : "text-amber-950"}`}>
+                            {breakdown.finalRemaining === 0 ? "Status Akhir" : "Sisa Tagihan"}
+                          </span>
+                          <span className={`font-mono font-black text-xs ${breakdown.finalRemaining === 0 ? "text-emerald-800" : "text-amber-800"}`}>
+                            {breakdown.finalRemaining === 0 ? "✨ LUNAS (Rp 0)" : formatCurrency(breakdown.finalRemaining)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="flex">
-                  <span className="w-36 text-slate-500 font-semibold">Metode & Tanggal:</span>
+                  <span className="w-36 text-slate-500 font-semibold">
+                    {selectedInvoiceForReceipt.status === "PAID" ? "Metode & Tanggal:" : "Jatuh Tempo:"}
+                  </span>
                   <span className="flex-1 text-slate-800">
-                    {selectedInvoiceForReceipt.paymentMethod} • {formatDate(selectedInvoiceForReceipt.paymentDate, "dd MMMM yyyy")}
+                    {selectedInvoiceForReceipt.status === "PAID" ? (
+                      <>{selectedInvoiceForReceipt.paymentMethod || "TRANSFER BANK"} • {formatDate(selectedInvoiceForReceipt.paymentDate, "dd MMMM yyyy")}</>
+                    ) : (
+                      <span className="font-bold text-amber-800">Wajib dilunasi sebelum: {formatDate(selectedInvoiceForReceipt.dueDate, "dd MMMM yyyy")}</span>
+                    )}
                   </span>
                 </div>
               </div>
@@ -1239,12 +1981,14 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
               {/* Signature Footer */}
               <div className="pt-6 border-t border-slate-200 flex justify-between items-end">
                 <div className="text-[11px] text-slate-500">
-                  <p className="font-bold text-emerald-800">STATUS: LUNAS / SAH</p>
+                  <p className={`font-bold ${selectedInvoiceForReceipt.status === "PAID" ? "text-emerald-800" : "text-amber-800"}`}>
+                    {selectedInvoiceForReceipt.status === "PAID" ? "STATUS: LUNAS / SAH" : "STATUS: MENUNGGU PEMBAYARAN"}
+                  </p>
                   <p>Dicetak otomatis via Sistem ERP Umroh</p>
                 </div>
 
                 <div className="text-center w-48">
-                  <p className="text-xs text-slate-600">Tebing Tinggi, {formatDate(selectedInvoiceForReceipt.paymentDate || new Date(), "dd MMMM yyyy")}</p>
+                  <p className="text-xs text-slate-600">Tebing Tinggi, {formatDate(selectedInvoiceForReceipt.paymentDate || selectedInvoiceForReceipt.createdAt || new Date(), "dd MMMM yyyy")}</p>
                   <p className="text-xs font-bold text-slate-700 mt-0.5">Bagian Keuangan / Pimpinan,</p>
                   <div className="h-14 flex items-center justify-center">
                     <span className="font-serif italic text-xs text-emerald-700 font-bold border-b border-emerald-400 pb-0.5">
@@ -1256,6 +2000,366 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 4: Form Koreksi / Edit Invoice & Pembayaran */}
+      {selectedInvoiceForEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 no-print">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Pencil className="w-5 h-5 text-amber-600" />
+                  Koreksi & Edit Data Tagihan
+                </h3>
+                <p className="text-[11px] font-mono text-slate-500 mt-0.5">
+                  No. Invoice: <strong className="text-slate-800">{selectedInvoiceForEdit.invoiceNumber}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedInvoiceForEdit(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditInvoice} className="space-y-3.5 text-xs">
+              {/* Pilih Jamaah */}
+              <div>
+                <label className="font-bold text-slate-700">Jamaah Pemilik Tagihan *</label>
+                <select
+                  required
+                  value={editFormData.pilgrimId}
+                  onChange={(e) => setEditFormData({ ...editFormData, pilgrimId: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white focus:ring-2 focus:ring-amber-500/20"
+                >
+                  <option value="">-- Pilih Jamaah --</option>
+                  {pilgrims.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} - ({p.package?.name || "Tanpa Paket"}) - HP: {p.phone}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Box Diskon Khusus di Edit Modal */}
+              <div className="p-3 bg-amber-50/70 border border-amber-300/80 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={editFormData.hasDiscount}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setEditFormData({
+                          ...editFormData,
+                          hasDiscount: checked,
+                          discountAmount: checked ? (editFormData.discountAmount || "4000000") : "",
+                          discountReason: checked ? (editFormData.discountReason || "Promo Spesial Keberangkatan") : "",
+                        });
+                      }}
+                      className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                    />
+                    <span className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-amber-700" />
+                      Diskon Khusus / Potongan Harga Tagihan
+                    </span>
+                  </label>
+                  {editFormData.hasDiscount && (
+                    <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
+                      Diskon Aktif
+                    </span>
+                  )}
+                </div>
+
+                {editFormData.hasDiscount && (
+                  <div className="space-y-2 pt-1 border-t border-amber-200">
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setEditFormData({ ...editFormData, discountAmount: "4000000", discountReason: "Promo Spesial Keberangkatan" })}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+                          editFormData.discountAmount === "4000000"
+                            ? "bg-amber-600 text-white border-amber-700 shadow-2xs"
+                            : "bg-white text-slate-700 border-amber-200 hover:bg-amber-100"
+                        }`}
+                      >
+                        🔥 Promo Rp 4 Jt
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditFormData({ ...editFormData, discountAmount: "3000000", discountReason: "Diskon Khusus Tokoh / Ustadz" })}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+                          editFormData.discountAmount === "3000000"
+                            ? "bg-amber-600 text-white border-amber-700 shadow-2xs"
+                            : "bg-white text-slate-700 border-amber-200 hover:bg-amber-100"
+                        }`}
+                      >
+                        👳 Tokoh Rp 3 Jt
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditFormData({ ...editFormData, discountAmount: "2000000", discountReason: "Diskon Keluarga / Mitra" })}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+                          editFormData.discountAmount === "2000000"
+                            ? "bg-amber-600 text-white border-amber-700 shadow-2xs"
+                            : "bg-white text-slate-700 border-amber-200 hover:bg-amber-100"
+                        }`}
+                      >
+                        👨‍👩‍👧 Keluarga Rp 2 Jt
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditFormData({ ...editFormData, discountAmount: "1000000", discountReason: "Early Bird / Booking Awal" })}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+                          editFormData.discountAmount === "1000000"
+                            ? "bg-amber-600 text-white border-amber-700 shadow-2xs"
+                            : "bg-white text-slate-700 border-amber-200 hover:bg-amber-100"
+                        }`}
+                      >
+                        ⚡ Early Bird Rp 1 Jt
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 block mb-0.5">Nominal Potongan (Rp) *</label>
+                        <input
+                          type="number"
+                          value={editFormData.discountAmount}
+                          onChange={(e) => setEditFormData({ ...editFormData, discountAmount: e.target.value })}
+                          className="w-full px-2.5 py-1.5 rounded-xl border border-amber-300 font-bold text-amber-900 bg-white text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 block mb-0.5">Alasan / Jenis Diskon *</label>
+                        <input
+                          type="text"
+                          value={editFormData.discountReason}
+                          onChange={(e) => setEditFormData({ ...editFormData, discountReason: e.target.value })}
+                          className="w-full px-2.5 py-1.5 rounded-xl border border-amber-300 font-medium text-slate-800 bg-white text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Dynamic Financial Calculator saat Edit */}
+              {(() => {
+                const targetPilgrim = pilgrims.find((p) => p.id === editFormData.pilgrimId);
+                if (!targetPilgrim) return null;
+
+                const customDisc = editFormData.hasDiscount && editFormData.discountAmount ? parseFloat(editFormData.discountAmount) : 0;
+                const { grossPrice, discountAmount, discountReason, netPrice, totalPaid, remaining } = getPilgrimFinancials(targetPilgrim, customDisc);
+
+                return (
+                  <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-amber-950 border-b border-amber-200 pb-1">
+                      <span className="flex items-center gap-1">
+                        <Calculator className="w-3.5 h-3.5 text-amber-700" />
+                        Status Keuangan: {targetPilgrim.name}
+                      </span>
+                      <span>Kamar: {targetPilgrim.roomType || "QUAD"}</span>
+                    </div>
+
+                    <div className={`grid gap-2 text-[10.5px] ${discountAmount > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+                      <div className="bg-white p-1.5 rounded-lg border border-slate-200">
+                        <span className="text-slate-500 block text-[9.5px]">Harga Normal:</span>
+                        <span className="font-mono font-bold text-slate-900">{formatCurrency(grossPrice)}</span>
+                      </div>
+                      {discountAmount > 0 && (
+                        <div className="bg-amber-100 p-1.5 rounded-lg border border-amber-300">
+                          <span className="text-amber-900 block text-[9.5px] font-bold">Diskon Khusus:</span>
+                          <span className="font-mono font-bold text-amber-900">- {formatCurrency(discountAmount)}</span>
+                        </div>
+                      )}
+                      <div className="bg-white p-1.5 rounded-lg border border-slate-200">
+                        <span className="text-slate-500 block text-[9.5px]">Total Terbayar:</span>
+                        <span className="font-mono font-bold text-emerald-700">{formatCurrency(totalPaid)}</span>
+                      </div>
+                      <div className="bg-white p-1.5 rounded-lg border border-slate-200">
+                        <span className="text-slate-500 block text-[9.5px]">Sisa Hutang:</span>
+                        <span className="font-mono font-bold text-amber-800">{formatCurrency(remaining)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700">Jenis Tagihan *</label>
+                  <select
+                    value={editFormData.type}
+                    onChange={(e) => setEditFormData({ ...editFormData, type: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold"
+                  >
+                    <option value="DP">Uang Muka (DP)</option>
+                    <option value="INSTALLMENT">Cicilan Bertahap</option>
+                    <option value="FULL_PAYMENT">Pelunasan Akhir</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700">Nominal Tagihan (Rp) *</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="0"
+                    value={editFormData.amount}
+                    onChange={(e) => setEditFormData({ ...editFormData, amount: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-mono font-black text-emerald-800 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700">Judul / Keterangan Tagihan *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Pembayaran DP Paket Umroh Reguler"
+                  value={editFormData.title}
+                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                />
+              </div>
+
+              {/* Status Pembayaran */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-800">Status Pembayaran Tagihan *</label>
+                  <span className="text-[10px] text-slate-500">Ubah sesuai kondisi riil</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={editFormData.status}
+                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 p-2 font-bold text-slate-900 bg-white"
+                  >
+                    <option value="PAID">✅ Lunas (PAID)</option>
+                    <option value="PENDING">⏳ Belum Bayar (PENDING)</option>
+                    <option value="OVERDUE">⚠️ Jatuh Tempo (OVERDUE)</option>
+                    <option value="CANCELLED">❌ Dibatalkan (CANCELLED)</option>
+                  </select>
+
+                  {editFormData.status === "PAID" ? (
+                    <select
+                      value={editFormData.paymentMethod}
+                      onChange={(e) => setEditFormData({ ...editFormData, paymentMethod: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 p-2 text-xs font-semibold bg-white"
+                    >
+                      <option value="BANK_TRANSFER">🏦 Transfer Bank</option>
+                      <option value="CASH">💵 Tunai Kantor</option>
+                      <option value="EDC">💳 Kartu Debit / EDC</option>
+                      <option value="QRIS">📱 QRIS</option>
+                    </select>
+                  ) : (
+                    <input
+                      type="date"
+                      value={editFormData.dueDate}
+                      onChange={(e) => setEditFormData({ ...editFormData, dueDate: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white"
+                      title="Tanggal Jatuh Tempo"
+                    />
+                  )}
+                </div>
+
+                {editFormData.status === "PAID" && (
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-600 block mb-1">
+                      Tanggal Pembayaran Diterima:
+                    </label>
+                    <input
+                      type="date"
+                      value={editFormData.paymentDate}
+                      onChange={(e) => setEditFormData({ ...editFormData, paymentDate: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white font-bold"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Pihak Penyetor */}
+              <div className="p-3 bg-emerald-50/50 border border-emerald-200 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-emerald-600" />
+                    Pihak Penyetor / Donatur
+                  </label>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetP = pilgrims.find((p) => p.id === editFormData.pilgrimId);
+                        setEditFormData({ ...editFormData, payerName: targetP?.name || "", payerPhone: targetP?.phone || "" });
+                      }}
+                      className="text-[9px] font-bold bg-white border border-slate-200 px-1.5 py-0.5 rounded hover:bg-slate-50 cursor-pointer"
+                    >
+                      Sesuai Jamaah
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditFormData({ ...editFormData, payerName: "Hamba Allah", payerPhone: "" })}
+                      className="text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded hover:bg-amber-200 cursor-pointer"
+                    >
+                      Hamba Allah
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Nama Penyetor (Kwitansi)"
+                    value={editFormData.payerName}
+                    onChange={(e) => setEditFormData({ ...editFormData, payerName: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 p-2 bg-white"
+                  />
+                  <input
+                    type="tel"
+                    placeholder="No HP Pembayar"
+                    value={editFormData.payerPhone}
+                    onChange={(e) => setEditFormData({ ...editFormData, payerPhone: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 p-2 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700">Catatan / Keterangan Promo / Rekening</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Koreksi nominal DP dan catatan potongan diskon..."
+                  value={editFormData.notes}
+                  onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setSelectedInvoiceForEdit(null)}
+                  className="px-4 py-2 rounded-xl border text-slate-600 font-bold hover:bg-slate-50 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700 shadow-md flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  {loading ? "Menyimpan..." : "Simpan Koreksi Data"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

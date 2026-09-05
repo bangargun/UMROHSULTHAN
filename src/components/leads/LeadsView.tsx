@@ -26,6 +26,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { formatCurrency, formatDate, getStatusBadge } from "@/lib/utils";
+import Pagination from "@/components/common/Pagination";
 
 interface LeadsViewProps {
   leads: any[];
@@ -38,6 +39,8 @@ interface LeadsViewProps {
 export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilgrim, onNavigateToFaq }: LeadsViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
@@ -108,6 +111,14 @@ export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilg
     const matchStatus = selectedStatus === "ALL" || lead.status === selectedStatus;
     return matchSearch && matchStatus;
   });
+
+  // Reset page when search or status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedStatus]);
+
+  // Paginated leads
+  const paginatedLeads = filteredLeads.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // Calculate metrics
   const totalLeads = leads.length;
@@ -465,7 +476,7 @@ export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilg
                   </td>
                 </tr>
               ) : (
-                filteredLeads.map((lead) => {
+                paginatedLeads.map((lead) => {
                   const isConverted = lead.status === "CLOSING_DP" || Boolean(lead.pilgrim);
                   return (
                     <tr key={lead.id} className="hover:bg-slate-50/80 transition-colors">
@@ -632,6 +643,19 @@ export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilg
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredLeads.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+          itemLabel="prospek"
+        />
       </div>
 
       {/* Modal 1: Input Prospek Baru */}

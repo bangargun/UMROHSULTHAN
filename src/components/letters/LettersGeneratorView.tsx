@@ -19,6 +19,7 @@ import {
   Edit3,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import Pagination from "@/components/common/Pagination";
 
 interface LettersGeneratorViewProps {
   letters: any[];
@@ -34,6 +35,8 @@ export default function LettersGeneratorView({
   initialPilgrim,
 }: LettersGeneratorViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [isAddModalOpen, setIsAddModalOpen] = useState(!!initialPilgrim);
   const [editingLetter, setEditingLetter] = useState<any | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -156,6 +159,14 @@ export default function LettersGeneratorView({
     l.destinationInstitution?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (l.customTitle && l.customTitle.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  // Paginated letters
+  const paginatedLetters = filteredLetters.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleTypeChange = (newType: string) => {
     const p = pilgrims.find((item) => item.id === formData.pilgrimId);
@@ -570,7 +581,7 @@ export default function LettersGeneratorView({
                   </td>
                 </tr>
               ) : (
-                filteredLetters.map((l) => (
+                paginatedLetters.map((l) => (
                   <tr key={l.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3.5 px-4">
                       <p className="font-mono font-bold text-slate-900">{l.letterNumber}</p>
@@ -629,6 +640,19 @@ export default function LettersGeneratorView({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredLetters.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+          itemLabel="surat"
+        />
       </div>
 
       {/* Modal: Form Terbitkan Surat (Standard & Custom Dynamic) */}

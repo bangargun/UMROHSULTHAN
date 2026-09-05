@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Sulthan Haramain',
   webDir: 'out',
   server: {
-    url: 'https://portalumroh.barokahgroupindonesia.tech',
+    url: 'https://portalumroh.barokahgroupindonesia.tech/portal',
     androidScheme: 'https',
     cleartext: true,
     allowNavigation: ['portalumroh.barokahgroupindonesia.tech', 'portalumroh-api.barokahgroupindonesia.tech', '*']

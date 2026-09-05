@@ -181,6 +181,15 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
             <span>Hak Akses Penuh: Superadmin, Operasional, Finance & Marketing</span>
           </div>
+
+          <div className="pt-2 border-t border-slate-800">
+            <a
+              href="/portal"
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-all shadow-sm"
+            >
+              <span>📱 Buka Mobile Portal Jamaah</span>
+            </a>
+          </div>
         </div>
       </div>
 

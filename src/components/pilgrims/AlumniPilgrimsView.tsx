@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Award,
   Search,
@@ -30,6 +30,7 @@ import {
   Info,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import Pagination from "@/components/common/Pagination";
 
 interface AlumniPilgrimsViewProps {
   pilgrims: any[];
@@ -48,6 +49,8 @@ export default function AlumniPilgrimsView({
   const [selectedYear, setSelectedYear] = useState<string>("ALL");
   const [selectedPackageId, setSelectedPackageId] = useState<string>("ALL");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [showInfoBanner, setShowInfoBanner] = useState(true);
   const [selectedPilgrimForCert, setSelectedPilgrimForCert] = useState<any | null>(null);
   const [selectedPilgrimForWA, setSelectedPilgrimForWA] = useState<any | null>(null);
@@ -116,6 +119,18 @@ export default function AlumniPilgrimsView({
       return true;
     });
   }, [alumniPilgrims, searchTerm, selectedYear, selectedPackageId, selectedStatus]);
+
+  // Auto-reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedYear, selectedPackageId, selectedStatus]);
+
+  const paginatedPilgrims = useMemo(() => {
+    return filteredPilgrims.slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
+    );
+  }, [filteredPilgrims, currentPage, pageSize]);
 
   // KPI Metrics
   const totalAlumni = alumniPilgrims.filter((p) => p.status === "RETURNED" || !p.status || p.status !== "DEPARTED").length;
@@ -486,7 +501,7 @@ export default function AlumniPilgrimsView({
                   </td>
                 </tr>
               ) : (
-                filteredPilgrims.map((p) => {
+                paginatedPilgrims.map((p) => {
                   const isDeparted = p.status === "DEPARTED";
                   const expInfo = getPassportExpiryStatus(p.passportExpiry);
 
@@ -618,6 +633,16 @@ export default function AlumniPilgrimsView({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredPilgrims.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          itemLabel="alumni jamaah"
+        />
       </div>
 
       {/* MODAL: INPUT ARSIP JAMAAH LAMPAU */}

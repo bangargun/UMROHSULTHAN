@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   UserCheck,
   Plus,
@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatDate, getStatusBadge } from "@/lib/utils";
 import RegistrationsAdminModal from "@/components/registrations/RegistrationsAdminModal";
+import Pagination from "@/components/common/Pagination";
 
 interface PilgrimsViewProps {
   pilgrims: any[];
@@ -517,6 +518,9 @@ export default function PilgrimsView({
     bloodType: "O",
     healthNotes: "",
     initialDpAmount: "10000000",
+    hasDiscount: false,
+    discountAmount: "",
+    discountReason: "",
   });
 
   // Edit form data
@@ -566,12 +570,16 @@ export default function PilgrimsView({
     bloodType: "O",
     healthNotes: "",
     status: "REGISTERED",
+    hasDiscount: false,
+    discountAmount: "",
+    discountReason: "",
   });
 
   const handleOpenEdit = (p: any) => {
     setEditingPilgrimId(p.id);
     const hasPass = Boolean(p.passportNumber && p.passportNumber.trim() !== "");
     const hasVis = Boolean(p.visaNumber && p.visaNumber.trim() !== "");
+    const pDisc = p.discountAmount || 0;
     setEditFormData({
       packageId: p.packageId || "",
       title: p.title || "Bpk",
@@ -618,6 +626,9 @@ export default function PilgrimsView({
       bloodType: p.bloodType || "O",
       healthNotes: p.healthNotes || "",
       status: p.status || "REGISTERED",
+      hasDiscount: pDisc > 0,
+      discountAmount: pDisc > 0 ? String(pDisc) : "",
+      discountReason: p.discountReason || "",
     });
 
     const hasMah = Boolean(p.mahramName && p.mahramName.trim() !== "");
@@ -636,6 +647,8 @@ export default function PilgrimsView({
     try {
       const payload = {
         ...editFormData,
+        discountAmount: editFormData.hasDiscount && editFormData.discountAmount ? parseFloat(editFormData.discountAmount) : 0,
+        discountReason: editFormData.hasDiscount ? editFormData.discountReason : null,
         passportName: editFormData.hasPassport ? editFormData.passportName : null,
         passportNumber: editFormData.hasPassport ? editFormData.passportNumber : null,
         passportIssuedDate: editFormData.hasPassport && editFormData.passportIssuedDate ? editFormData.passportIssuedDate : null,
@@ -745,6 +758,8 @@ export default function PilgrimsView({
   };
 
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Filter
   const filteredPilgrims = pilgrims.filter((p) => {
@@ -758,12 +773,24 @@ export default function PilgrimsView({
     return matchSearch && matchPackage && matchStatus;
   });
 
+  // Auto-reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedPackageId, selectedStatus]);
+
+  const paginatedPilgrims = filteredPilgrims.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   const handleAddPilgrim = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       const payload = {
         ...formData,
+        discountAmount: formData.hasDiscount && formData.discountAmount ? parseFloat(formData.discountAmount) : 0,
+        discountReason: formData.hasDiscount ? formData.discountReason : null,
         passportName: formData.hasPassport ? formData.passportName : null,
         passportNumber: formData.hasPassport ? formData.passportNumber : null,
         passportIssuedDate: formData.hasPassport && formData.passportIssuedDate ? formData.passportIssuedDate : null,
@@ -830,6 +857,9 @@ export default function PilgrimsView({
           bloodType: "O",
           healthNotes: "",
           initialDpAmount: "10000000",
+          hasDiscount: false,
+          discountAmount: "",
+          discountReason: "",
         });
         onRefresh();
       } else {
@@ -1183,7 +1213,7 @@ export default function PilgrimsView({
                   </td>
                 </tr>
               ) : (
-                filteredPilgrims.map((p) => {
+                paginatedPilgrims.map((p) => {
                   const badge = getStatusBadge(p.status);
                   const expInfo = getPassportExpiryStatus(p.passportExpiry, p.package?.departureDate);
 
@@ -1439,6 +1469,16 @@ export default function PilgrimsView({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredPilgrims.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          itemLabel="jamaah"
+        />
       </div>
 
       {/* Modal Detail Jamaah Lengkap */}
@@ -1725,20 +1765,22 @@ export default function PilgrimsView({
 
             {/* Kartu Status Keuangan, DP & Kekurangan Pelunasan */}
             {(() => {
-              const pkgPrice = (() => {
+              const grossPrice = (() => {
                 if (!selectedPilgrim.package) return 0;
                 if (selectedPilgrim.roomType === "TRIPLE") return selectedPilgrim.package.priceTriple || selectedPilgrim.package.priceQuad || 0;
                 if (selectedPilgrim.roomType === "DOUBLE") return selectedPilgrim.package.priceDouble || selectedPilgrim.package.priceQuad || 0;
                 return selectedPilgrim.package.priceQuad || 0;
               })();
 
+              const discountAmount = selectedPilgrim.discountAmount || 0;
+              const discountReason = selectedPilgrim.discountReason || "";
+              const netPrice = Math.max(0, grossPrice - discountAmount);
+
               const invoicesList = selectedPilgrim.invoices || [];
               const paidInvoices = invoicesList.filter((inv: any) => inv.status === "PAID");
               const totalPaid = paidInvoices.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
-              const pendingInvoices = invoicesList.filter((inv: any) => inv.status !== "PAID");
-              const totalPending = pendingInvoices.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
-              const remainingBalance = pkgPrice > 0 ? Math.max(0, pkgPrice - totalPaid) : totalPending;
-              const isFullySettled = remainingBalance === 0 && totalPaid > 0;
+              const remainingBalance = netPrice > 0 ? Math.max(0, netPrice - totalPaid) : 0;
+              const isFullySettled = remainingBalance === 0 && (totalPaid > 0 || (netPrice === 0 && grossPrice > 0));
 
               return (
                 <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-emerald-950 text-white p-4.5 space-y-3.5 shadow-md">
@@ -1764,15 +1806,30 @@ export default function PilgrimsView({
                     )}
                   </div>
 
+                  {/* Discount Banner if applicable */}
+                  {discountAmount > 0 && (
+                    <div className="bg-amber-400/20 border border-amber-400/40 rounded-xl p-2.5 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-amber-300 font-bold">🏷️ Diskon Khusus ({discountReason || "Promo Spesial"}):</span>
+                        <span className="font-mono font-black text-amber-200">- {formatCurrency(discountAmount)}</span>
+                      </div>
+                      <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full">
+                        Kewajiban Bersih: {formatCurrency(netPrice)}
+                      </span>
+                    </div>
+                  )}
+
                   {/* 3 Metric Summary Boxes */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="bg-white/10 rounded-xl p-3 border border-white/10">
-                      <span className="text-[10px] text-emerald-200 block">Total Biaya Paket ({selectedPilgrim.roomType || "QUAD"}):</span>
+                      <span className="text-[10px] text-emerald-200 block">
+                        {discountAmount > 0 ? `Kewajiban Bersih (${selectedPilgrim.roomType || "QUAD"}):` : `Total Biaya Paket (${selectedPilgrim.roomType || "QUAD"}):`}
+                      </span>
                       <strong className="text-base font-mono font-black text-white mt-0.5 block">
-                        {formatCurrency(pkgPrice)}
+                        {formatCurrency(netPrice)}
                       </strong>
                       <p className="text-[10px] text-slate-300 mt-0.5 line-clamp-1">
-                        {selectedPilgrim.package?.name || "Program Umroh"}
+                        {selectedPilgrim.package?.name || "Program Umroh"} {discountAmount > 0 ? `(Normal: ${formatCurrency(grossPrice)})` : ""}
                       </p>
                     </div>
 
@@ -2367,6 +2424,92 @@ export default function PilgrimsView({
                       className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-emerald-800 text-sm"
                     />
                   </div>
+                </div>
+
+                {/* Opsi Diskon Khusus Jamaah */}
+                <div className="p-3 bg-amber-50/80 border border-amber-300 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={formData.hasDiscount}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFormData({
+                            ...formData,
+                            hasDiscount: checked,
+                            discountAmount: checked ? (formData.discountAmount || "4000000") : "",
+                            discountReason: checked ? (formData.discountReason || "Promo Spesial Keberangkatan") : "",
+                          });
+                        }}
+                        className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <span className="font-bold text-amber-950 text-xs">
+                        🏷️ Berikan Diskon Khusus / Potongan Harga Promo
+                      </span>
+                    </label>
+                    {formData.hasDiscount && (
+                      <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
+                        Diskon Aktif
+                      </span>
+                    )}
+                  </div>
+
+                  {formData.hasDiscount && (
+                    <div className="space-y-2 pt-1 border-t border-amber-200">
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, discountAmount: "4000000", discountReason: "Promo Spesial Keberangkatan" })}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${formData.discountAmount === "4000000" ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-amber-200"}`}
+                        >
+                          🔥 Promo Rp 4 Jt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, discountAmount: "3000000", discountReason: "Diskon Khusus Tokoh / Ustadz" })}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${formData.discountAmount === "3000000" ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-amber-200"}`}
+                        >
+                          👳 Tokoh Rp 3 Jt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, discountAmount: "2000000", discountReason: "Diskon Keluarga / Mitra" })}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${formData.discountAmount === "2000000" ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-amber-200"}`}
+                        >
+                          👨‍👩‍👧 Keluarga Rp 2 Jt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, discountAmount: "1000000", discountReason: "Early Bird / Booking Awal" })}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${formData.discountAmount === "1000000" ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-amber-200"}`}
+                        >
+                          ⚡ Early Bird Rp 1 Jt
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-0.5">Nominal Potongan (Rp)</label>
+                          <input
+                            type="number"
+                            value={formData.discountAmount}
+                            onChange={(e) => setFormData({ ...formData, discountAmount: e.target.value })}
+                            className="w-full px-2.5 py-1.5 rounded-xl border border-amber-300 font-bold text-amber-900 bg-white text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-0.5">Alasan / Jenis Diskon</label>
+                          <input
+                            type="text"
+                            value={formData.discountReason}
+                            onChange={(e) => setFormData({ ...formData, discountReason: e.target.value })}
+                            className="w-full px-2.5 py-1.5 rounded-xl border border-amber-300 font-medium text-slate-800 bg-white text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3447,6 +3590,92 @@ export default function PilgrimsView({
                       <option value="RETURNED">🕋 Selesai / Pulang (RETURNED)</option>
                     </select>
                   </div>
+                </div>
+
+                {/* Opsi Diskon Khusus Jamaah */}
+                <div className="p-3 bg-amber-50/80 border border-amber-300 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editFormData.hasDiscount}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setEditFormData({
+                            ...editFormData,
+                            hasDiscount: checked,
+                            discountAmount: checked ? (editFormData.discountAmount || "4000000") : "",
+                            discountReason: checked ? (editFormData.discountReason || "Promo Spesial Keberangkatan") : "",
+                          });
+                        }}
+                        className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <span className="font-bold text-amber-950 text-xs">
+                        🏷️ Diskon Khusus / Potongan Harga Promo Jamaah
+                      </span>
+                    </label>
+                    {editFormData.hasDiscount && (
+                      <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
+                        Diskon Aktif
+                      </span>
+                    )}
+                  </div>
+
+                  {editFormData.hasDiscount && (
+                    <div className="space-y-2 pt-1 border-t border-amber-200">
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditFormData({ ...editFormData, discountAmount: "4000000", discountReason: "Promo Spesial Keberangkatan" })}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${editFormData.discountAmount === "4000000" ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-amber-200"}`}
+                        >
+                          🔥 Promo Rp 4 Jt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditFormData({ ...editFormData, discountAmount: "3000000", discountReason: "Diskon Khusus Tokoh / Ustadz" })}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${editFormData.discountAmount === "3000000" ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-amber-200"}`}
+                        >
+                          👳 Tokoh Rp 3 Jt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditFormData({ ...editFormData, discountAmount: "2000000", discountReason: "Diskon Keluarga / Mitra" })}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${editFormData.discountAmount === "2000000" ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-amber-200"}`}
+                        >
+                          👨‍👩‍👧 Keluarga Rp 2 Jt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditFormData({ ...editFormData, discountAmount: "1000000", discountReason: "Early Bird / Booking Awal" })}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${editFormData.discountAmount === "1000000" ? "bg-amber-600 text-white border-amber-700" : "bg-white text-slate-700 border-amber-200"}`}
+                        >
+                          ⚡ Early Bird Rp 1 Jt
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-0.5">Nominal Potongan (Rp)</label>
+                          <input
+                            type="number"
+                            value={editFormData.discountAmount}
+                            onChange={(e) => setEditFormData({ ...editFormData, discountAmount: e.target.value })}
+                            className="w-full px-2.5 py-1.5 rounded-xl border border-amber-300 font-bold text-amber-900 bg-white text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-0.5">Alasan / Jenis Diskon</label>
+                          <input
+                            type="text"
+                            value={editFormData.discountReason}
+                            onChange={(e) => setEditFormData({ ...editFormData, discountReason: e.target.value })}
+                            className="w-full px-2.5 py-1.5 rounded-xl border border-amber-300 font-medium text-slate-800 bg-white text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

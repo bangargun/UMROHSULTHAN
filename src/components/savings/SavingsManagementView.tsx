@@ -23,6 +23,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import Pagination from "@/components/common/Pagination";
 
 interface SavingsManagementViewProps {
   packages: any[];
@@ -34,6 +35,8 @@ export default function SavingsManagementView({ packages, onRefresh }: SavingsMa
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -196,6 +199,14 @@ export default function SavingsManagementView({ packages, onRefresh }: SavingsMa
     return matchSearch && matchStatus;
   });
 
+  // Reset page when search or status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  // Paginated accounts
+  const paginatedAccounts = filteredAccounts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   // KPI Metrics
   const totalSavingsBalance = accounts.reduce((acc, curr) => acc + (curr.totalBalance || 0), 0);
   const targetReachedCount = accounts.filter((acc) => acc.status === "TARGET_REACHED").length;
@@ -308,7 +319,7 @@ export default function SavingsManagementView({ packages, onRefresh }: SavingsMa
                   </td>
                 </tr>
               ) : (
-                filteredAccounts.map((acc) => {
+                paginatedAccounts.map((acc) => {
                   const percent = Math.min(100, Math.round((acc.totalBalance / acc.targetAmount) * 100));
                   const remaining = Math.max(0, acc.targetAmount - acc.totalBalance);
 
@@ -408,6 +419,21 @@ export default function SavingsManagementView({ packages, onRefresh }: SavingsMa
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {!loading && filteredAccounts.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredAccounts.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+            itemLabel="rekening tabungan"
+          />
+        )}
       </div>
 
       {/* MODAL 1: BUKA REKENING PENABUNG BARU */}

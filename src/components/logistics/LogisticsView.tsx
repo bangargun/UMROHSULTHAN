@@ -21,6 +21,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import Pagination from "@/components/common/Pagination";
 
 interface LogisticsViewProps {
   equipment: any[];
@@ -32,6 +33,10 @@ export default function LogisticsView({ equipment, onRefresh, onNavigateToHandov
   const [activeTab, setActiveTab] = useState<"STOCK" | "HISTORY">("STOCK");
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [stockPage, setStockPage] = useState(1);
+  const [stockPageSize, setStockPageSize] = useState(10);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
   const [movementsHistory, setMovementsHistory] = useState<any[]>([]);
   const [isMutationModalOpen, setIsMutationModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -96,6 +101,15 @@ export default function LogisticsView({ equipment, onRefresh, onNavigateToHandov
       ref.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
+
+  // Reset pagination when search or category changes
+  useEffect(() => {
+    setStockPage(1);
+    setHistoryPage(1);
+  }, [searchTerm, categoryFilter]);
+
+  const paginatedEquipment = filteredEquipment.slice((stockPage - 1) * stockPageSize, stockPage * stockPageSize);
+  const paginatedMovements = filteredMovements.slice((historyPage - 1) * historyPageSize, historyPage * historyPageSize);
 
   const handleOpenEdit = (item: any) => {
     setEditingEquipment(item);
@@ -356,7 +370,7 @@ export default function LogisticsView({ equipment, onRefresh, onNavigateToHandov
                     </td>
                   </tr>
                 ) : (
-                  filteredEquipment.map((item) => {
+                  paginatedEquipment.map((item) => {
                     const isLowStock = item.availableStock <= item.minStockAlert;
                     const isOutOfStock = item.availableStock === 0;
                     const badge = getCategoryBadge(item.category);
@@ -429,7 +443,7 @@ export default function LogisticsView({ equipment, onRefresh, onNavigateToHandov
                             <button
                               onClick={() => {
                                 setMutationForm({
-                                  equipmentId: item.id,
+                                   equipmentId: item.id,
                                   movementDate: new Date().toISOString().split("T")[0],
                                   type: "IN_PURCHASE",
                                   quantity: "10",
@@ -467,6 +481,21 @@ export default function LogisticsView({ equipment, onRefresh, onNavigateToHandov
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {filteredEquipment.length > 0 && (
+            <Pagination
+              currentPage={stockPage}
+              totalItems={filteredEquipment.length}
+              pageSize={stockPageSize}
+              onPageChange={setStockPage}
+              onPageSizeChange={(newSize) => {
+                setStockPageSize(newSize);
+                setStockPage(1);
+              }}
+              itemLabel="barang"
+            />
+          )}
         </div>
       )}
 
@@ -495,7 +524,7 @@ export default function LogisticsView({ equipment, onRefresh, onNavigateToHandov
                     </td>
                   </tr>
                 ) : (
-                  filteredMovements.map((m) => {
+                  paginatedMovements.map((m) => {
                     const badge = getMovementTypeBadge(m.type);
                     const isPlus = m.type === "IN_PURCHASE" || m.type === "RETURN";
 
@@ -545,6 +574,21 @@ export default function LogisticsView({ equipment, onRefresh, onNavigateToHandov
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {filteredMovements.length > 0 && (
+            <Pagination
+              currentPage={historyPage}
+              totalItems={filteredMovements.length}
+              pageSize={historyPageSize}
+              onPageChange={setHistoryPage}
+              onPageSizeChange={(newSize) => {
+                setHistoryPageSize(newSize);
+                setHistoryPage(1);
+              }}
+              itemLabel="riwayat mutasi"
+            />
+          )}
         </div>
       )}
 
