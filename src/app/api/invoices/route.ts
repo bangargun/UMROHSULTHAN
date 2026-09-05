@@ -69,6 +69,9 @@ export async function POST(request: Request) {
         const count = await prisma.invoice.count();
         const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(count + 1 + i).padStart(4, "0")}`;
 
+        const totalDiscount = discountAmount ? (parseFloat(discountAmount) || 0) : 0;
+        const pilgrimDiscount = totalDiscount > 0 ? (totalDiscount / validAllocations.length) : 0;
+
         const invoice = await prisma.invoice.create({
           data: {
             invoiceNumber,
@@ -82,6 +85,8 @@ export async function POST(request: Request) {
             paymentDate: actualPaymentDate,
             payerName: payerName || null,
             payerPhone: payerPhone || null,
+            discountAmount: pilgrimDiscount,
+            discountReason: discountReason || null,
             notes: notes || null,
           },
           include: {
@@ -93,14 +98,24 @@ export async function POST(request: Request) {
           const allPilgrimInvoices = await prisma.invoice.findMany({
             where: { pilgrimId: item.pilgrimId },
           });
-          const pendingInvoices = allPilgrimInvoices.filter((inv) => inv.status !== "PAID");
-          let newPilgrimStatus = "DP_PAID";
-          if (pendingInvoices.length === 0) {
-            newPilgrimStatus = "FULLY_PAID";
-          }
+          const pilgrimData = await prisma.pilgrim.findUnique({
+            where: { id: item.pilgrimId },
+            include: { package: true },
+          });
+          const paidInvoices = allPilgrimInvoices.filter((inv) => inv.status === "PAID");
+          const totalPaid = paidInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+
+          let grossPrice = pilgrimData?.package ? (pilgrimData.package.priceQuad || 0) : 0;
+          if (pilgrimData?.roomType === "TRIPLE" && pilgrimData.package?.priceTriple) grossPrice = pilgrimData.package.priceTriple;
+          if (pilgrimData?.roomType === "DOUBLE" && pilgrimData.package?.priceDouble) grossPrice = pilgrimData.package.priceDouble;
+
+          const effDiscount = Math.max(pilgrimData?.discountAmount || 0, pilgrimDiscount);
+          const netObligation = Math.max(0, grossPrice - effDiscount);
+
+          const isFullyPaid = totalPaid >= netObligation && netObligation > 0;
           await prisma.pilgrim.update({
             where: { id: item.pilgrimId },
-            data: { status: newPilgrimStatus },
+            data: { status: isFullyPaid ? "FULLY_PAID" : "DP_PAID" },
           });
         }
 

@@ -359,6 +359,8 @@ export default function ProfitLossView({ packages, onRefreshAll }: ProfitLossVie
   };
 
   const summary = plData?.summary || {
+    grossRevenue: 0,
+    salesDiscount: 0,
     totalRevenuePaid: 0,
     totalRevenuePending: 0,
     totalHPP: 0,
@@ -514,19 +516,25 @@ export default function ProfitLossView({ packages, onRefreshAll }: ProfitLossVie
 
       {/* KPI Cards Summary */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 no-print">
-        {/* Total Pendapatan Kas */}
+        {/* Total Pendapatan Usaha */}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Total Pendapatan (Revenue)
+              Pendapatan Usaha Bersih
             </span>
             <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
           <h3 className="text-2xl font-black text-slate-900 mt-2">{formatCurrency(summary.totalRevenuePaid)}</h3>
-          <p className="text-[11px] text-slate-400 mt-1">
-            Akun Kategori 4xxx (Kredit Jurnal)
+          <p className="text-[11px] text-slate-500 mt-1">
+            {summary.salesDiscount > 0 ? (
+              <span className="text-amber-700 font-semibold">
+                Bruto {formatCurrency(summary.grossRevenue || summary.totalRevenuePaid)} (Diskon {formatCurrency(summary.salesDiscount)})
+              </span>
+            ) : (
+              "Akun Kategori 4xxx (Net Revenue)"
+            )}
           </p>
         </div>
 
@@ -557,7 +565,7 @@ export default function ProfitLossView({ packages, onRefreshAll }: ProfitLossVie
           <h3 className={`text-2xl font-black mt-2 ${summary.grossProfit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
             {formatCurrency(summary.grossProfit)}
           </h3>
-          <p className="text-[11px] text-slate-400 mt-1">Pendapatan - Beban HPP Paket</p>
+          <p className="text-[11px] text-slate-400 mt-1">Pendapatan Bersih - Beban HPP Paket</p>
         </div>
 
         {/* Laba Bersih */}
@@ -570,21 +578,19 @@ export default function ProfitLossView({ packages, onRefreshAll }: ProfitLossVie
               Margin {summary.netMargin.toFixed(1)}%
             </span>
           </div>
-          <h3 className="text-2xl font-black mt-2 text-amber-300">
-            {formatCurrency(summary.netProfit)}
-          </h3>
-          <p className="text-[11px] text-emerald-200 mt-1">Laba Kotor - Beban Opex Kantor</p>
+          <h3 className="text-2xl font-black text-white mt-2">{formatCurrency(summary.netProfit)}</h3>
+          <p className="text-[11px] text-emerald-200 mt-1">Laba Bersih Setelah Dikurangi OPEX</p>
         </div>
       </div>
 
-      {/* TABS NAVIGATION */}
-      <div className="flex gap-2 border-b border-slate-200 pb-3 no-print overflow-x-auto">
+      {/* Main Tab Navigation */}
+      <div className="flex border-b border-slate-200 space-x-4 no-print">
         <button
           onClick={() => setActiveTab("STATEMENT")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+          className={`pb-3 text-xs font-black uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${
             activeTab === "STATEMENT"
-              ? "bg-emerald-600 text-white shadow-xs"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              ? "border-emerald-600 text-emerald-700"
+              : "border-transparent text-slate-400 hover:text-slate-600"
           }`}
         >
           <Receipt className="w-4 h-4" /> 1. Laporan Laba Rugi Komprehensif
@@ -592,46 +598,46 @@ export default function ProfitLossView({ packages, onRefreshAll }: ProfitLossVie
 
         <button
           onClick={() => setActiveTab("JOURNAL")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+          className={`pb-3 text-xs font-black uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${
             activeTab === "JOURNAL"
-              ? "bg-emerald-600 text-white shadow-xs"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              ? "border-emerald-600 text-emerald-700"
+              : "border-transparent text-slate-400 hover:text-slate-600"
           }`}
         >
-          <BookOpen className="w-4 h-4" /> 2. Jurnal Umum Akuntansi ({journalEntries.length})
+          <BookOpen className="w-4 h-4" /> 2. Jurnal Umum (Double-Entry)
         </button>
 
         <button
           onClick={() => setActiveTab("PACKAGES")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+          className={`pb-3 text-xs font-black uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${
             activeTab === "PACKAGES"
-              ? "bg-emerald-600 text-white shadow-xs"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              ? "border-emerald-600 text-emerald-700"
+              : "border-transparent text-slate-400 hover:text-slate-600"
           }`}
         >
-          <Plane className="w-4 h-4" /> 3. Profitabilitas per Paket Umroh
+          <PieChart className="w-4 h-4" /> 3. Analisis Laba Per Paket
         </button>
 
         <button
           onClick={() => setActiveTab("EXPENSES")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+          className={`pb-3 text-xs font-black uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${
             activeTab === "EXPENSES"
-              ? "bg-emerald-600 text-white shadow-xs"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              ? "border-emerald-600 text-emerald-700"
+              : "border-transparent text-slate-400 hover:text-slate-600"
           }`}
         >
-          <DollarSign className="w-4 h-4" /> 4. Kas Keluar & Pengeluaran ({expenses.length})
+          <DollarSign className="w-4 h-4" /> 4. Riwayat Beban & Pengeluaran
         </button>
       </div>
 
-      {/* TAB 1: FORMAL INCOME STATEMENT (PRINTABLE A4) */}
+      {/* TAB 1: LAPORAN LABA RUGI RESMI (INCOME STATEMENT - PRINT READY) */}
       {activeTab === "STATEMENT" && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm max-w-4xl mx-auto space-y-6">
-          {/* Header Report */}
-          <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
-            <h1 className="text-base sm:text-lg font-black tracking-wide uppercase text-slate-900 leading-none">
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-10 shadow-sm space-y-6 max-w-4xl mx-auto">
+          {/* Official Letterhead (KOP Resmi PPIU) */}
+          <div className="text-center border-b-2 border-emerald-800 pb-4 space-y-1">
+            <h2 className="text-base sm:text-lg font-black tracking-wide text-slate-900 uppercase">
               {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
-            </h1>
+            </h2>
             <p className="text-[10px] text-slate-600 leading-tight">
               {travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}
             </p>
@@ -662,26 +668,39 @@ export default function ProfitLossView({ packages, onRefreshAll }: ProfitLossVie
 
           {/* Statement Content */}
           <div className="space-y-6 text-xs text-slate-900">
-            {/* 1. PENDAPATAN */}
+            {/* 1. PENDAPATAN USAHA */}
             <div className="space-y-2">
               <div className="flex justify-between items-center bg-slate-100 p-2.5 rounded-lg font-bold">
                 <span className="uppercase text-slate-800 font-black">I. PENDAPATAN USAHA (REVENUE)</span>
-                <span>{formatCurrency(summary.totalRevenuePaid)}</span>
+                <span className="font-mono font-bold text-slate-900">{formatCurrency(summary.totalRevenuePaid)}</span>
               </div>
-              <div className="pl-4 space-y-1.5">
-                {Object.keys(breakdownRevenue).length === 0 ? (
-                  <div className="flex justify-between text-slate-700">
-                    <span>• Pendapatan Paket Umroh & Haji</span>
-                    <span className="font-semibold">{formatCurrency(summary.totalRevenuePaid)}</span>
-                  </div>
-                ) : (
-                  Object.entries(breakdownRevenue).map(([name, val]) => (
-                    <div key={name} className="flex justify-between text-slate-700">
-                      <span>• {name}</span>
-                      <span className="font-semibold">{formatCurrency(val as number)}</span>
-                    </div>
-                  ))
-                )}
+              <div className="pl-4 space-y-2">
+                {/* 1.1 Pendapatan Bruto */}
+                <div className="flex justify-between text-slate-700">
+                  <span>• Pendapatan Bruto Paket Umroh</span>
+                  <span className="font-semibold font-mono">{formatCurrency(summary.grossRevenue || summary.totalRevenuePaid)}</span>
+                </div>
+
+                {/* 1.2 Potongan Diskon Penjualan */}
+                <div className="flex justify-between text-amber-900 font-medium">
+                  <span className="flex items-center gap-1.5">
+                    • Potongan Diskon & Promo Penjualan
+                    {summary.salesDiscount > 0 && (
+                      <span className="text-[9.5px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">
+                        Diskon Promo
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-semibold font-mono text-amber-800">
+                    {summary.salesDiscount > 0 ? `(${formatCurrency(summary.salesDiscount)})` : "(Rp 0)"}
+                  </span>
+                </div>
+
+                {/* 1.3 Total Pendapatan Bersih (Net Revenue) */}
+                <div className="flex justify-between border-t border-slate-200 pt-1.5 font-bold text-slate-900">
+                  <span className="text-slate-800">• Total Pendapatan Usaha Bersih (Net Revenue)</span>
+                  <span className="font-mono font-black text-emerald-800">{formatCurrency(summary.totalRevenuePaid)}</span>
+                </div>
               </div>
             </div>
 

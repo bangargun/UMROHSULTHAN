@@ -77,6 +77,33 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       packageId,
     } = body;
 
+    const existingPilgrim = await prisma.pilgrim.findUnique({ where: { id: params.id } });
+    if (!existingPilgrim) {
+      return NextResponse.json({ error: "Jamaah tidak ditemukan" }, { status: 404 });
+    }
+
+    if (packageId && packageId !== existingPilgrim.packageId) {
+      try {
+        await prisma.package.update({
+          where: { id: existingPilgrim.packageId },
+          data: { bookedCount: { decrement: 1 } },
+        });
+        await prisma.package.update({
+          where: { id: packageId },
+          data: { bookedCount: { increment: 1 } },
+        });
+      } catch (pkgErr) {
+        console.warn("Failed to rebalance package bookedCount:", pkgErr);
+      }
+    }
+
+    const parseDateSafe = (val: any) => {
+      if (val === undefined) return undefined;
+      if (!val || val === "" || val === "null") return null;
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
     const updated = await prisma.pilgrim.update({
       where: { id: params.id },
       data: {
@@ -87,11 +114,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         nik: nik !== undefined ? nik : undefined,
         passportName: passportName !== undefined ? passportName : undefined,
         passportNumber: passportNumber !== undefined ? passportNumber : undefined,
-        passportIssuedDate: passportIssuedDate ? new Date(passportIssuedDate) : passportIssuedDate === null ? null : undefined,
+        passportIssuedDate: parseDateSafe(passportIssuedDate),
         passportIssuedCity: passportIssuedCity !== undefined ? passportIssuedCity : undefined,
-        passportExpiry: passportExpiry ? new Date(passportExpiry) : passportExpiry === null ? null : undefined,
+        passportExpiry: parseDateSafe(passportExpiry),
         placeOfBirth: placeOfBirth !== undefined ? placeOfBirth : undefined,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : dateOfBirth === null ? null : undefined,
+        dateOfBirth: parseDateSafe(dateOfBirth),
         gender: gender !== undefined ? gender : undefined,
         address: address !== undefined ? address : undefined,
         subDistrict: subDistrict !== undefined ? subDistrict : undefined,
@@ -107,8 +134,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         job: job !== undefined ? job : undefined,
         visaProvider: visaProvider !== undefined ? visaProvider : undefined,
         visaNumber: visaNumber !== undefined ? visaNumber : undefined,
-        visaIssueDate: visaIssueDate ? new Date(visaIssueDate) : visaIssueDate === null ? null : undefined,
-        visaExpiryDate: visaExpiryDate ? new Date(visaExpiryDate) : visaExpiryDate === null ? null : undefined,
+        visaIssueDate: parseDateSafe(visaIssueDate),
+        visaExpiryDate: parseDateSafe(visaExpiryDate),
         mofaNumber: mofaNumber !== undefined ? mofaNumber : undefined,
         muassasahName: muassasahName !== undefined ? muassasahName : undefined,
         insuranceNumber: insuranceNumber !== undefined ? insuranceNumber : undefined,
@@ -129,7 +156,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         marriageBookFileUrl: body.marriageBookFileUrl !== undefined ? body.marriageBookFileUrl : undefined,
         portalPassword: body.portalPassword !== undefined ? body.portalPassword : undefined,
         status: status !== undefined ? status : undefined,
-        packageId: packageId !== undefined ? packageId : undefined,
+        package: packageId ? { connect: { id: packageId } } : undefined,
         discountAmount: body.discountAmount !== undefined ? (parseFloat(body.discountAmount) || 0) : undefined,
         discountReason: body.discountReason !== undefined ? body.discountReason : undefined,
       },
@@ -181,8 +208,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     return NextResponse.json(updated);
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to update pilgrim" }, { status: 500 });
+  } catch (error: any) {
+    console.error("PUT pilgrim error:", error);
+    return NextResponse.json({ error: error?.message || "Failed to update pilgrim" }, { status: 500 });
   }
 }
 

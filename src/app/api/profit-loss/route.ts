@@ -42,6 +42,7 @@ export async function GET(request: Request) {
     const hasJournalData = journalEntries.length > 0;
 
     let totalRevenuePaid = 0;
+    let totalSalesDiscount = 0;
     let totalHPP = 0;
     let totalOperational = 0;
     const breakdownRevenue: { [key: string]: number } = {};
@@ -52,10 +53,18 @@ export async function GET(request: Request) {
       journalEntries.forEach((entry) => {
         entry.lines.forEach((line) => {
           if (line.accountCategory === "REVENUE") {
-            const val = line.credit - line.debit;
-            totalRevenuePaid += val;
-            const key = line.accountName || line.accountCode;
-            breakdownRevenue[key] = (breakdownRevenue[key] || 0) + val;
+            const netVal = line.credit - line.debit;
+            if (line.debit > line.credit) {
+              // Contra-revenue / Sales Discount
+              const discVal = line.debit - line.credit;
+              totalSalesDiscount += discVal;
+              const key = line.accountName || "Potongan Diskon Penjualan";
+              breakdownRevenue[key] = (breakdownRevenue[key] || 0) - discVal;
+            } else {
+              totalRevenuePaid += netVal;
+              const key = line.accountName || line.accountCode;
+              breakdownRevenue[key] = (breakdownRevenue[key] || 0) + netVal;
+            }
           } else if (line.accountCategory === "HPP_EXPENSE") {
             const val = line.debit - line.credit;
             totalHPP += val;
@@ -70,8 +79,8 @@ export async function GET(request: Request) {
         });
       });
     } else {
-      // Fallback to Invoices & Expenses if no journal entries yet
-      const [invoices, expenses] = await Promise.all([
+      // Fallback to Invoices & Expenses & Pilgrims if no journal entries yet
+      const [invoices, expenses, pilgrims] = await Promise.all([
         prisma.invoice.findMany({
           where: hasDateFilter ? { paymentDate: dateFilter } : {},
           include: { pilgrim: { include: { package: true } } },
@@ -80,36 +89,34 @@ export async function GET(request: Request) {
           where: hasDateFilter ? { expenseDate: dateFilter } : {},
           include: { package: true },
         }),
+        prisma.pilgrim.findMany({
+          include: { package: true, invoices: true },
+        }),
       ]);
 
       invoices.forEach((inv) => {
         if (inv.status === "PAID") {
           totalRevenuePaid += inv.amount;
-          breakdownRevenue["Pendapatan Paket Umroh"] = (breakdownRevenue["Pendapatan Paket Umroh"] || 0) + inv.amount;
+        }
+        if (inv.discountAmount && inv.discountAmount > 0) {
+          totalSalesDiscount += inv.discountAmount;
         }
       });
 
-      const hppCategories = [
-        "TIKET_PESAWAT",
-        "HOTEL_SAUDI",
-        "VISA_ASURANSI",
-        "MUTHAWWIF_HANDLING",
-        "LOGISTIK_VENDOR",
-        "KOMISI_AGEN",
-        "KOMISI_REFERRAL",
-      ];
-      expenses.forEach((exp) => {
-        if (hppCategories.includes(exp.category)) {
-          totalHPP += exp.amount;
-          breakdownHPP[exp.title || exp.category] = (breakdownHPP[exp.title || exp.category] || 0) + exp.amount;
-        } else {
-          totalOperational += exp.amount;
-          breakdownOperational[exp.title || exp.category] = (breakdownOperational[exp.title || exp.category] || 0) + exp.amount;
-        }
-      });
+      // If no invoice-level discounts tracked, sum from pilgrim profiles
+      if (totalSalesDiscount === 0) {
+        totalSalesDiscount = pilgrims.reduce((sum, p) => sum + (p.discountAmount || 0), 0);
+      }
+
+      const grossRevenue = totalRevenuePaid + totalSalesDiscount;
+      breakdownRevenue["Pendapatan Bruto Paket Umroh"] = grossRevenue;
+      if (totalSalesDiscount > 0) {
+        breakdownRevenue["Potongan Diskon & Promo Penjualan"] = -totalSalesDiscount;
+      }
     }
 
-    const totalRevenue = totalRevenuePaid;
+    const grossRevenue = totalRevenuePaid + totalSalesDiscount;
+    const totalRevenue = totalRevenuePaid; // Net recognized revenue
     const grossProfit = totalRevenue - totalHPP;
     const totalExpenses = totalHPP + totalOperational;
     const netProfit = grossProfit - totalOperational;
@@ -165,6 +172,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       summary: {
+        grossRevenue,
+        salesDiscount: totalSalesDiscount,
         totalRevenuePaid,
         totalRevenuePending: 0,
         totalRevenue,

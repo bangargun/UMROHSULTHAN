@@ -47,6 +47,10 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
   const [pageSize, setPageSize] = useState(10);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedInvoiceForReceipt, setSelectedInvoiceForReceipt] = useState<any | null>(null);
+  const [multiReceiptInvoices, setMultiReceiptInvoices] = useState<any[] | null>(null);
+  const [receiptViewMode, setReceiptViewMode] = useState<"GROUP" | "INDIVIDUAL">("GROUP");
+  const [selectedIndividualIndex, setSelectedIndividualIndex] = useState<number>(0);
+  const [printAllIndividual, setPrintAllIndividual] = useState<boolean>(false);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<any | null>(null);
   const [selectedInvoiceForEdit, setSelectedInvoiceForEdit] = useState<any | null>(null);
   const [editFormData, setEditFormData] = useState({
@@ -230,6 +234,34 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
     }
   };
 
+  // Helper to find related invoices created in the same multi-payment or batch
+  const findRelatedInvoices = (targetInv: any) => {
+    if (!targetInv) return [];
+    const targetTime = new Date(targetInv.createdAt || targetInv.paymentDate || new Date()).getTime();
+    const related = invoices.filter((i) => {
+      if (i.id === targetInv.id) return true;
+      const iTime = new Date(i.createdAt || i.paymentDate || new Date()).getTime();
+      const timeDiff = Math.abs(targetTime - iTime);
+      const samePayer = targetInv.payerName && i.payerName && targetInv.payerName.trim().toLowerCase() === i.payerName.trim().toLowerCase();
+      const sameStatus = targetInv.status === i.status;
+      
+      // Matched if same payer and same status created within 15 minutes of each other
+      if (samePayer && sameStatus && timeDiff <= 15 * 60 * 1000) return true;
+      return false;
+    });
+    return related.length > 0 ? related : [targetInv];
+  };
+
+  const openReceiptModal = (inv: any, customGroupInvoices?: any[]) => {
+    const group = (customGroupInvoices && customGroupInvoices.length > 0) ? customGroupInvoices : findRelatedInvoices(inv);
+    setMultiReceiptInvoices(group);
+    setSelectedInvoiceForReceipt(inv);
+    setReceiptViewMode(group.length > 1 ? "GROUP" : "INDIVIDUAL");
+    const idx = group.findIndex((i: any) => i.id === inv.id);
+    setSelectedIndividualIndex(idx >= 0 ? idx : 0);
+    setPrintAllIndividual(false);
+  };
+
   // Financial calculations
   let totalRevenue = 0;
   let totalPending = 0;
@@ -321,11 +353,14 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
       if (res.ok) {
         const data = await res.json();
         setIsAddModalOpen(false);
-        const createdInv = data.invoice || (Array.isArray(data.invoices) ? data.invoices[0] : data);
+        const createdInvList = data.invoices && Array.isArray(data.invoices) && data.invoices.length > 0
+          ? data.invoices
+          : (data.invoice ? [data.invoice] : (Array.isArray(data) ? data : [data]));
+        const createdInv = createdInvList[0];
 
         // If direct payment is checked, immediately show printable Kwitansi!
         if (formData.isDirectPayment && createdInv) {
-          setSelectedInvoiceForReceipt(createdInv);
+          openReceiptModal(createdInv, createdInvList);
         }
 
         setFormData({
@@ -376,7 +411,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
         alert("Pembayaran berhasil dicatat!");
         onRefresh();
         // Immediately show printable Kwitansi!
-        setSelectedInvoiceForReceipt(updatedInvoice);
+        openReceiptModal(updatedInvoice);
       }
     } catch (err) {
       console.error(err);
@@ -659,7 +694,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                           {/* Print Invoice / Tagihan (Pending) */}
                           {!isPaid && (
                             <button
-                              onClick={() => setSelectedInvoiceForReceipt(inv)}
+                              onClick={() => openReceiptModal(inv)}
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
                               title="Cetak Surat Tagihan / Invoice"
                             >
@@ -680,7 +715,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                             </button>
                           ) : (
                             <button
-                              onClick={() => setSelectedInvoiceForReceipt(inv)}
+                              onClick={() => openReceiptModal(inv)}
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
                               title="Cetak Kwitansi Pembayaran Sah"
                             >
@@ -1040,22 +1075,33 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 </div>
               </div>
 
-              {/* Smart Financial Indicator Box (Supports Single & Multi-Jamaah Aggregation) */}
+              {/* Smart Financial Indicator Box (Supports Single & Multi-Jamaah Aggregation with Discount Support) */}
               {(() => {
                 if (formData.isMultiPilgrim) {
                   const selPilgrims = pilgrims.filter((p) => formData.selectedPilgrimIds.includes(p.id));
                   if (selPilgrims.length === 0) return null;
 
-                  let totalPkgPrice = 0;
+                  let totalGrossPrice = 0;
+                  let totalProfileDiscount = 0;
                   let totalPaid = 0;
-                  let totalRemaining = 0;
 
                   selPilgrims.forEach((p) => {
-                    const fin = getPilgrimFinancials(p);
-                    totalPkgPrice += fin.pkgPrice;
-                    totalPaid += fin.totalPaid;
-                    totalRemaining += fin.remaining;
+                    let gross = p.package ? (p.package.priceQuad || 0) : 0;
+                    if (p.roomType === "TRIPLE" && p.package?.priceTriple) gross = p.package.priceTriple;
+                    if (p.roomType === "DOUBLE" && p.package?.priceDouble) gross = p.package.priceDouble;
+                    totalGrossPrice += gross;
+                    totalProfileDiscount += (p.discountAmount || 0);
+
+                    const pilgrimInvoices = p.invoices && p.invoices.length > 0 ? p.invoices : invoices.filter((inv: any) => inv.pilgrimId === p.id);
+                    const paidInvoices = pilgrimInvoices.filter((inv: any) => inv.status === "PAID");
+                    totalPaid += paidInvoices.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
                   });
+
+                  // Effective discount: If form discount is toggled on, use the form input; otherwise sum profile discounts
+                  const formDiscount = formData.hasDiscount && formData.discountAmount ? (parseFloat(formData.discountAmount) || 0) : 0;
+                  const totalDiscount = formData.hasDiscount ? formDiscount : totalProfileDiscount;
+                  const totalNetPrice = Math.max(0, totalGrossPrice - totalDiscount);
+                  const totalRemaining = Math.max(0, totalNetPrice - totalPaid);
 
                   const currentTotalInput = parseFloat(formData.amount || "0") || 0;
                   const projectedTotalRemaining = Math.max(0, totalRemaining - currentTotalInput);
@@ -1071,17 +1117,29 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                           Multi-Jamaah
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
-                        <div>
-                          <span className="text-slate-600 block">Total Harga Paket:</span>
-                          <span className="font-mono font-bold text-slate-900 text-xs">{formatCurrency(totalPkgPrice)}</span>
+                      <div className={`grid gap-2 text-[11px] ${totalDiscount > 0 ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-3"}`}>
+                        <div className="p-2 bg-white rounded-xl border border-amber-200">
+                          <span className="text-slate-600 block text-[10px]">Total Normal:</span>
+                          <span className="font-mono font-bold text-slate-900 text-xs">{formatCurrency(totalGrossPrice)}</span>
                         </div>
-                        <div>
-                          <span className="text-slate-600 block">Total Sudah Terbayar:</span>
+                        {totalDiscount > 0 && (
+                          <div className="p-2 bg-amber-100/70 rounded-xl border border-amber-300">
+                            <span className="text-amber-900 block text-[10px] font-bold">Diskon Khusus:</span>
+                            <span className="font-mono font-bold text-amber-800 text-xs">- {formatCurrency(totalDiscount)}</span>
+                          </div>
+                        )}
+                        {totalDiscount > 0 && (
+                          <div className="p-2 bg-emerald-50 rounded-xl border border-emerald-300">
+                            <span className="text-emerald-900 block text-[10px] font-bold">Kewajiban Bersih:</span>
+                            <span className="font-mono font-bold text-emerald-800 text-xs">{formatCurrency(totalNetPrice)}</span>
+                          </div>
+                        )}
+                        <div className="p-2 bg-white rounded-xl border border-amber-200">
+                          <span className="text-slate-600 block text-[10px]">Total Terbayar:</span>
                           <span className="font-mono font-bold text-emerald-700 text-xs">{formatCurrency(totalPaid)}</span>
                         </div>
-                        <div>
-                          <span className="text-slate-600 block">Sisa Kewajiban Saat Ini:</span>
+                        <div className="p-2 bg-white rounded-xl border border-amber-200">
+                          <span className="text-slate-600 block text-[10px]">Sisa Pelunasan:</span>
                           <span className="font-mono font-bold text-amber-800 text-xs">{formatCurrency(totalRemaining)}</span>
                         </div>
                       </div>
@@ -1099,7 +1157,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                           </div>
                           {currentTotalInput === totalRemaining && totalRemaining > 0 && (
                             <p className="text-[10px] font-bold text-emerald-700 mt-1 flex items-center gap-1">
-                              🎉 Pembayaran ini akan melunasi seluruh total biaya paket ke-{selPilgrims.length} jamaah terpilih!
+                              🎉 Pembayaran ini akan melunasi seluruh kewajiban bersih ke-{selPilgrims.length} jamaah terpilih!
                             </p>
                           )}
                         </div>
@@ -1115,8 +1173,9 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                             type="button"
                             onClick={() => {
                               const newAlloc: Record<string, string> = {};
+                              const perPilgrimDiscount = totalDiscount > 0 ? (totalDiscount / selPilgrims.length) : 0;
                               selPilgrims.forEach((p) => {
-                                const fin = getPilgrimFinancials(p);
+                                const fin = getPilgrimFinancials(p, perPilgrimDiscount);
                                 newAlloc[p.id] = String(fin.remaining);
                               });
                               setFormData({
@@ -1393,9 +1452,10 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                         onClick={() => {
                           let pool = parseFloat(formData.amount || "0");
                           const sel = pilgrims.filter((p) => formData.selectedPilgrimIds.includes(p.id));
+                          const formPerPilgrimDiscount = formData.hasDiscount && formData.discountAmount ? ((parseFloat(formData.discountAmount) || 0) / (sel.length || 1)) : undefined;
                           const newAlloc: Record<string, string> = {};
                           sel.forEach((p) => {
-                            const fin = getPilgrimFinancials(p);
+                            const fin = getPilgrimFinancials(p, formPerPilgrimDiscount);
                             const allocate = Math.min(pool, fin.remaining);
                             newAlloc[p.id] = String(allocate);
                             pool -= allocate;
@@ -1422,10 +1482,12 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
 
                   {/* List Item Input Alokasi Per Jamaah */}
                   <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    {pilgrims
-                      .filter((p) => formData.selectedPilgrimIds.includes(p.id))
-                      .map((p) => {
-                        const fin = getPilgrimFinancials(p);
+                    {(() => {
+                      const sel = pilgrims.filter((p) => formData.selectedPilgrimIds.includes(p.id));
+                      const formPerPilgrimDiscount = formData.hasDiscount && formData.discountAmount ? ((parseFloat(formData.discountAmount) || 0) / (sel.length || 1)) : undefined;
+
+                      return sel.map((p) => {
+                        const fin = getPilgrimFinancials(p, formPerPilgrimDiscount);
                         const currentAlloc = formData.allocations[p.id] !== undefined ? formData.allocations[p.id] : "";
 
                         return (
@@ -1438,7 +1500,9 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                               <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
                                 <span>Kamar: <strong className="text-slate-700">{p.roomType || "QUAD"}</strong></span>
                                 <span>•</span>
-                                <span>Sisa Hutang: <strong className="text-amber-700 font-mono">{formatCurrency(fin.remaining)}</strong></span>
+                                <span>Kewajiban: <strong className="text-slate-700 font-mono">{formatCurrency(fin.netPrice)}</strong></span>
+                                <span>•</span>
+                                <span>Sisa: <strong className="text-amber-700 font-mono">{formatCurrency(fin.remaining)}</strong></span>
                               </div>
                             </div>
 
@@ -1471,7 +1535,8 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                             </div>
                           </div>
                         );
-                      })}
+                      });
+                    })()}
                   </div>
 
                   {/* Allocation Balance Live Validation Bar */}
@@ -1749,33 +1814,20 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
         </div>
       )}
 
-      {/* Modal 3: Kwitansi Resmi Siap Cetak (Printable Receipt) */}
-      {selectedInvoiceForReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl space-y-6 max-h-[95vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 no-print">
-              <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
-                {selectedInvoiceForReceipt.status === "PAID" ? "Dokumen Resmi Kwitansi Pembayaran" : "Dokumen Resmi Surat Tagihan (Invoice)"}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handlePrintReceipt}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 cursor-pointer"
-                >
-                  <Printer className="w-4 h-4" /> {selectedInvoiceForReceipt.status === "PAID" ? "Cetak Kwitansi (Print/PDF)" : "Cetak Invoice (Print/PDF)"}
-                </button>
-                <button
-                  onClick={() => setSelectedInvoiceForReceipt(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+      {/* Modal 3: Kwitansi Resmi Siap Cetak (Printable Receipt - Dual Mode: Single / Group) */}
+      {selectedInvoiceForReceipt && (() => {
+        const renderSingleReceiptContent = (inv: any, isBatchView: boolean = false) => {
+          if (!inv) return null;
+          const invPilgrim = inv.pilgrim || pilgrims.find((p) => p.id === inv.pilgrimId);
+          const breakdown = getInvoiceBreakdown(inv);
+          const isDisc = (breakdown && breakdown.isDiscounted) ||
+            (inv.discountAmount && inv.discountAmount > 0) ||
+            (inv.notes?.toLowerCase().includes("promo") || inv.notes?.toLowerCase().includes("diskon") || inv.title?.toLowerCase().includes("promo"));
+          const discAmt = breakdown?.discountAmount || inv.discountAmount || 0;
+          const discReason = breakdown?.discountReason || inv.discountReason || inv.notes || "Program Promo Spesial Diskon Khusus";
 
-            {/* Printable Receipt / Invoice Template */}
-            <div className="border border-slate-300 p-8 rounded-2xl bg-white text-slate-900 relative space-y-4">
+          return (
+            <div className={`border border-slate-300 p-6 sm:p-8 rounded-2xl bg-white text-slate-900 relative space-y-4 ${isBatchView ? "print-sheet" : ""}`}>
               {/* Header Travel */}
               <div className="flex items-center justify-between gap-4 pb-1">
                 <div className="flex items-center gap-3">
@@ -1810,12 +1862,12 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 </div>
                 <div className="text-right flex-shrink-0">
                   <span className={`inline-block text-white font-bold text-xs px-3 py-1 rounded ${
-                    selectedInvoiceForReceipt.status === "PAID" ? "bg-slate-900" : "bg-amber-700"
+                    inv.status === "PAID" ? "bg-slate-900" : "bg-amber-700"
                   }`}>
-                    {selectedInvoiceForReceipt.status === "PAID" ? "KWITANSI PEMBAYARAN" : "SURAT TAGIHAN (INVOICE)"}
+                    {inv.status === "PAID" ? "KWITANSI PEMBAYARAN" : "SURAT TAGIHAN (INVOICE)"}
                   </span>
                   <p className="font-mono text-xs font-bold text-amber-900 mt-1">
-                    {selectedInvoiceForReceipt.status === "PAID" ? `No: KW-${selectedInvoiceForReceipt.invoiceNumber}` : `No: ${selectedInvoiceForReceipt.invoiceNumber}`}
+                    {inv.status === "PAID" ? `No: KW-${inv.invoiceNumber}` : `No: ${inv.invoiceNumber}`}
                   </p>
                 </div>
               </div>
@@ -1833,23 +1885,23 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
               </div>
 
               {/* Receipt / Invoice Body */}
-              <div className="py-5 space-y-3.5 text-xs">
+              <div className="py-4 space-y-3 text-xs">
                 <div className="flex items-start">
                   <span className="w-36 text-slate-500 font-semibold pt-0.5">
-                    {selectedInvoiceForReceipt.status === "PAID" ? "Telah Terima Dari:" : "Ditagihkan Kepada:"}
+                    {inv.status === "PAID" ? "Telah Terima Dari:" : "Ditagihkan Kepada:"}
                   </span>
                   <div className="flex-1">
                     <span className="font-bold text-slate-900 text-sm">
-                      {selectedInvoiceForReceipt.payerName || selectedInvoiceForReceipt.pilgrim?.name}
+                      {inv.payerName || invPilgrim?.name}
                     </span>
-                    {selectedInvoiceForReceipt.payerName && selectedInvoiceForReceipt.payerName.toLowerCase().includes("hamba allah") && (
+                    {inv.payerName && inv.payerName.toLowerCase().includes("hamba allah") && (
                       <span className="ml-2 inline-block bg-amber-100 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-300">
                         ✨ Donatur Hamba Allah
                       </span>
                     )}
-                    {selectedInvoiceForReceipt.payerName && !selectedInvoiceForReceipt.payerName.toLowerCase().includes("hamba allah") && selectedInvoiceForReceipt.payerName !== selectedInvoiceForReceipt.pilgrim?.name && (
+                    {inv.payerName && !inv.payerName.toLowerCase().includes("hamba allah") && inv.payerName !== invPilgrim?.name && (
                       <span className="ml-2 inline-block bg-blue-100 text-blue-900 text-[10px] font-bold px-2 py-0.5 rounded-md border border-blue-200">
-                        Penyetor / Donatur
+                        Penyetor / Penanggung Jawab
                       </span>
                     )}
                   </div>
@@ -1857,140 +1909,123 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
 
                 <div className="flex items-start">
                   <span className="w-36 text-slate-500 font-semibold pt-1">
-                    {selectedInvoiceForReceipt.status === "PAID" ? "Uang Sejumlah:" : "Nominal Tagihan:"}
+                    {inv.status === "PAID" ? "Uang Sejumlah:" : "Nominal Tagihan:"}
                   </span>
                   <span className="flex-1 font-bold text-slate-900 bg-emerald-50/90 p-2.5 rounded-xl border border-emerald-200 text-xs sm:text-sm leading-relaxed">
-                    "{formatRupiahWithWords(selectedInvoiceForReceipt.amount)}"
+                    "{formatRupiahWithWords(inv.amount)}"
                   </span>
                 </div>
 
                 <div className="flex">
                   <span className="w-36 text-slate-500 font-semibold">
-                    {selectedInvoiceForReceipt.status === "PAID" ? "Untuk Pembayaran:" : "Peruntukan Tagihan:"}
+                    {inv.status === "PAID" ? "Untuk Pembayaran:" : "Peruntukan Tagihan:"}
                   </span>
                   <span className="flex-1 text-slate-800">
-                    {selectedInvoiceForReceipt.title}
-                    {selectedInvoiceForReceipt.pilgrim && (
-                      <span className="font-semibold text-emerald-950"> — Jamaah: {selectedInvoiceForReceipt.pilgrim.name} ({selectedInvoiceForReceipt.pilgrim.package?.name || "Program Umroh"})</span>
+                    {inv.title}
+                    {invPilgrim && (
+                      <span className="font-semibold text-emerald-950"> — Jamaah: {invPilgrim.name} ({invPilgrim.package?.name || "Program Umroh"})</span>
                     )}
                   </span>
                 </div>
 
                 {/* Keterangan Potongan Harga / Diskon Promo Resmi */}
-                {(() => {
-                  const breakdown = getInvoiceBreakdown(selectedInvoiceForReceipt);
-                  const isDisc = (breakdown && breakdown.isDiscounted) ||
-                    (selectedInvoiceForReceipt.discountAmount && selectedInvoiceForReceipt.discountAmount > 0) ||
-                    (selectedInvoiceForReceipt.notes?.toLowerCase().includes("promo") || selectedInvoiceForReceipt.notes?.toLowerCase().includes("diskon") || selectedInvoiceForReceipt.title?.toLowerCase().includes("promo"));
-
-                  if (!isDisc) return null;
-
-                  const discAmt = breakdown?.discountAmount || selectedInvoiceForReceipt.discountAmount || 4000000;
-                  const discReason = breakdown?.discountReason || selectedInvoiceForReceipt.discountReason || selectedInvoiceForReceipt.notes || "Program Promo Spesial Diskon Khusus";
-
-                  return (
-                    <div className="flex items-start">
-                      <span className="w-36 text-slate-500 font-semibold pt-1">Keterangan Diskon:</span>
-                      <div className="flex-1 bg-amber-50 p-2.5 rounded-xl border border-amber-300 text-xs space-y-1">
-                        <p className="font-bold text-amber-950 flex items-center gap-1">
-                          🏷️ {discReason} ({formatCurrency(discAmt)})
-                        </p>
-                        <p className="text-[10px] text-slate-600">
-                          Potongan harga khusus telah dikurangkan dari harga paket normal ({formatCurrency(breakdown?.grossPrice || 0)}) sehingga total kewajiban bersih menjadi {formatCurrency(breakdown?.netPrice || 0)}.
-                        </p>
-                      </div>
+                {isDisc && (
+                  <div className="flex items-start">
+                    <span className="w-36 text-slate-500 font-semibold pt-1">Keterangan Diskon:</span>
+                    <div className="flex-1 bg-amber-50 p-2.5 rounded-xl border border-amber-300 text-xs space-y-1">
+                      <p className="font-bold text-amber-950 flex items-center gap-1">
+                        🏷️ {discReason} ({formatCurrency(discAmt)})
+                      </p>
+                      <p className="text-[10px] text-slate-600">
+                        Potongan harga khusus telah dikurangkan dari harga paket normal ({formatCurrency(breakdown?.grossPrice || 0)}) sehingga total kewajiban bersih menjadi {formatCurrency(breakdown?.netPrice || 0)}.
+                      </p>
                     </div>
-                  );
-                })()}
+                  </div>
+                )}
 
                 {/* Rincian Akumulasi Finansial & Sisa Pembayaran Paket */}
-                {(() => {
-                  const breakdown = getInvoiceBreakdown(selectedInvoiceForReceipt);
-                  if (!breakdown || (breakdown.pkgPrice === 0 && breakdown.grossPrice === 0)) return null;
+                {breakdown && (breakdown.pkgPrice > 0 || breakdown.grossPrice > 0) && (
+                  <div className="bg-slate-50/90 p-3.5 rounded-2xl border border-slate-200 text-xs space-y-2.5">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-800 pb-1.5 border-b border-slate-200">
+                      <span className="flex items-center gap-1.5 font-bold text-slate-900">
+                        <Calculator className="w-3.5 h-3.5 text-emerald-600" />
+                        Rincian Status Finansial & Sisa Pembayaran Paket
+                      </span>
+                      <span className="font-mono text-emerald-700 text-[10.5px]">
+                        Progres Pelunasan: {breakdown.progressPercent}%
+                      </span>
+                    </div>
 
-                  return (
-                    <div className="bg-slate-50/90 p-3.5 rounded-2xl border border-slate-200 text-xs space-y-2.5">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-800 pb-1.5 border-b border-slate-200">
-                        <span className="flex items-center gap-1.5 font-bold text-slate-900">
-                          <Calculator className="w-3.5 h-3.5 text-emerald-600" />
-                          Rincian Status Finansial & Sisa Pembayaran Paket
+                    <div className={`grid gap-2 text-center ${breakdown.isDiscounted ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4"}`}>
+                      <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                        <span className="text-[9.5px] text-slate-500 block uppercase font-semibold">Harga Normal</span>
+                        <span className="font-mono font-black text-slate-900 text-xs">{formatCurrency(breakdown.grossPrice)}</span>
+                      </div>
+                      {breakdown.isDiscounted && (
+                        <div className="p-2 bg-amber-50 rounded-xl border border-amber-300 shadow-2xs">
+                          <span className="text-[9.5px] text-amber-900 block uppercase font-bold">Diskon Khusus</span>
+                          <span className="font-mono font-bold text-amber-800 text-xs">- {formatCurrency(breakdown.discountAmount)}</span>
+                        </div>
+                      )}
+                      <div className="p-2 bg-emerald-50/50 rounded-xl border border-emerald-200 shadow-2xs">
+                        <span className="text-[9.5px] text-slate-600 block uppercase font-semibold">
+                          {breakdown.isDiscounted ? "Kewajiban Bersih" : "Terbayar Sblmnya"}
                         </span>
-                        <span className="font-mono text-emerald-700 text-[10.5px]">
-                          Progres Pelunasan: {breakdown.progressPercent}%
+                        <span className="font-mono font-black text-slate-700 text-xs">
+                          {breakdown.isDiscounted ? formatCurrency(breakdown.netPrice) : formatCurrency(breakdown.priorPaid)}
                         </span>
                       </div>
-
-                      <div className={`grid gap-2 text-center ${breakdown.isDiscounted ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4"}`}>
+                      {breakdown.isDiscounted && (
                         <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                          <span className="text-[9.5px] text-slate-500 block uppercase font-semibold">Harga Normal</span>
-                          <span className="font-mono font-black text-slate-900 text-xs">{formatCurrency(breakdown.grossPrice)}</span>
+                          <span className="text-[9.5px] text-slate-500 block uppercase font-semibold">Terbayar Sblmnya</span>
+                          <span className="font-mono font-black text-slate-700 text-xs">{formatCurrency(breakdown.priorPaid)}</span>
                         </div>
-                        {breakdown.isDiscounted && (
-                          <div className="p-2 bg-amber-50 rounded-xl border border-amber-300 shadow-2xs">
-                            <span className="text-[9.5px] text-amber-900 block uppercase font-bold">Diskon Khusus</span>
-                            <span className="font-mono font-bold text-amber-800 text-xs">- {formatCurrency(breakdown.discountAmount)}</span>
-                          </div>
-                        )}
-                        <div className="p-2 bg-emerald-50/50 rounded-xl border border-emerald-200 shadow-2xs">
-                          <span className="text-[9.5px] text-slate-600 block uppercase font-semibold">
-                            {breakdown.isDiscounted ? "Kewajiban Bersih" : "Terbayar Sblmnya"}
-                          </span>
-                          <span className="font-mono font-black text-slate-700 text-xs">
-                            {breakdown.isDiscounted ? formatCurrency(breakdown.netPrice) : formatCurrency(breakdown.priorPaid)}
-                          </span>
-                        </div>
-                        {breakdown.isDiscounted && (
-                          <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                            <span className="text-[9.5px] text-slate-500 block uppercase font-semibold">Terbayar Sblmnya</span>
-                            <span className="font-mono font-black text-slate-700 text-xs">{formatCurrency(breakdown.priorPaid)}</span>
-                          </div>
-                        )}
-                        <div className="p-2 bg-emerald-50 rounded-xl border border-emerald-300 shadow-2xs">
-                          <span className="text-[9.5px] text-emerald-900 block uppercase font-black">
-                            {selectedInvoiceForReceipt.status === "PAID" ? "Kwitansi Ini" : "Invoice Ini"}
-                          </span>
-                          <span className="font-mono font-black text-emerald-800 text-xs">{formatCurrency(breakdown.currentAmount)}</span>
-                        </div>
-                        <div className={`p-2 rounded-xl border shadow-2xs ${breakdown.finalRemaining === 0 ? "bg-emerald-100 border-emerald-400" : "bg-amber-50 border-amber-300"}`}>
-                          <span className={`text-[9.5px] block uppercase font-black ${breakdown.finalRemaining === 0 ? "text-emerald-950" : "text-amber-950"}`}>
-                            {breakdown.finalRemaining === 0 ? "Status Akhir" : "Sisa Tagihan"}
-                          </span>
-                          <span className={`font-mono font-black text-xs ${breakdown.finalRemaining === 0 ? "text-emerald-800" : "text-amber-800"}`}>
-                            {breakdown.finalRemaining === 0 ? "✨ LUNAS (Rp 0)" : formatCurrency(breakdown.finalRemaining)}
-                          </span>
-                        </div>
+                      )}
+                      <div className="p-2 bg-emerald-50 rounded-xl border border-emerald-300 shadow-2xs">
+                        <span className="text-[9.5px] text-emerald-900 block uppercase font-black">
+                          {inv.status === "PAID" ? "Kwitansi Ini" : "Invoice Ini"}
+                        </span>
+                        <span className="font-mono font-black text-emerald-800 text-xs">{formatCurrency(breakdown.currentAmount)}</span>
+                      </div>
+                      <div className={`p-2 rounded-xl border shadow-2xs ${breakdown.finalRemaining === 0 ? "bg-emerald-100 border-emerald-400" : "bg-amber-50 border-amber-300"}`}>
+                        <span className={`text-[9.5px] block uppercase font-black ${breakdown.finalRemaining === 0 ? "text-emerald-950" : "text-amber-950"}`}>
+                          {breakdown.finalRemaining === 0 ? "Status Akhir" : "Sisa Tagihan"}
+                        </span>
+                        <span className={`font-mono font-black text-xs ${breakdown.finalRemaining === 0 ? "text-emerald-800" : "text-amber-800"}`}>
+                          {breakdown.finalRemaining === 0 ? "✨ LUNAS (Rp 0)" : formatCurrency(breakdown.finalRemaining)}
+                        </span>
                       </div>
                     </div>
-                  );
-                })()}
+                  </div>
+                )}
 
                 <div className="flex">
                   <span className="w-36 text-slate-500 font-semibold">
-                    {selectedInvoiceForReceipt.status === "PAID" ? "Metode & Tanggal:" : "Jatuh Tempo:"}
+                    {inv.status === "PAID" ? "Metode & Tanggal:" : "Jatuh Tempo:"}
                   </span>
                   <span className="flex-1 text-slate-800">
-                    {selectedInvoiceForReceipt.status === "PAID" ? (
-                      <>{selectedInvoiceForReceipt.paymentMethod || "TRANSFER BANK"} • {formatDate(selectedInvoiceForReceipt.paymentDate, "dd MMMM yyyy")}</>
+                    {inv.status === "PAID" ? (
+                      <>{inv.paymentMethod || "TRANSFER BANK"} • {formatDate(inv.paymentDate, "dd MMMM yyyy")}</>
                     ) : (
-                      <span className="font-bold text-amber-800">Wajib dilunasi sebelum: {formatDate(selectedInvoiceForReceipt.dueDate, "dd MMMM yyyy")}</span>
+                      <span className="font-bold text-amber-800">Wajib dilunasi sebelum: {formatDate(inv.dueDate, "dd MMMM yyyy")}</span>
                     )}
                   </span>
                 </div>
               </div>
 
               {/* Signature Footer */}
-              <div className="pt-6 border-t border-slate-200 flex justify-between items-end">
+              <div className="pt-5 border-t border-slate-200 flex justify-between items-end">
                 <div className="text-[11px] text-slate-500">
-                  <p className={`font-bold ${selectedInvoiceForReceipt.status === "PAID" ? "text-emerald-800" : "text-amber-800"}`}>
-                    {selectedInvoiceForReceipt.status === "PAID" ? "STATUS: LUNAS / SAH" : "STATUS: MENUNGGU PEMBAYARAN"}
+                  <p className={`font-bold ${inv.status === "PAID" ? "text-emerald-800" : "text-amber-800"}`}>
+                    {inv.status === "PAID" ? "STATUS: LUNAS / SAH" : "STATUS: MENUNGGU PEMBAYARAN"}
                   </p>
                   <p>Dicetak otomatis via Sistem ERP Umroh</p>
                 </div>
 
                 <div className="text-center w-48">
-                  <p className="text-xs text-slate-600">Tebing Tinggi, {formatDate(selectedInvoiceForReceipt.paymentDate || selectedInvoiceForReceipt.createdAt || new Date(), "dd MMMM yyyy")}</p>
+                  <p className="text-xs text-slate-600">Tebing Tinggi, {formatDate(inv.paymentDate || inv.createdAt || new Date(), "dd MMMM yyyy")}</p>
                   <p className="text-xs font-bold text-slate-700 mt-0.5">Bagian Keuangan / Pimpinan,</p>
-                  <div className="h-14 flex items-center justify-center">
+                  <div className="h-12 flex items-center justify-center">
                     <span className="font-serif italic text-xs text-emerald-700 font-bold border-b border-emerald-400 pb-0.5">
                       [Tanda Tangan & Stempel Resmi]
                     </span>
@@ -2000,9 +2035,412 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 </div>
               </div>
             </div>
+          );
+        };
+
+        const renderGroupReceiptContent = (groupInvoices: any[]) => {
+          if (!groupInvoices || groupInvoices.length === 0) return null;
+          const firstInv = groupInvoices[0];
+          const groupTotalAmount = groupInvoices.reduce((sum, i) => sum + (i.amount || 0), 0);
+          const groupPayerName = firstInv.payerName || firstInv.pilgrim?.name || "Penanggung Jawab Rombongan";
+          const groupPaymentMethod = firstInv.paymentMethod || "TRANSFER BANK";
+          const groupPaymentDate = firstInv.paymentDate || firstInv.createdAt || new Date();
+          const isAllPaid = groupInvoices.every((i) => i.status === "PAID");
+
+          let groupGrossTotal = 0;
+          let groupDiscountTotal = 0;
+          let groupNetTotal = 0;
+          let groupRemainingTotal = 0;
+
+          const groupBreakdowns = groupInvoices.map((inv) => {
+            const bd = getInvoiceBreakdown(inv);
+            if (bd) {
+              groupGrossTotal += bd.grossPrice;
+              groupDiscountTotal += bd.discountAmount;
+              groupNetTotal += bd.netPrice;
+              groupRemainingTotal += bd.finalRemaining;
+            }
+            return { inv, bd };
+          });
+
+          return (
+            <div className="border border-slate-300 p-6 sm:p-8 rounded-2xl bg-white text-slate-900 relative space-y-4 print-sheet">
+              {/* Header Travel */}
+              <div className="flex items-center justify-between gap-4 pb-1">
+                <div className="flex items-center gap-3">
+                  <div className="h-14 w-14 flex-shrink-0 flex items-center justify-center p-0.5">
+                    <img
+                      src="/sulthan-haramain-logo.jpg"
+                      alt="Logo Sulthan Haramain"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                  <div>
+                    <h1 className="text-sm sm:text-base font-black tracking-tight text-slate-950 uppercase leading-none">
+                      {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
+                    </h1>
+                    <p className="text-[9.5px] text-slate-700 leading-tight mt-1">
+                      {travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"}
+                    </p>
+                    <p className="text-[9px] font-semibold text-slate-700 leading-tight mt-0.5">
+                      Telp / WhatsApp: {travelSettings.phone || "0821-6733-9464"} • Email: {travelSettings.email || "barokahsulthanharamain@gmail.com"}
+                    </p>
+                    <p className="text-[9px] font-bold text-slate-900 leading-tight mt-0.5 tracking-tight">
+                      {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026"}
+                    </p>
+                    <p className="text-[7.5px] sm:text-[8px] font-semibold text-slate-500 tracking-wide mt-0.5 uppercase">
+                      NO. IZIN PPIU : {(travelSettings.licenseNumber || "25052200384080005")
+                        .replace(/•?\s*NIB[\s\S]*/i, "")
+                        .replace(/•?\s*KBLI[\s\S]*/i, "")
+                        .replace(/NO\.\s*IZIN\s*PPIU\s*:\s*/i, "")
+                        .trim()}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <span className={`inline-block text-white font-bold text-xs px-3 py-1 rounded ${
+                    isAllPaid ? "bg-slate-900" : "bg-amber-700"
+                  }`}>
+                    {isAllPaid ? "KWITANSI GABUNGAN ROMBONGAN" : "SURAT TAGIHAN GABUNGAN"}
+                  </span>
+                  <p className="font-mono text-xs font-bold text-amber-900 mt-1">
+                    {isAllPaid ? `No: KW-GRP-${firstInv.invoiceNumber?.replace('INV-', '')}` : `No: ${firstInv.invoiceNumber}`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Geometric Header Divider */}
+              <div className="relative w-full h-4 flex items-center my-0.5 overflow-hidden">
+                <div className="h-2 flex-1 bg-gradient-to-r from-amber-400 to-amber-500 rounded-l" />
+                <div className="flex gap-1 px-2">
+                  <div className="w-1.5 h-3 bg-amber-400 -skew-x-25" />
+                  <div className="w-1.5 h-3 bg-amber-400 -skew-x-25" />
+                  <div className="w-1.5 h-3 bg-amber-400 -skew-x-25" />
+                  <div className="w-1.5 h-3 bg-amber-400 -skew-x-25" />
+                </div>
+                <div className="w-20 h-3 bg-slate-900 -skew-x-25 -mr-3" />
+              </div>
+
+              {/* Receipt / Invoice Body */}
+              <div className="py-4 space-y-3 text-xs">
+                <div className="flex items-start">
+                  <span className="w-36 text-slate-500 font-semibold pt-0.5">
+                    {isAllPaid ? "Telah Terima Dari:" : "Ditagihkan Kepada:"}
+                  </span>
+                  <div className="flex-1">
+                    <span className="font-bold text-slate-900 text-sm">
+                      {groupPayerName}
+                    </span>
+                    <span className="ml-2 inline-block bg-emerald-100 text-emerald-900 text-[10px] font-bold px-2 py-0.5 rounded-md border border-emerald-300">
+                      👨‍👩‍👧 Penanggung Jawab Rombongan ({groupInvoices.length} Jamaah)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <span className="w-36 text-slate-500 font-semibold pt-1">
+                    {isAllPaid ? "Uang Sejumlah:" : "Nominal Tagihan:"}
+                  </span>
+                  <span className="flex-1 font-bold text-slate-900 bg-emerald-50/90 p-2.5 rounded-xl border border-emerald-200 text-xs sm:text-sm leading-relaxed">
+                    "{formatRupiahWithWords(groupTotalAmount)}"
+                  </span>
+                </div>
+
+                <div className="flex">
+                  <span className="w-36 text-slate-500 font-semibold">
+                    {isAllPaid ? "Untuk Pembayaran:" : "Peruntukan Tagihan:"}
+                  </span>
+                  <span className="flex-1 text-slate-800 font-semibold">
+                    {firstInv.title?.replace(/\s*\([^)]*\)/g, "") || "Pelunasan Biaya Paket Umroh"} — Rombongan ({groupInvoices.length} Jamaah)
+                  </span>
+                </div>
+
+                {/* Rincian Tabel Jamaah Rombongan */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-800">
+                    <span className="flex items-center gap-1.5 font-bold text-slate-900">
+                      <Users className="w-3.5 h-3.5 text-emerald-600" />
+                      Rincian Jamaah, Alokasi Setoran & Sisa Tagihan Rombongan
+                    </span>
+                    <span className="font-mono text-emerald-700 text-[10.5px]">
+                      Total Jamaah: {groupInvoices.length} Orang
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-[11px] text-left">
+                      <thead className="bg-slate-100/90 text-slate-800 font-bold border-b border-slate-200">
+                        <tr>
+                          <th className="py-2 px-2 text-center w-7">No</th>
+                          <th className="py-2 px-2.5">Nama Jamaah</th>
+                          <th className="py-2 px-2.5">Paket & Kamar</th>
+                          <th className="py-2 px-2 text-right">Harga Normal</th>
+                          <th className="py-2 px-2 text-right">Diskon</th>
+                          <th className="py-2 px-2 text-right">Kewajiban</th>
+                          <th className="py-2 px-2.5 text-right text-emerald-900 bg-emerald-50/80">Setoran Ini</th>
+                          <th className="py-2 px-2.5 text-right">Sisa Tagihan</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {groupBreakdowns.map(({ inv, bd }, idx) => {
+                          const pilgrim = inv.pilgrim || pilgrims.find((p) => p.id === inv.pilgrimId);
+                          const roomBadge = pilgrim?.roomType === "DOUBLE" ? "Double" : pilgrim?.roomType === "TRIPLE" ? "Triple" : "Quad";
+                          return (
+                            <tr key={inv.id || idx} className="hover:bg-slate-50/50">
+                              <td className="py-2 px-2 text-center font-bold text-slate-600">{idx + 1}</td>
+                              <td className="py-2 px-2.5 font-bold text-slate-900">
+                                {pilgrim?.name || "Jamaah"}
+                              </td>
+                              <td className="py-2 px-2.5 text-slate-600">
+                                <span className="font-medium text-slate-800">{pilgrim?.package?.name || "Paket Umroh"}</span>
+                                <span className="text-[9.5px] text-slate-500 block">Kamar {roomBadge}</span>
+                              </td>
+                              <td className="py-2 px-2 text-right font-mono text-slate-700">
+                                {formatCurrency(bd?.grossPrice || 0)}
+                              </td>
+                              <td className="py-2 px-2 text-right font-mono text-amber-700">
+                                {bd && bd.discountAmount > 0 ? `- ${formatCurrency(bd.discountAmount)}` : "-"}
+                              </td>
+                              <td className="py-2 px-2 text-right font-mono font-semibold text-slate-900">
+                                {formatCurrency(bd?.netPrice || 0)}
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono font-bold text-emerald-800 bg-emerald-50/50">
+                                {formatCurrency(inv.amount)}
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono font-bold">
+                                {bd && bd.finalRemaining === 0 ? (
+                                  <span className="text-emerald-700 font-black">✨ LUNAS</span>
+                                ) : (
+                                  <span className="text-amber-800">{formatCurrency(bd?.finalRemaining || 0)}</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot className="bg-slate-50 font-bold border-t-2 border-slate-300 text-slate-900">
+                        <tr>
+                          <td colSpan={3} className="py-2.5 px-2.5 text-right uppercase tracking-wider text-[10.5px]">
+                            Total Rombongan:
+                          </td>
+                          <td className="py-2.5 px-2 text-right font-mono">{formatCurrency(groupGrossTotal)}</td>
+                          <td className="py-2.5 px-2 text-right font-mono text-amber-800">
+                            {groupDiscountTotal > 0 ? `- ${formatCurrency(groupDiscountTotal)}` : "-"}
+                          </td>
+                          <td className="py-2.5 px-2 text-right font-mono">{formatCurrency(groupNetTotal)}</td>
+                          <td className="py-2.5 px-2.5 text-right font-mono text-emerald-900 bg-emerald-100/70 text-xs">
+                            {formatCurrency(groupTotalAmount)}
+                          </td>
+                          <td className="py-2.5 px-2.5 text-right font-mono text-xs">
+                            {groupRemainingTotal === 0 ? (
+                              <span className="text-emerald-800 font-black">✨ SEMUA LUNAS</span>
+                            ) : (
+                              <span className="text-amber-900">{formatCurrency(groupRemainingTotal)}</span>
+                            )}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex pt-1">
+                  <span className="w-36 text-slate-500 font-semibold">
+                    {isAllPaid ? "Metode & Tanggal:" : "Jatuh Tempo:"}
+                  </span>
+                  <span className="flex-1 text-slate-800">
+                    {isAllPaid ? (
+                      <>{groupPaymentMethod} • {formatDate(groupPaymentDate, "dd MMMM yyyy")}</>
+                    ) : (
+                      <span className="font-bold text-amber-800">Wajib dilunasi sebelum: {formatDate(firstInv.dueDate, "dd MMMM yyyy")}</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Signature Footer */}
+              <div className="pt-5 border-t border-slate-200 flex justify-between items-end">
+                <div className="text-[11px] text-slate-500">
+                  <p className={`font-bold ${isAllPaid ? "text-emerald-800" : "text-amber-800"}`}>
+                    {isAllPaid ? "STATUS: LUNAS / SAH" : "STATUS: MENUNGGU PEMBAYARAN"}
+                  </p>
+                  <p>Dicetak otomatis via Sistem ERP Umroh</p>
+                </div>
+
+                <div className="text-center w-48">
+                  <p className="text-xs text-slate-600">Tebing Tinggi, {formatDate(groupPaymentDate, "dd MMMM yyyy")}</p>
+                  <p className="text-xs font-bold text-slate-700 mt-0.5">Bagian Keuangan / Pimpinan,</p>
+                  <div className="h-12 flex items-center justify-center">
+                    <span className="font-serif italic text-xs text-emerald-700 font-bold border-b border-emerald-400 pb-0.5">
+                      [Tanda Tangan & Stempel Resmi]
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-slate-900">{travelSettings.directorName || "ATIYATUL AMRA"}</p>
+                  <p className="text-[10px] text-slate-400">{travelSettings.directorTitle || "Direktur Utama"}</p>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl space-y-5 max-h-[95vh] overflow-y-auto printable-modal-content">
+              {/* Modal Header & Options Toolbar (no-print) */}
+              <div className="space-y-3 pb-3 border-b border-slate-100 no-print">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  {/* Mode Switcher Tabs if multi */}
+                  {multiReceiptInvoices && multiReceiptInvoices.length > 1 ? (
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReceiptViewMode("GROUP");
+                          setPrintAllIndividual(false);
+                        }}
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          receiptViewMode === "GROUP"
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                        }`}
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        Kwitansi Gabungan ({multiReceiptInvoices.length} Jamaah)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReceiptViewMode("INDIVIDUAL");
+                          setPrintAllIndividual(false);
+                        }}
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          receiptViewMode === "INDIVIDUAL"
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                        }`}
+                      >
+                        <User className="w-3.5 h-3.5" />
+                        Kwitansi Per Jamaah (Satu per Satu)
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
+                      {selectedInvoiceForReceipt.status === "PAID" ? "Dokumen Resmi Kwitansi Pembayaran" : "Dokumen Resmi Surat Tagihan (Invoice)"}
+                    </span>
+                  )}
+
+                  {/* Print Buttons & Close */}
+                  <div className="flex items-center gap-2">
+                    {receiptViewMode === "GROUP" && multiReceiptInvoices && multiReceiptInvoices.length > 1 ? (
+                      <button
+                        onClick={() => {
+                          setPrintAllIndividual(false);
+                          setTimeout(() => window.print(), 50);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 cursor-pointer"
+                      >
+                        <Printer className="w-4 h-4" /> Cetak Kwitansi Gabungan (1 Lembar)
+                      </button>
+                    ) : receiptViewMode === "INDIVIDUAL" && multiReceiptInvoices && multiReceiptInvoices.length > 1 ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            setPrintAllIndividual(false);
+                            setTimeout(() => window.print(), 50);
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 cursor-pointer"
+                          title="Cetak lembar kwitansi untuk jamaah yang sedang dipilih"
+                        >
+                          <Printer className="w-3.5 h-3.5" /> Cetak Jamaah Ini
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPrintAllIndividual(true);
+                            setTimeout(() => window.print(), 50);
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-900 cursor-pointer"
+                          title="Cetak semua kwitansi jamaah satu per satu dalam 1 kali perintah cetak"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-amber-400" /> Cetak Semua ({multiReceiptInvoices.length} Lembar)
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setPrintAllIndividual(false);
+                          setTimeout(() => window.print(), 50);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 cursor-pointer"
+                      >
+                        <Printer className="w-4 h-4" /> {selectedInvoiceForReceipt.status === "PAID" ? "Cetak Kwitansi (Print/PDF)" : "Cetak Invoice (Print/PDF)"}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setSelectedInvoiceForReceipt(null);
+                        setMultiReceiptInvoices(null);
+                        setPrintAllIndividual(false);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sub-tabs for Pilgrim Selection in INDIVIDUAL mode */}
+                {receiptViewMode === "INDIVIDUAL" && multiReceiptInvoices && multiReceiptInvoices.length > 1 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5">
+                    <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap mr-1">Pilih Jamaah:</span>
+                    {multiReceiptInvoices.map((inv, idx) => {
+                      const pilgrim = inv.pilgrim || pilgrims.find((p) => p.id === inv.pilgrimId);
+                      const pName = pilgrim?.name || `Jamaah #${idx + 1}`;
+                      const isActive = selectedIndividualIndex === idx;
+                      return (
+                        <button
+                          key={inv.id || idx}
+                          type="button"
+                          onClick={() => {
+                            setSelectedIndividualIndex(idx);
+                            setSelectedInvoiceForReceipt(inv);
+                            setPrintAllIndividual(false);
+                          }}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                            isActive
+                              ? "bg-slate-900 text-amber-400 border border-slate-900 shadow-xs"
+                              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          <span className="w-4 h-4 rounded-full bg-slate-200/50 flex items-center justify-center text-[10px]">
+                            {idx + 1}
+                          </span>
+                          {pName} ({formatCurrency(inv.amount)})
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Document Body */}
+              {receiptViewMode === "GROUP" && multiReceiptInvoices && multiReceiptInvoices.length > 1 ? (
+                renderGroupReceiptContent(multiReceiptInvoices)
+              ) : printAllIndividual && multiReceiptInvoices && multiReceiptInvoices.length > 1 ? (
+                <div className="space-y-6">
+                  {multiReceiptInvoices.map((inv, idx) => (
+                    <div key={inv.id || idx} className={idx > 0 ? "page-break pt-4" : ""}>
+                      {renderSingleReceiptContent(inv, true)}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                renderSingleReceiptContent(selectedInvoiceForReceipt)
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Modal 4: Form Koreksi / Edit Invoice & Pembayaran */}
       {selectedInvoiceForEdit && (
