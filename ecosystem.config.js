@@ -9,7 +9,7 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: 3000,
-        DATABASE_URL: "file:./dev.db"
+        DATABASE_URL: "file:./prisma/dev.db"
       }
     }
   ]
