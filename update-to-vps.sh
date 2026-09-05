@@ -12,11 +12,11 @@ echo "=========================================================="
 
 cd "$(dirname "$0")"
 
-# 1. Push ke GitHub
+# 1. Push ke GitHub (abaikan jika tidak ada file baru)
 echo "[1/4] Mengirim Kode Terbaru ke GitHub..."
 git add .
-git commit -m "Update sinkronisasi total tampilan dan database $(date +'%Y-%m-%d %H:%M')" || true
-git push origin main
+git commit -m "Update sinkronisasi total $(date +'%Y-%m-%d %H:%M')" || true
+git push origin main || true
 
 # 2. Reset & Pull Kode di VPS (Bebas Konflik Git)
 echo "[2/4] Menarik Kode Terbaru di VPS (Reset Clean Git)..."
