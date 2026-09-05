@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const body = await request.json();
-    const { paymentMethod, paymentDate, notes, proofUrl } = body;
+    const { paymentMethod, paymentDate, notes, proofUrl, payerName, payerPhone } = body;
 
     const invoice = await prisma.invoice.findUnique({
       where: { id: params.id },
@@ -21,6 +21,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         status: "PAID",
         paymentMethod: paymentMethod || "BANK_TRANSFER",
         paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+        payerName: payerName !== undefined ? payerName : invoice.payerName,
+        payerPhone: payerPhone !== undefined ? payerPhone : invoice.payerPhone,
         notes: notes || invoice.notes,
         proofUrl: proofUrl || invoice.proofUrl,
       },

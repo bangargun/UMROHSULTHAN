@@ -40,7 +40,7 @@ export default function HandoverChecklistView({
 
   // Form states
   const [selectedPilgrimId, setSelectedPilgrimId] = useState(pilgrims[0]?.id || "");
-  const [officerName, setOfficerName] = useState("Budi Santoso (Logistik)");
+  const [officerName, setOfficerName] = useState("Tim Admin");
   const [recipientName, setRecipientName] = useState("");
   const [notes, setNotes] = useState("Perlengkapan diserahkan lengkap dalam kondisi baru dan baik.");
   const [checklistItems, setChecklistItems] = useState<{ [eqId: string]: boolean }>({});
@@ -414,6 +414,18 @@ export default function HandoverChecklistView({
                     className="mt-1 w-full rounded-xl border border-slate-200 p-2.5"
                   />
                 </div>
+
+                <div>
+                  <label className="font-bold text-slate-700">Nama Petugas / Tim Admin Penyerah *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Tim Admin"
+                    value={officerName}
+                    onChange={(e) => setOfficerName(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-medium"
+                  />
+                </div>
               </div>
 
               {/* Checklist Barang Perlengkapan */}
@@ -641,12 +653,12 @@ export default function HandoverChecklistView({
               {/* Signatures */}
               <div className="pt-4 grid grid-cols-2 gap-4 text-center border-t border-slate-200">
                 <div>
-                  <p className="text-slate-600 font-medium">Petugas Logistik / Penyerah</p>
+                  <p className="text-slate-600 font-medium">Tim Admin / Penyerah</p>
                   <div className="h-16 flex items-center justify-center">
-                    <span className="text-xs font-serif italic text-slate-500">[TTD Petugas]</span>
+                    <span className="text-xs font-serif italic text-slate-500">[TTD Tim Admin]</span>
                   </div>
                   <p className="font-bold text-slate-900 border-t border-slate-300 pt-1 inline-block px-4">
-                    {selectedHandoverForPrint.officerName}
+                    {selectedHandoverForPrint.officerName || "Tim Admin"}
                   </p>
                 </div>
 

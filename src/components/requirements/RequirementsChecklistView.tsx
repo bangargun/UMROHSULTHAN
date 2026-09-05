@@ -372,6 +372,82 @@ export default function RequirementsChecklistView({
                   </div>
                 </div>
 
+                {/* Google Drive Document Access Strip */}
+                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                    <Shield className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Dokumen Google Drive:</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {pilgrim.ktpFileUrl ? (
+                      <a
+                        href={pilgrim.ktpFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-[10px] hover:bg-emerald-200"
+                      >
+                        <ExternalLink className="w-3 h-3" /> KTP (Wajib)
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-rose-600 font-semibold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                        KTP: Belum Diunggah
+                      </span>
+                    )}
+
+                    {pilgrim.familyCardFileUrl ? (
+                      <a
+                        href={pilgrim.familyCardFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-[10px] hover:bg-emerald-200"
+                      >
+                        <ExternalLink className="w-3 h-3" /> KK (Wajib)
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-rose-600 font-semibold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                        KK: Belum Diunggah
+                      </span>
+                    )}
+
+                    {pilgrim.vaccineCardFileUrl ? (
+                      <a
+                        href={pilgrim.vaccineCardFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-[10px] hover:bg-emerald-200"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Vaksin Meningitis (Wajib)
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-rose-600 font-semibold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                        Vaksin: Belum Diunggah
+                      </span>
+                    )}
+
+                    {pilgrim.passportFileUrl && (
+                      <a
+                        href={pilgrim.passportFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 text-blue-900 border border-blue-300 font-bold text-[10px] hover:bg-blue-200"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Paspor (Opsional)
+                      </a>
+                    )}
+
+                    {pilgrim.marriageBookFileUrl && (
+                      <a
+                        href={pilgrim.marriageBookFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 border border-purple-300 font-bold text-[10px] hover:bg-purple-200"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Buku Nikah / Ijazah
+                      </a>
+                    )}
+                  </div>
+                </div>
+
                 {/* Requirements Grid Items */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {reqs.map((req: any) => {

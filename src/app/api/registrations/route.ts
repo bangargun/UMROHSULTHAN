@@ -91,6 +91,7 @@ export async function POST(request: Request) {
       referralName,
       ktpBase64,
       familyCardBase64,
+      vaccineCardBase64,
       passportBase64,
       diplomaBase64,
       marriageBookBase64,
@@ -215,7 +216,22 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Upload Paspor (Kondisional jika ada)
+    // 3. Upload Vaksin Meningitis (Wajib)
+    let vaccineCardFileUrl: string | null = null;
+    if (vaccineCardBase64) {
+      try {
+        const saved = await saveUploadedFile({
+          fileBase64: vaccineCardBase64,
+          fileName: `VAKSIN_${fullName.replace(/\s+/g, "_")}_${nik.slice(-4)}.jpg`,
+          subFolder: "vaksin",
+        });
+        vaccineCardFileUrl = saved.fileUrl;
+      } catch (err) {
+        console.error("Gagal simpan Sertifikat Vaksin:", err);
+      }
+    }
+
+    // 4. Upload Paspor (Kondisional jika ada)
     let passportFileUrl: string | null = null;
     if (passportBase64) {
       try {
@@ -230,7 +246,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Upload Ijazah (Kondisional jika ada)
+    // 5. Upload Ijazah (Kondisional jika ada)
     let diplomaFileUrl: string | null = null;
     if (diplomaBase64) {
       try {
@@ -245,7 +261,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 5. Upload Buku Nikah (Kondisional jika ada)
+    // 6. Upload Buku Nikah (Kondisional jika ada)
     let marriageBookFileUrl: string | null = null;
     if (marriageBookBase64) {
       try {
@@ -309,6 +325,7 @@ export async function POST(request: Request) {
         leadId,
         ktpFileUrl,
         familyCardFileUrl,
+        vaccineCardFileUrl,
         passportFileUrl,
         diplomaFileUrl,
         marriageBookFileUrl,

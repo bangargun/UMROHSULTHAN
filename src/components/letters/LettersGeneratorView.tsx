@@ -87,7 +87,7 @@ export default function LettersGeneratorView({
     fatherName: initialPilgrim?.fatherName || "",
     endorsedTargetName: "",
     customNotes: "Permohonan penambahan nama pada halaman pengesahan paspor untuk syarat Visa Umroh.",
-    generatedBy: "H. Sulthan Syarif, Lc., M.A.",
+    generatedBy: "ATIYATUL AMRA",
   });
 
   const [editFormData, setEditFormData] = useState({
@@ -102,7 +102,7 @@ export default function LettersGeneratorView({
     fatherName: "",
     endorsedTargetName: "",
     customNotes: "",
-    generatedBy: "H. Sulthan Syarif, Lc., M.A.",
+    generatedBy: "ATIYATUL AMRA",
   });
 
   const [loading, setLoading] = useState(false);
@@ -200,6 +200,18 @@ export default function LettersGeneratorView({
       defaultSubject = "Surat Keterangan Mahram / Pendampingan Keluarga";
       defaultNote = "Keterangan hubungan mahram dan pendampingan resmi selama di Tanah Suci.";
       defaultCustomTitle = "Surat Keterangan Mahram & Pendampingan";
+    } else if (newType === "SURAT_UNDANGAN_MANASIK") {
+      defaultDest = p ? `Bpk/Ibu ${p.name} & Keluarga` : "Bapak/Ibu Calon Jamaah Umroh & Keluarga";
+      defaultSubject = "Undangan Bimbingan Manasik Ibadah Umroh & Pembagian Perlengkapan";
+      defaultNote = "Waktu: Pukul 08:30 WIB s.d Selesai\nTempat: Kantor Pusat PT Barokah Sulthan Haramain / Hotel\nDress Code: Busana Muslim Putih / Rapi Syar'i\nCatatan: Harap hadir 15 menit sebelum acara dan membawa buku catatan panduan doa.";
+      defaultCustomTitle = "Surat Undangan Manasik Umroh & Pembagian Perlengkapan";
+      defaultBody = `Sehubungan dengan semakin dekatnya jadwal keberangkatan ibadah Umroh ke Tanah Suci, bersama ini kami mengundang Bapak/Ibu Calon Jamaah Umroh beserta keluarga untuk hadir dalam kegiatan Bimbingan Manasik Ibadah Umroh (Teori Tata Cara Ibadah & Simulasi Praktik Thawaf/Sa'i) sekaligus Pembagian Koper dan Perlengkapan Resmi Travel.`;
+    } else if (newType === "SURAT_UNDANGAN_HALAL_BIHALAL") {
+      defaultDest = p ? `Bpk/Ibu ${p.name} & Keluarga` : "Bapak/Ibu Alumni Jamaah Umroh & Keluarga";
+      defaultSubject = "Undangan Silaturahmi, Temu Alumni & Halal Bi Halal Pasca Umroh";
+      defaultNote = "Waktu: Pukul 09:00 WIB s.d Selesai\nTempat: Ruang Pertemuan / Restoran / Kantor Travel\nDress Code: Seragam Batik Travel / Busana Muslim Rapi\nCatatan: Acara temu kangen, tausiyah merawat kemabruran ibadah, penyerahan piagam/sertifikat resmi umroh, dan jamuan makan bersama.";
+      defaultCustomTitle = "Surat Undangan Halal Bi Halal & Silaturahmi Pasca Umroh";
+      defaultBody = `Alhamdulillahirabbil'alamin, atas limpahan rahmat dan karunia Allah SWT, seluruh rangkaian ibadah Umroh ke Tanah Suci Makkah dan Madinah telah terlaksana dengan lancar dan seluruh jamaah telah tiba kembali di tanah air dengan selamat. Guna mempererat tali silaturahmi, menjaga kemabruran ibadah, dan ukhuwah islamiyah antar jamaah, kami mengundang Bapak/Ibu Jamaah Umroh beserta keluarga dalam acara Halal Bi Halal & Temu Kangen Alumni Jamaah Umroh.`;
     } else if (newType === "SURAT_CUSTOM") {
       defaultDest = "";
       defaultSubject = "";
@@ -353,6 +365,10 @@ export default function LettersGeneratorView({
         return "Surat Keterangan Terdaftar Jamaah";
       case "SURAT_MAHRAM":
         return "Surat Keterangan Mahram & Pendamping";
+      case "SURAT_UNDANGAN_MANASIK":
+        return "Surat Undangan Manasik Umroh";
+      case "SURAT_UNDANGAN_HALAL_BIHALAL":
+        return "Surat Undangan Halal Bi Halal & Silaturahmi";
       case "SURAT_CUSTOM":
         return letter?.customTitle || "Surat Keterangan Resmi";
       default:
@@ -400,7 +416,7 @@ export default function LettersGeneratorView({
       </div>
 
       {/* Quick Letter Type Category Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 no-print">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 no-print">
         <button
           onClick={() => {
             handleTypeChange("SURAT_ENDORSEMENT_PASPOR");
@@ -410,7 +426,7 @@ export default function LettersGeneratorView({
         >
           <span className="text-[10px] font-bold text-amber-800 uppercase block">Imigrasi</span>
           <p className="text-xs font-bold text-slate-900 group-hover:text-amber-700 line-clamp-1 mt-0.5">
-            Endos Nama Paspor
+            Endos Paspor
           </p>
         </button>
 
@@ -463,6 +479,32 @@ export default function LettersGeneratorView({
           <span className="text-[10px] font-bold text-teal-800 uppercase block">Kemenag</span>
           <p className="text-xs font-bold text-slate-900 group-hover:text-teal-700 line-clamp-1 mt-0.5">
             Pengantar Kemenag
+          </p>
+        </button>
+
+        <button
+          onClick={() => {
+            handleTypeChange("SURAT_UNDANGAN_MANASIK");
+            setIsAddModalOpen(true);
+          }}
+          className="p-2.5 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 text-left transition-all group shadow-2xs"
+        >
+          <span className="text-[10px] font-bold text-indigo-700 uppercase block">Pra-Berangkat</span>
+          <p className="text-xs font-bold text-slate-900 group-hover:text-indigo-700 line-clamp-1 mt-0.5">
+            Undangan Manasik
+          </p>
+        </button>
+
+        <button
+          onClick={() => {
+            handleTypeChange("SURAT_UNDANGAN_HALAL_BIHALAL");
+            setIsAddModalOpen(true);
+          }}
+          className="p-2.5 rounded-xl bg-white hover:bg-emerald-50 border border-emerald-200 text-left transition-all group shadow-2xs"
+        >
+          <span className="text-[10px] font-bold text-emerald-700 uppercase block">Pasca-Pulang</span>
+          <p className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 line-clamp-1 mt-0.5">
+            Halal Bi Halal
           </p>
         </button>
 
@@ -617,7 +659,21 @@ export default function LettersGeneratorView({
                 <select
                   required
                   value={formData.pilgrimId}
-                  onChange={(e) => setFormData({ ...formData, pilgrimId: e.target.value })}
+                  onChange={(e) => {
+                    const selectedP = pilgrims.find((p) => p.id === e.target.value);
+                    const fName = selectedP?.fatherName || "";
+                    let updatedDest = formData.destinationInstitution;
+                    if (formData.type === "SURAT_UNDANGAN_MANASIK" || formData.type === "SURAT_UNDANGAN_HALAL_BIHALAL") {
+                      updatedDest = selectedP ? `Bpk/Ibu ${selectedP.name} & Keluarga` : formData.destinationInstitution;
+                    }
+                    setFormData({
+                      ...formData,
+                      pilgrimId: e.target.value,
+                      fatherName: fName,
+                      endorsedTargetName: computeEndorsementName(selectedP?.name || "", fName),
+                      destinationInstitution: updatedDest,
+                    });
+                  }}
                   className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold focus:ring-2 focus:ring-emerald-500/20"
                 >
                   {pilgrims.length === 0 ? (
@@ -646,6 +702,8 @@ export default function LettersGeneratorView({
                       <option value="SURAT_PERPANJANG_PASPOR">Surat Rekomendasi Perpanjangan / Penggantian Paspor (Imigrasi)</option>
                       <option value="SURAT_IZIN_CUTI">Surat Permohonan Izin Cuti Kerja / Kuliah / Sekolah</option>
                       <option value="SURAT_PENGANTAR_KEMENAG">Surat Pengantar Rekomendasi Kemenag Kab/Kota</option>
+                      <option value="SURAT_UNDANGAN_MANASIK">🕌 Surat Undangan Manasik Umroh & Pembagian Perlengkapan</option>
+                      <option value="SURAT_UNDANGAN_HALAL_BIHALAL">🤝 Surat Undangan Halal Bi Halal & Silaturahmi Pasca Umroh</option>
                       <option value="SURAT_KETERANGAN_JAMAAH">Surat Keterangan Terdaftar Calon Jamaah Umroh</option>
                       <option value="SURAT_MAHRAM">Surat Keterangan Mahram & Pendampingan Keluarga</option>
                       <option value="SURAT_CUSTOM">➕ Buat Jenis Surat Kustom Lainnya...</option>
@@ -715,6 +773,45 @@ export default function LettersGeneratorView({
                         Format Resmi: [Nama Lengkap Jamaah] + [Nama Orang Tua Laki-laki]
                       </span>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SPECIFIC FIELDS FOR UNDANGAN MANASIK / HALAL BI HALAL */}
+              {(formData.type === "SURAT_UNDANGAN_MANASIK" || formData.type === "SURAT_UNDANGAN_HALAL_BIHALAL") && (
+                <div className="bg-emerald-50/80 p-3.5 rounded-2xl border border-emerald-300 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-emerald-950 font-bold text-xs">
+                      <Sparkles className="w-4 h-4 text-emerald-600" />
+                      {formData.type === "SURAT_UNDANGAN_MANASIK"
+                        ? "Detail Undangan Manasik Umroh & Pembagian Perlengkapan"
+                        : "Detail Undangan Halal Bi Halal & Silaturahmi Pasca Umroh"}
+                    </div>
+                    <span className="text-[10px] bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 rounded-md">
+                      {formData.type === "SURAT_UNDANGAN_MANASIK" ? "Pra-Keberangkatan" : "Pasca-Kepulangan"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-800">Perihal / Hal Undangan *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.customSubject}
+                      onChange={(e) => setFormData({ ...formData, customSubject: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-800">Paragraf Pembuka Undangan *</label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={formData.customBody}
+                      onChange={(e) => setFormData({ ...formData, customBody: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-emerald-300 p-2.5 bg-white text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                    />
                   </div>
                 </div>
               )}
@@ -886,11 +983,16 @@ export default function LettersGeneratorView({
                   onChange={(e) => {
                     const selectedP = pilgrims.find((p) => p.id === e.target.value);
                     const fName = selectedP?.fatherName || "";
+                    let updatedDest = editFormData.destinationInstitution;
+                    if (editFormData.type === "SURAT_UNDANGAN_MANASIK" || editFormData.type === "SURAT_UNDANGAN_HALAL_BIHALAL") {
+                      updatedDest = selectedP ? `Bpk/Ibu ${selectedP.name} & Keluarga` : editFormData.destinationInstitution;
+                    }
                     setEditFormData({
                       ...editFormData,
                       pilgrimId: e.target.value,
                       fatherName: fName,
                       endorsedTargetName: computeEndorsementName(selectedP?.name || "", fName),
+                      destinationInstitution: updatedDest,
                     });
                   }}
                   className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-semibold focus:ring-2 focus:ring-amber-500/20"
@@ -922,6 +1024,8 @@ export default function LettersGeneratorView({
                       <option value="SURAT_PERPANJANG_PASPOR">Surat Rekomendasi Perpanjangan / Penggantian Paspor (Imigrasi)</option>
                       <option value="SURAT_IZIN_CUTI">Surat Permohonan Izin Cuti Kerja / Kuliah / Sekolah</option>
                       <option value="SURAT_PENGANTAR_KEMENAG">Surat Pengantar Rekomendasi Kemenag Kab/Kota</option>
+                      <option value="SURAT_UNDANGAN_MANASIK">🕌 Surat Undangan Manasik Umroh & Pembagian Perlengkapan</option>
+                      <option value="SURAT_UNDANGAN_HALAL_BIHALAL">🤝 Surat Undangan Halal Bi Halal & Silaturahmi Pasca Umroh</option>
                       <option value="SURAT_KETERANGAN_JAMAAH">Surat Keterangan Terdaftar Calon Jamaah Umroh</option>
                       <option value="SURAT_MAHRAM">Surat Keterangan Mahram & Pendampingan Keluarga</option>
                       <option value="SURAT_CUSTOM">➕ Buat Jenis Surat Kustom Lainnya...</option>
@@ -985,6 +1089,45 @@ export default function LettersGeneratorView({
                         className="mt-1 w-full rounded-xl border border-amber-400 p-2.5 bg-white font-black text-slate-950 uppercase text-sm tracking-wide focus:ring-2 focus:ring-amber-500/20 shadow-xs"
                       />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SPECIFIC FIELDS FOR UNDANGAN MANASIK / HALAL BI HALAL */}
+              {(editFormData.type === "SURAT_UNDANGAN_MANASIK" || editFormData.type === "SURAT_UNDANGAN_HALAL_BIHALAL") && (
+                <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-300 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-amber-950 font-bold text-xs">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
+                      {editFormData.type === "SURAT_UNDANGAN_MANASIK"
+                        ? "Detail Undangan Manasik Umroh & Pembagian Perlengkapan"
+                        : "Detail Undangan Halal Bi Halal & Silaturahmi Pasca Umroh"}
+                    </div>
+                    <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-md">
+                      {editFormData.type === "SURAT_UNDANGAN_MANASIK" ? "Pra-Keberangkatan" : "Pasca-Kepulangan"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-800">Perihal / Hal Undangan *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.customSubject}
+                      onChange={(e) => setEditFormData({ ...editFormData, customSubject: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-amber-300 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-amber-500/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-800">Paragraf Pembuka Undangan *</label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={editFormData.customBody}
+                      onChange={(e) => setEditFormData({ ...editFormData, customBody: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-amber-300 p-2.5 bg-white text-xs text-slate-900 focus:ring-2 focus:ring-amber-500/20"
+                    />
                   </div>
                 </div>
               )}
@@ -1330,13 +1473,17 @@ export default function LettersGeneratorView({
                 <div className={`${includeLetterhead ? "pt-4" : "pt-0"} text-xs flex justify-between items-start`}>
                   <div>
                     <p className="font-mono text-slate-900">
-                      <strong>Nomor :</strong> {selectedLetterForPrint.letterNumber || "001/ENDOS/SULTHAN/VIII/2026"}
+                      <strong>Nomor :</strong> {selectedLetterForPrint.letterNumber || "001/MANASIK/SULTHAN/IX/2026"}
                     </p>
                     <p className="text-slate-900 mt-0.5">
                       <strong>Perihal :</strong>{" "}
                       <span className="font-bold underline">
-                        {selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ||
-                        (selectedLetterForPrint.customTitle && /perpanjang/i.test(selectedLetterForPrint.customTitle))
+                        {selectedLetterForPrint.type === "SURAT_UNDANGAN_MANASIK"
+                          ? (selectedLetterForPrint.customSubject || "Undangan Bimbingan Manasik Ibadah Umroh & Pembagian Perlengkapan")
+                          : selectedLetterForPrint.type === "SURAT_UNDANGAN_HALAL_BIHALAL"
+                          ? (selectedLetterForPrint.customSubject || "Undangan Silaturahmi, Temu Alumni & Halal Bi Halal Pasca Umroh")
+                          : selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ||
+                          (selectedLetterForPrint.customTitle && /perpanjang/i.test(selectedLetterForPrint.customTitle))
                           ? "Permohonan Perpanjangan / Penggantian Paspor Calon Jemaah Umrah"
                           : selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ||
                             (selectedLetterForPrint.customTitle && /endorse/i.test(selectedLetterForPrint.customTitle))
@@ -1355,13 +1502,103 @@ export default function LettersGeneratorView({
                 {/* 4. RECIPIENT */}
                 <div className="pt-4 text-xs space-y-0.5">
                   <p>Kepada Yth :</p>
-                  <p className="font-bold text-slate-950">{selectedLetterForPrint.destinationInstitution}</p>
+                  <p className="font-bold text-slate-950">{selectedLetterForPrint.destinationInstitution || "Bapak/Ibu Calon Jamaah Umroh & Keluarga"}</p>
                   <p>Di</p>
                   <p>Tempat</p>
                 </div>
 
                 {/* 5. LETTER BODY */}
-                {selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR" ||
+                {selectedLetterForPrint.type === "SURAT_UNDANGAN_MANASIK" || selectedLetterForPrint.type === "SURAT_UNDANGAN_HALAL_BIHALAL" ? (
+                  <div className="pt-3.5 space-y-3 text-xs text-justify leading-relaxed">
+                    <p className="font-bold text-slate-950">Assalamu’alaikum Warahmatullahi Wabarakatuh,</p>
+
+                    <p className="text-slate-800">
+                      {selectedLetterForPrint.customBody ? (
+                        selectedLetterForPrint.customBody
+                      ) : selectedLetterForPrint.type === "SURAT_UNDANGAN_MANASIK" ? (
+                        <>
+                          Puji dan syukur senantiasa kita panjatkan ke hadirat Allah SWT atas segala limpahan rahmat dan hidayah-Nya. Sehubungan dengan semakin dekatnya jadwal keberangkatan ibadah Umroh ke Tanah Suci, bersama ini kami dari <strong>{travelSettings.companyName}</strong> mengundang Bapak/Ibu Calon Jamaah Umroh beserta keluarga untuk hadir dalam kegiatan <strong>Bimbingan Manasik Ibadah Umroh</strong> sekaligus <strong>Pembagian Koper & Perlengkapan Resmi Travel</strong>.
+                        </>
+                      ) : (
+                        <>
+                          Alhamdulillahirabbil&apos;alamin, atas limpahan rahmat, perlindungan, dan kemudahan dari Allah SWT, seluruh rangkaian ibadah Umroh ke Tanah Suci Makkah dan Madinah telah terlaksana dengan lancar dan seluruh jamaah telah tiba kembali di tanah air dalam keadaan sehat wal&apos;afiat. Guna mempererat tali silaturahmi, menjaga kemabruran ibadah, dan ukhuwah islamiyah antar sesama jamaah, kami mengundang Bapak/Ibu Jamaah Umroh beserta keluarga dalam acara <strong>Silaturahmi & Halal Bi Halal Pasca Umroh</strong>.
+                        </>
+                      )}
+                    </p>
+
+                    <div className="space-y-1.5 pt-1">
+                      <p className="font-bold text-slate-900">
+                        Adapun rincian informasi dan data kegiatan adalah sebagai berikut :
+                      </p>
+
+                      <div className="border border-slate-900 rounded-xl p-3.5 bg-slate-50/50 space-y-2">
+                        <div className="grid grid-cols-[150px_12px_1fr] text-slate-900">
+                          <span className="font-semibold">Nama Jamaah</span>
+                          <span>:</span>
+                          <span className="font-black uppercase text-slate-950">{selectedLetterForPrint.pilgrim?.name || "-"}</span>
+                        </div>
+
+                        <div className="grid grid-cols-[150px_12px_1fr] text-slate-900">
+                          <span className="font-semibold">Program Paket Umroh</span>
+                          <span>:</span>
+                          <span className="font-bold text-slate-900">
+                            {selectedLetterForPrint.pilgrim?.package?.name || "Program Umroh Reguler"}
+                          </span>
+                        </div>
+
+                        {selectedLetterForPrint.pilgrim?.package?.departureDate && (
+                          <div className="grid grid-cols-[150px_12px_1fr] text-slate-900">
+                            <span className="font-semibold">Jadwal Keberangkatan</span>
+                            <span>:</span>
+                            <span className="font-semibold text-slate-900">
+                              {formatDate(selectedLetterForPrint.pilgrim?.package?.departureDate, "dd MMMM yyyy")}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-[150px_12px_1fr] text-slate-900">
+                          <span className="font-semibold">Agenda Kegiatan</span>
+                          <span>:</span>
+                          <span>
+                            {selectedLetterForPrint.type === "SURAT_UNDANGAN_MANASIK" ? (
+                              <span className="font-medium text-slate-900 block space-y-0.5">
+                                <span>1. Pembekalan Teori Rukun, Wajib, Sunnah & Larangan Ibadah Umroh</span><br />
+                                <span>2. Simulasi Praktik Thawaf, Sa&apos;i, dan Tahallul</span><br />
+                                <span>3. Penjelasan Teknis Handling Bandara & Ketentuan Bagasi Pesawat</span><br />
+                                <span>4. Pembagian Koper Fiber, Seragam Batik, Ihram/Mukena & Buku Doa</span>
+                              </span>
+                            ) : (
+                              <span className="font-medium text-slate-900 block space-y-0.5">
+                                <span>1. Pembacaan Doa Syukur & Tausiyah &quot;Merawat Kemabruran Pasca Umroh&quot;</span><br />
+                                <span>2. Penayangan Video Dokumentasi Perjalanan & Kesan Pesan Jamaah</span><br />
+                                <span>3. Penyerahan Sertifikat / Piagam Resmi Umroh (Syahadah Al-Umrah)</span><br />
+                                <span>4. Silaturahmi Ukhuwah & Jamuan Makan Bersama</span>
+                              </span>
+                            )}
+                          </span>
+                        </div>
+
+                        {selectedLetterForPrint.customNotes && (
+                          <div className="grid grid-cols-[150px_12px_1fr] text-slate-900 pt-1.5 border-t border-slate-200">
+                            <span className="font-semibold">Waktu, Tempat & Catatan</span>
+                            <span>:</span>
+                            <span className="font-semibold text-slate-950 whitespace-pre-line">{selectedLetterForPrint.customNotes}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="pt-1 text-slate-800">
+                      Mengingat pentingnya acara ini demi {selectedLetterForPrint.type === "SURAT_UNDANGAN_MANASIK" ? "kesiapan fisik, mental, dan kelancaran ibadah Bapak/Ibu di Tanah Suci" : "menjaga tali ukhuwah islamiyah dan kelanggengan nilai-nilai ibadah kita"}, kehadiran Bapak/Ibu tepat pada waktunya sangat kami harapkan.
+                    </p>
+
+                    <p className="pt-0.5 text-slate-800">
+                      Atas perhatian, kesediaan waktu, dan kehadirannya, kami ucapkan terima kasih yang sebesar-besarnya. <em>Jazakumullahu Khairan Katsiran</em>.
+                    </p>
+
+                    <p className="font-bold text-slate-950 pt-1">Wassalamu’alaikum Warahmatullahi Wabarakatuh,</p>
+                  </div>
+                ) : selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR" ||
                 selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ||
                 selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ||
                 (selectedLetterForPrint.customTitle && /perpanjang.*paspor|paspor.*baru|endorse/i.test(selectedLetterForPrint.customTitle)) ? (
@@ -1595,44 +1832,50 @@ export default function LettersGeneratorView({
                   </div>
                 )}
 
-                {/* 6. SIGNATURE AREA (All on the Left for Immigration Letters) */}
+                {/* 6. SIGNATURE AREA (All on the Left for Immigration Letters with Materai) */}
                 {selectedLetterForPrint.type === "SURAT_REKOMENDASI_PASPOR" ||
                 selectedLetterForPrint.type === "SURAT_PERPANJANG_PASPOR" ||
                 selectedLetterForPrint.type === "SURAT_ENDORSEMENT_PASPOR" ||
                 (selectedLetterForPrint.customTitle && /perpanjang.*paspor|paspor.*baru|endorse/i.test(selectedLetterForPrint.customTitle)) ? (
-                  <div className="pt-4 flex flex-col items-start text-left text-xs space-y-1.5">
-                    <p className="font-bold text-slate-950 uppercase">{travelSettings.companyName || "PT. BAROKAH SULTHAN HARAMAIN"}</p>
+                  <div className="pt-6 sm:pt-8 flex flex-col items-start text-left text-xs space-y-2.5">
+                    <p className="font-bold text-slate-950 uppercase tracking-wide">
+                      {travelSettings.companyName || "PT. BAROKAH SULTHAN HARAMAIN"}
+                    </p>
 
-                    {/* Kotak Meterai & Ruang TTD/Stempel di Sebelah Kiri */}
-                    <div className="flex items-center gap-3 my-1">
-                      <div className="border-2 border-dashed border-slate-300 rounded-xl p-1.5 text-center w-28 h-16 flex flex-col items-center justify-center bg-slate-50 text-[9px] text-slate-500 shrink-0">
-                        <span className="font-bold text-slate-700">METERAI TEMPEL</span>
-                        <span className="font-black text-slate-900 text-[10px]">Rp 10.000</span>
-                        <span className="text-[7.5px] text-slate-400">Tempel di sini</span>
+                    {/* Kotak Meterai Lapang & Ruang TTD/Stempel di Sebelah Kiri */}
+                    <div className="flex items-center gap-5 my-2.5 sm:my-3.5">
+                      <div className="border-2 border-dashed border-slate-400 rounded-2xl p-2.5 text-center w-36 sm:w-40 h-24 sm:h-26 flex flex-col items-center justify-center bg-slate-50/90 text-[9.5px] text-slate-600 shrink-0 shadow-2xs">
+                        <span className="font-bold text-slate-700 tracking-wider uppercase text-[9px]">METERAI TEMPEL</span>
+                        <span className="font-black text-slate-950 text-xs my-0.5">Rp 10.000</span>
+                        <span className="text-[7.5px] text-slate-500 leading-tight">Tempel di sini & TTD menimpa</span>
                       </div>
-                      <div className="h-16 w-36">
-                        {/* Ruang Tanda Tangan & Stempel Menimpa Meterai */}
+                      <div className="h-24 sm:h-26 w-48 sm:w-56 flex items-center">
+                        {/* Ruang Bersih & Renggang untuk Tanda Tangan Basah & Cap Stempel Resmi Perusahaan */}
                       </div>
                     </div>
 
-                    <div>
-                      <p className="font-bold text-slate-950 underline text-xs uppercase">
+                    <div className="pt-2">
+                      <p className="font-black text-slate-950 underline text-xs uppercase tracking-wide">
                         {selectedLetterForPrint.generatedBy || travelSettings.directorName || "ATIYATUL AMRA"}
                       </p>
-                      <p className="text-[11px] text-slate-700 font-medium">{travelSettings.directorTitle || "Direktur Utama"}</p>
+                      <p className="text-[11px] text-slate-800 font-semibold mt-0.5">
+                        {travelSettings.directorTitle || "Direktur Utama"}
+                      </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="pt-8 flex flex-col items-start text-xs">
-                    <p>Hormat Kami,</p>
-                    <p className="font-bold text-slate-900">{travelSettings.companyName}</p>
-                    <div className="my-6 h-16 w-44">
+                  <div className="pt-6 sm:pt-8 flex flex-col items-start text-xs space-y-2">
+                    <p className="font-medium text-slate-800">Hormat Kami,</p>
+                    <p className="font-bold text-slate-950 uppercase">{travelSettings.companyName}</p>
+                    <div className="my-2 h-20 sm:h-24 w-48 sm:w-56">
                       {/* Ruang Bersih untuk Tanda Tangan Fisik & Stempel Resmi Perusahaan */}
                     </div>
-                    <p className="font-bold text-slate-950 underline text-xs uppercase">
-                      {selectedLetterForPrint.generatedBy || travelSettings.directorName}
-                    </p>
-                    <p className="text-[11px] text-slate-700">{travelSettings.directorTitle || "Direktur Utama"}</p>
+                    <div>
+                      <p className="font-black text-slate-950 underline text-xs uppercase tracking-wide">
+                        {selectedLetterForPrint.generatedBy || travelSettings.directorName || "ATIYATUL AMRA"}
+                      </p>
+                      <p className="text-[11px] text-slate-800 font-semibold mt-0.5">{travelSettings.directorTitle || "Direktur Utama"}</p>
+                    </div>
                   </div>
                 )}
               </div>

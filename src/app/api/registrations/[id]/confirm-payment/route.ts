@@ -51,6 +51,12 @@ export async function POST(
           roomType: reg.roomType || "QUAD",
           uniformSize: reg.uniformSize || "L",
           healthNotes: healthInfo || null,
+          ktpFileUrl: reg.ktpFileUrl || null,
+          familyCardFileUrl: reg.familyCardFileUrl || null,
+          vaccineCardFileUrl: reg.vaccineCardFileUrl || null,
+          passportFileUrl: reg.passportFileUrl || null,
+          diplomaFileUrl: reg.diplomaFileUrl || null,
+          marriageBookFileUrl: reg.marriageBookFileUrl || null,
           status: "DP_PAID",
         },
       });

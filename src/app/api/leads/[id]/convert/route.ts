@@ -211,7 +211,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       const handover = await prisma.logisticsHandover.create({
         data: {
           pilgrimId: pilgrim.id,
-          officerName: "Petugas Logistik",
+          officerName: "Tim Admin",
           recipientName: pilgrim.name,
           notes: "Draft formulir serah terima perlengkapan umroh",
           isCompleted: false,

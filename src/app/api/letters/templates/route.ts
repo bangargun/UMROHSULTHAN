@@ -74,6 +74,26 @@ const defaultLetterTemplates = [
     orderIndex: 6,
   },
   {
+    code: "MANASIK",
+    typeKey: "SURAT_UNDANGAN_MANASIK",
+    title: "Surat Undangan Manasik Umroh & Pembagian Perlengkapan",
+    subject: "Undangan Bimbingan Manasik Ibadah Umroh & Pembagian Logistik",
+    defaultDest: "Bapak/Ibu Calon Jamaah Umroh & Keluarga",
+    defaultNotes: "Undangan bimbingan teori & praktik manasik umroh serta pendistribusian koper dan perlengkapan.",
+    bodyTemplate: "Sehubungan dengan semakin dekatnya jadwal keberangkatan ibadah Umroh ke Tanah Suci, bersama ini kami mengundang Bapak/Ibu Calon Jamaah Umroh untuk hadir dalam kegiatan Bimbingan Manasik Ibadah Umroh (Teori & Simulasi Praktik Thawaf/Sa'i) sekaligus Pembagian Koper & Perlengkapan Resmi Travel.",
+    orderIndex: 7,
+  },
+  {
+    code: "SILATURAHMI",
+    typeKey: "SURAT_UNDANGAN_HALAL_BIHALAL",
+    title: "Surat Undangan Halal Bi Halal & Silaturahmi Kepulangan",
+    subject: "Undangan Silaturahmi, Temu Alumni & Halal Bi Halal Pasca Umroh",
+    defaultDest: "Bapak/Ibu Alumni Jamaah Umroh & Keluarga",
+    defaultNotes: "Undangan temu kangen, silaturahmi, dan penyerahan piagam/sertifikat resmi pasca ibadah umroh.",
+    bodyTemplate: "Alhamdulillahirabbil'alamin, atas berkat rahmat Allah SWT seluruh rangkaian ibadah Umroh telah terlaksana dengan lancar dan seluruh jamaah telah tiba kembali di tanah air dengan selamat. Guna mempererat tali silaturahmi dan ukhuwah islamiyah antar jamaah, kami mengundang Bapak/Ibu beserta keluarga dalam acara Halal Bi Halal & Temu Kangen Alumni Jamaah Umroh.",
+    orderIndex: 8,
+  },
+  {
     code: "RESMI",
     typeKey: "SURAT_CUSTOM",
     title: "Surat Keterangan Resmi Kustom Lainnya",
@@ -81,7 +101,7 @@ const defaultLetterTemplates = [
     defaultDest: "Instansi / Pihak Terkait",
     defaultNotes: "Surat keterangan resmi dinamis untuk keperluan administratif lainnya.",
     bodyTemplate: "Bersama ini kami selaku Pimpinan PT SULTHAN HARAMAIN TOUR & TRAVEL menerangkan bahwa calon jamaah umroh kami yang terdaftar pada program keberangkatan resmi memerlukan dokumen surat keterangan ini.",
-    orderIndex: 7,
+    orderIndex: 9,
   },
 ];
 
@@ -95,6 +115,17 @@ export async function GET() {
       console.log("🌱 Initializing Default Letter Templates and Abbreviations...");
       for (const t of defaultLetterTemplates) {
         await prisma.letterTemplate.create({ data: t });
+      }
+      templates = await prisma.letterTemplate.findMany({
+        orderBy: { orderIndex: "asc" },
+      });
+    } else {
+      // Ensure MANASIK and SILATURAHMI exist in database
+      for (const t of defaultLetterTemplates) {
+        const exist = templates.find((x) => x.typeKey === t.typeKey || x.code === t.code);
+        if (!exist) {
+          await prisma.letterTemplate.create({ data: t });
+        }
       }
       templates = await prisma.letterTemplate.findMany({
         orderBy: { orderIndex: "asc" },

@@ -30,32 +30,97 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { pilgrimId, type, title, amount, dueDate, notes } = body;
+    const { pilgrimId, pilgrimIds, allocations, type, title, amount, dueDate, notes, payerName, payerPhone } = body;
 
-    if (!pilgrimId || !amount || !dueDate) {
+    // Support detailed per-pilgrim allocations: [{ pilgrimId, amount, title? }]
+    if (Array.isArray(allocations) && allocations.length > 0) {
+      if (!dueDate) {
+        return NextResponse.json({ error: "Tanggal jatuh tempo wajib diisi" }, { status: 400 });
+      }
+
+      const validAllocations = allocations.filter((a) => a.pilgrimId && parseFloat(a.amount) > 0);
+      if (validAllocations.length === 0) {
+        return NextResponse.json({ error: "Minimal ada 1 alokasi pembayaran untuk jamaah terpilih (> Rp 0)" }, { status: 400 });
+      }
+
+      const createdInvoices = [];
+      for (let i = 0; i < validAllocations.length; i++) {
+        const item = validAllocations[i];
+        const count = await prisma.invoice.count();
+        const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(count + 1 + i).padStart(4, "0")}`;
+
+        const invoice = await prisma.invoice.create({
+          data: {
+            invoiceNumber,
+            pilgrimId: item.pilgrimId,
+            type: type || "INSTALLMENT",
+            title: item.title || title || "Tagihan Pembayaran Umroh",
+            amount: parseFloat(item.amount),
+            dueDate: new Date(dueDate),
+            status: "PENDING",
+            payerName: payerName || null,
+            payerPhone: payerPhone || null,
+            notes: notes || null,
+          },
+          include: {
+            pilgrim: { include: { package: true } },
+          },
+        });
+        createdInvoices.push(invoice);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Berhasil menerbitkan ${createdInvoices.length} invoice sesuai alokasi jamaah.`,
+        invoices: createdInvoices,
+      }, { status: 201 });
+    }
+
+    // Support single pilgrim or simple multi-pilgrim array
+    const targetPilgrimIds: string[] = Array.isArray(pilgrimIds) && pilgrimIds.length > 0
+      ? pilgrimIds
+      : pilgrimId ? [pilgrimId] : [];
+
+    if (targetPilgrimIds.length === 0 || !amount || !dueDate) {
       return NextResponse.json({ error: "Data wajib: Jamaah, Nominal, dan Tanggal Jatuh Tempo" }, { status: 400 });
     }
 
-    const count = await prisma.invoice.count();
-    const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(count + 1).padStart(4, "0")}`;
+    const createdInvoices = [];
 
-    const invoice = await prisma.invoice.create({
-      data: {
-        invoiceNumber,
-        pilgrimId,
-        type: type || "INSTALLMENT",
-        title: title || "Tagihan Pembayaran Umroh",
-        amount: parseFloat(amount),
-        dueDate: new Date(dueDate),
-        status: "PENDING",
-        notes,
-      },
-      include: {
-        pilgrim: { include: { package: true } },
-      },
-    });
+    for (let i = 0; i < targetPilgrimIds.length; i++) {
+      const pid = targetPilgrimIds[i];
+      const count = await prisma.invoice.count();
+      const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(count + 1 + i).padStart(4, "0")}`;
 
-    return NextResponse.json(invoice, { status: 201 });
+      const invoice = await prisma.invoice.create({
+        data: {
+          invoiceNumber,
+          pilgrimId: pid,
+          type: type || "INSTALLMENT",
+          title: title || "Tagihan Pembayaran Umroh",
+          amount: parseFloat(amount),
+          dueDate: new Date(dueDate),
+          status: "PENDING",
+          payerName: payerName || null,
+          payerPhone: payerPhone || null,
+          notes: notes || null,
+        },
+        include: {
+          pilgrim: { include: { package: true } },
+        },
+      });
+      createdInvoices.push(invoice);
+    }
+
+    if (createdInvoices.length === 1) {
+      return NextResponse.json(createdInvoices[0], { status: 201 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Berhasil menerbitkan ${createdInvoices.length} invoice untuk jamaah terpilih.`,
+      invoices: createdInvoices,
+    }, { status: 201 });
   } catch (error) {
     console.error("Error creating invoice:", error);
     return NextResponse.json({ error: "Failed to create invoice" }, { status: 500 });

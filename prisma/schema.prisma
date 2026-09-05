@@ -183,6 +183,14 @@ model Pilgrim {
   // Status
   status                String                @default("REGISTERED") // REGISTERED, DP_PAID, FULLY_PAID, DOCUMENTS_READY, VISA_ISSUED, DEPARTED, RETURNED
 
+  // Berkas Dokumen Google Drive
+  ktpFileUrl            String?   // 1. Berkas KTP (Wajib)
+  familyCardFileUrl     String?   // 2. Berkas Kartu Keluarga (Wajib)
+  vaccineCardFileUrl    String?   // 3. Berkas Vaksin Meningitis (Wajib)
+  passportFileUrl       String?   // 4. Berkas Paspor (Opsional)
+  marriageBookFileUrl   String?   // 5. Berkas Buku Nikah (Opsional)
+  diplomaFileUrl        String?   // 6. Berkas Ijazah (Opsional)
+
   // Akun Portal & Password Jamaah
   portalPassword        String?               @default("123456")
   user                  User?
@@ -192,6 +200,7 @@ model Pilgrim {
   handovers             LogisticsHandover[]
   requirements          PilgrimRequirement[]
   letters               OfficialLetter[]
+  certificates          Certificate[]
   
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
@@ -209,6 +218,8 @@ model Invoice {
   status        String    @default("PENDING") // PENDING, PAID, OVERDUE, CANCELLED
   paymentMethod String?   // BANK_TRANSFER, CASH, QRIS
   paymentDate   DateTime?
+  payerName     String?   // Nama Pembayar / Penyetor (misal: "Hamba Allah", "Bpk Ahmad", "Sponsor")
+  payerPhone    String?   // Nomor HP / WA Pembayar
   proofUrl      String?
   notes         String?
   createdAt     DateTime  @default(now())
@@ -638,12 +649,13 @@ model Registration {
   referralName        String?
   leadId              String?   // Terkoneksi ke Leads CRM
 
-  // Dokumen Unggahan Google Drive (5 Berkas)
-  ktpFileUrl          String?   // 1. Berkas KTP
-  familyCardFileUrl   String?   // 2. Berkas Kartu Keluarga (KK)
-  passportFileUrl     String?   // 3. Berkas Paspor (jika ada)
-  diplomaFileUrl      String?   // 4. Berkas Ijazah (jika ada)
-  marriageBookFileUrl String?   // 5. Berkas Buku Nikah (jika ada)
+  // Dokumen Unggahan Google Drive (Wajib KTP, KK, Vaksin; Lainnya Opsional)
+  ktpFileUrl          String?   // 1. Berkas KTP (WAJIB)
+  familyCardFileUrl   String?   // 2. Berkas Kartu Keluarga / KK (WAJIB)
+  vaccineCardFileUrl  String?   // 3. Berkas Sertifikat Vaksin Meningitis (WAJIB)
+  passportFileUrl     String?   // 4. Berkas Paspor (Opsional / jika ada)
+  diplomaFileUrl      String?   // 5. Berkas Ijazah / Akta (Opsional)
+  marriageBookFileUrl String?   // 6. Berkas Buku Nikah (Opsional)
   transferProofUrl    String?   // Bukti Transfer DP
   googleDriveFolderId String?
   
@@ -796,4 +808,23 @@ model SopDocument {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
+
+model Certificate {
+  id                String    @id @default(uuid())
+  certificateNumber String    @unique // e.g. CERT-SH/UMR/2026/09/0001
+  pilgrimId         String
+  pilgrim           Pilgrim   @relation(fields: [pilgrimId], references: [id], onDelete: Cascade)
+  packageId         String?
+  packageName       String
+  departureDate     DateTime?
+  returnDate        DateTime?
+  issueDate         DateTime  @default(now())
+  muthawwifName     String?   @default("Ustadz Pembimbing Ibadah")
+  directorName      String    @default("Attiyatul Amra")
+  directorTitle     String    @default("Direktur Utama")
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
 

@@ -75,6 +75,8 @@ export async function POST(request: Request) {
       else if (type === "SURAT_PENGANTAR_KEMENAG") prefix = "KEMENAG";
       else if (type === "SURAT_KETERANGAN_JAMAAH") prefix = "JAMAAH";
       else if (type === "SURAT_MAHRAM") prefix = "MAHRAM";
+      else if (type === "SURAT_UNDANGAN_MANASIK") prefix = "MANASIK";
+      else if (type === "SURAT_UNDANGAN_HALAL_BIHALAL") prefix = "SILATURAHMI";
       else if (type === "SURAT_CUSTOM") prefix = "RESMI";
     }
 
@@ -93,7 +95,7 @@ export async function POST(request: Request) {
         applicantJobTitle: applicantJobTitle || null,
         letterCity: letterCity || "Tebing Tinggi",
         customNotes: customNotes || null,
-        generatedBy: generatedBy || "H. Sulthan Syarif, Lc., M.A.",
+        generatedBy: generatedBy || "ATIYATUL AMRA",
       },
       include: {
         pilgrim: {

@@ -91,6 +91,7 @@ export default function PublicRegistrationPage() {
     referralName: "",
     ktpBase64: "",
     familyCardBase64: "",
+    vaccineCardBase64: "",
     passportBase64: "",
     diplomaBase64: "",
     marriageBookBase64: "",
@@ -98,6 +99,7 @@ export default function PublicRegistrationPage() {
   });
   const [ktpPreview, setKtpPreview] = useState<string | null>(null);
   const [familyCardPreview, setFamilyCardPreview] = useState<string | null>(null);
+  const [vaccineCardPreview, setVaccineCardPreview] = useState<string | null>(null);
   const [passportPreview, setPassportPreview] = useState<string | null>(null);
   const [diplomaPreview, setDiplomaPreview] = useState<string | null>(null);
   const [marriageBookPreview, setMarriageBookPreview] = useState<string | null>(null);
@@ -282,6 +284,18 @@ export default function PublicRegistrationPage() {
     }
   };
 
+  const handleVaccineCardUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file);
+      setVaccineCardPreview(compressed);
+      setFormData((prev) => ({ ...prev, vaccineCardBase64: compressed }));
+    } catch (err) {
+      console.error("Failed to compress Vaccine Card:", err);
+    }
+  };
+
   const handlePassportUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -356,6 +370,26 @@ export default function PublicRegistrationPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      // Validasi 3 Dokumen Wajib: KTP, KK, Vaksin Meningitis (Tersimpan di Google Drive)
+      if (!formData.ktpBase64 && !ktpPreview) {
+        alert("Mohon unggah Berkas Wajib: 1) Foto KTP Asli");
+        setSubmitting(false);
+        setCurrentStep(4);
+        return;
+      }
+      if (!formData.familyCardBase64 && !familyCardPreview) {
+        alert("Mohon unggah Berkas Wajib: 2) Foto Kartu Keluarga (KK)");
+        setSubmitting(false);
+        setCurrentStep(4);
+        return;
+      }
+      if (!formData.vaccineCardBase64 && !vaccineCardPreview) {
+        alert("Mohon unggah Berkas Wajib: 3) Sertifikat / Buku Vaksin Meningitis");
+        setSubmitting(false);
+        setCurrentStep(4);
+        return;
+      }
+
       const selectedDiseases = formData.chronicDiseases.includes("LAINNYA") && formData.customChronicDisease
         ? [...formData.chronicDiseases.filter((d) => d !== "LAINNYA"), formData.customChronicDisease]
         : formData.chronicDiseases;
@@ -1614,19 +1648,19 @@ export default function PublicRegistrationPage() {
                 <div>
                   <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                     <Upload className="w-5 h-5 text-emerald-600" />
-                    Langkah 4: Upload 5 Dokumen Persyaratan & Ringkasan Pendaftaran
+                    Langkah 4: Upload Dokumen Persyaratan & Ringkasan Pendaftaran
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Berkas yang Anda upload akan tersimpan secara otomatis & aman di Google Drive sistem Sulthan Haramain. Dokumen juga dapat diserahkan menyusul jika belum lengkap.
+                    Berkas wajib: <strong>KTP, KK, dan Sertifikat Vaksin Meningitis</strong>. Berkas lain (Paspor, Buku Nikah, Ijazah) bersifat <strong>opsional / dapat menyusul</strong>. Seluruh berkas otomatis tersimpan di Google Drive Travel.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {/* 1. Upload KTP */}
-                  <div className="border-2 border-dashed border-emerald-200 bg-emerald-50/20 rounded-2xl p-3.5 text-center space-y-2 hover:border-emerald-500 transition-colors">
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="text-xs font-bold text-slate-800">1. Foto KTP Asli</span>
-                      <span className="text-[10px] text-rose-600 font-bold">*Wajib</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                  {/* 1. Upload KTP (WAJIB) */}
+                  <div className="border-2 border-dashed border-emerald-300 bg-emerald-50/30 rounded-2xl p-3.5 text-center space-y-2 hover:border-emerald-600 transition-colors shadow-2xs">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="text-xs font-black text-slate-900">1. Foto KTP Asli</span>
+                      <span className="text-[10px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-bold border border-rose-200">*WAJIB</span>
                     </div>
                     {ktpPreview ? (
                       <div className="space-y-1.5">
@@ -1639,14 +1673,14 @@ export default function PublicRegistrationPage() {
                         <p className="text-[10px] text-slate-500">e-KTP asli jelas & terbaca</p>
                       </div>
                     )}
-                    <input type="file" accept="image/*" onChange={handleKtpUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200 cursor-pointer" />
+                    <input type="file" accept="image/*" onChange={handleKtpUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer" />
                   </div>
 
-                  {/* 2. Upload Kartu Keluarga */}
-                  <div className="border-2 border-dashed border-emerald-200 bg-emerald-50/20 rounded-2xl p-3.5 text-center space-y-2 hover:border-emerald-500 transition-colors">
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="text-xs font-bold text-slate-800">2. Foto Kartu Keluarga</span>
-                      <span className="text-[10px] text-rose-600 font-bold">*Wajib</span>
+                  {/* 2. Upload Kartu Keluarga (WAJIB) */}
+                  <div className="border-2 border-dashed border-emerald-300 bg-emerald-50/30 rounded-2xl p-3.5 text-center space-y-2 hover:border-emerald-600 transition-colors shadow-2xs">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="text-xs font-black text-slate-900">2. Foto Kartu Keluarga (KK)</span>
+                      <span className="text-[10px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-bold border border-rose-200">*WAJIB</span>
                     </div>
                     {familyCardPreview ? (
                       <div className="space-y-1.5">
@@ -1659,14 +1693,34 @@ export default function PublicRegistrationPage() {
                         <p className="text-[10px] text-slate-500">Foto KK asli / barcode</p>
                       </div>
                     )}
-                    <input type="file" accept="image/*" onChange={handleFamilyCardUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200 cursor-pointer" />
+                    <input type="file" accept="image/*" onChange={handleFamilyCardUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer" />
                   </div>
 
-                  {/* 3. Upload Paspor */}
+                  {/* 3. Upload Vaksin Meningitis (WAJIB) */}
+                  <div className="border-2 border-dashed border-emerald-300 bg-emerald-50/30 rounded-2xl p-3.5 text-center space-y-2 hover:border-emerald-600 transition-colors shadow-2xs">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="text-xs font-black text-slate-900">3. Sertifikat Vaksin Meningitis</span>
+                      <span className="text-[10px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-bold border border-rose-200">*WAJIB</span>
+                    </div>
+                    {vaccineCardPreview ? (
+                      <div className="space-y-1.5">
+                        <img src={vaccineCardPreview} alt="Preview Vaksin" className="h-24 mx-auto rounded-lg object-contain border bg-white" />
+                        <label className="text-[10px] text-emerald-700 font-bold cursor-pointer block">Ganti Foto Vaksin</label>
+                      </div>
+                    ) : (
+                      <div className="py-3 space-y-1">
+                        <Upload className="w-7 h-7 text-emerald-600 mx-auto" />
+                        <p className="text-[10px] text-slate-500">Buku Kuning / Sertifikat Vaksin (ICV)</p>
+                      </div>
+                    )}
+                    <input type="file" accept="image/*" onChange={handleVaccineCardUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer" />
+                  </div>
+
+                  {/* 4. Upload Paspor (OPSIONAL) */}
                   <div className={`border-2 border-dashed rounded-2xl p-3.5 text-center space-y-2 transition-colors ${formData.hasPassport ? "border-blue-300 bg-blue-50/20 hover:border-blue-500" : "border-slate-200 bg-slate-50/60"}`}>
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="text-xs font-bold text-slate-800">3. Foto Paspor</span>
-                      <span className="text-[10px] text-slate-500 font-medium">({formData.hasPassport ? "Jika Ada" : "Menyusul"})</span>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-800">4. Foto Paspor</span>
+                      <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">Opsional / Menyusul</span>
                     </div>
                     {passportPreview ? (
                       <div className="space-y-1.5">
@@ -1675,51 +1729,31 @@ export default function PublicRegistrationPage() {
                       </div>
                     ) : (
                       <div className="py-3 space-y-1">
-                        <Upload className="w-7 h-7 text-blue-600 mx-auto" />
-                        <p className="text-[10px] text-slate-500">Halaman depan berfoto</p>
+                        <Upload className="w-7 h-7 text-blue-500 mx-auto" />
+                        <p className="text-[10px] text-slate-500">Halaman berfoto (jika sudah ada)</p>
                       </div>
                     )}
                     <input type="file" accept="image/*" onChange={handlePassportUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-blue-100 file:text-blue-800 hover:file:bg-blue-200 cursor-pointer" />
                   </div>
 
-                  {/* 4. Upload Ijazah */}
-                  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-3.5 text-center space-y-2 hover:border-emerald-500 transition-colors">
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="text-xs font-bold text-slate-800">4. Foto Ijazah</span>
-                      <span className="text-[10px] text-slate-400">(Jika Ada / Opsional)</span>
-                    </div>
-                    {diplomaPreview ? (
-                      <div className="space-y-1.5">
-                        <img src={diplomaPreview} alt="Preview Ijazah" className="h-24 mx-auto rounded-lg object-contain border bg-white" />
-                        <label className="text-[10px] text-emerald-700 font-bold cursor-pointer block">Ganti Foto Ijazah</label>
-                      </div>
-                    ) : (
-                      <div className="py-3 space-y-1">
-                        <Upload className="w-7 h-7 text-slate-400 mx-auto" />
-                        <p className="text-[10px] text-slate-500">Ijazah / Akta Lahir</p>
-                      </div>
-                    )}
-                    <input type="file" accept="image/*" onChange={handleDiplomaUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-slate-100 file:text-slate-800 hover:file:bg-slate-200 cursor-pointer" />
-                  </div>
-
-                  {/* 5. Upload Buku Nikah */}
-                  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-3.5 text-center space-y-2 hover:border-emerald-500 transition-colors">
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="text-xs font-bold text-slate-800">5. Foto Buku Nikah</span>
-                      <span className="text-[10px] text-slate-400">(Jika Ada / Menikah)</span>
+                  {/* 5. Upload Dokumen Pendukung Lain (OPSIONAL) */}
+                  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-3.5 text-center space-y-2 hover:border-slate-400 transition-colors bg-slate-50/40">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-800">5. Buku Nikah / Ijazah</span>
+                      <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">Opsional</span>
                     </div>
                     {marriageBookPreview ? (
                       <div className="space-y-1.5">
                         <img src={marriageBookPreview} alt="Preview Buku Nikah" className="h-24 mx-auto rounded-lg object-contain border bg-white" />
-                        <label className="text-[10px] text-emerald-700 font-bold cursor-pointer block">Ganti Buku Nikah</label>
+                        <label className="text-[10px] text-slate-700 font-bold cursor-pointer block">Ganti Dokumen</label>
                       </div>
                     ) : (
                       <div className="py-3 space-y-1">
                         <Upload className="w-7 h-7 text-slate-400 mx-auto" />
-                        <p className="text-[10px] text-slate-500">Buku Nikah (Bagi Pasutri)</p>
+                        <p className="text-[10px] text-slate-500">Buku Nikah (Pasutri) / Akta / Ijazah</p>
                       </div>
                     )}
-                    <input type="file" accept="image/*" onChange={handleMarriageBookUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-slate-100 file:text-slate-800 hover:file:bg-slate-200 cursor-pointer" />
+                    <input type="file" accept="image/*" onChange={handleMarriageBookUpload} className="text-[11px] w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-slate-200 file:text-slate-800 hover:file:bg-slate-300 cursor-pointer" />
                   </div>
                 </div>
 

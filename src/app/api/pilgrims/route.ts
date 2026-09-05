@@ -88,6 +88,12 @@ export async function POST(request: Request) {
       healthNotes,
       status,
       initialDpAmount,
+      ktpFileUrl,
+      familyCardFileUrl,
+      vaccineCardFileUrl,
+      passportFileUrl,
+      diplomaFileUrl,
+      marriageBookFileUrl,
     } = body;
 
     if (!packageId || !name || !nik || !phone) {
@@ -144,6 +150,12 @@ export async function POST(request: Request) {
         uniformSize: uniformSize || "L",
         bloodType: bloodType || null,
         healthNotes: healthNotes || null,
+        ktpFileUrl: ktpFileUrl || null,
+        familyCardFileUrl: familyCardFileUrl || null,
+        vaccineCardFileUrl: vaccineCardFileUrl || null,
+        passportFileUrl: passportFileUrl || null,
+        diplomaFileUrl: diplomaFileUrl || null,
+        marriageBookFileUrl: marriageBookFileUrl || null,
         status: status || (initialDpAmount ? "DP_PAID" : "REGISTERED"),
       },
     });
@@ -217,7 +229,7 @@ export async function POST(request: Request) {
       const handover = await prisma.logisticsHandover.create({
         data: {
           pilgrimId: pilgrim.id,
-          officerName: "Petugas Logistik",
+          officerName: "Tim Admin",
           recipientName: pilgrim.name,
           notes: "Draft formulir serah terima perlengkapan umroh",
           isCompleted: false,

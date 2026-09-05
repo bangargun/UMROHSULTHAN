@@ -27,6 +27,7 @@ import {
   MessageSquare,
   Coins,
   Heart,
+  GraduationCap,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -162,9 +163,15 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
           desc: "Alur ibadah, peraturan & mitigasi AI",
         },
         {
+          id: "certificates",
+          label: "Piagam & Sertifikat Umroh",
+          icon: Award,
+          desc: "Syahadah Al-Umrah & e-Sertifikat",
+        },
+        {
           id: "alumni",
           label: "Riwayat Jamaah & Alumni",
-          icon: Award,
+          icon: GraduationCap,
           desc: "Arsip kepulangan & CRM alumni",
         },
       ],

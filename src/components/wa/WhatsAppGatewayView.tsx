@@ -267,6 +267,36 @@ export default function WhatsAppGatewayView({ pilgrims, packages }: WhatsAppGate
               </button>
             </div>
           </form>
+
+          {/* Panduan Cara Mendapatkan API Token Fonnte */}
+          <div className="mt-6 pt-5 border-t border-slate-200 space-y-3">
+            <h4 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+              💡 Panduan Cara Mendapatkan API Token Fonnte (3 Langkah Mudah):
+            </h4>
+            <div className="space-y-2 text-[11px] text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <p>
+                <strong>1. Buka & Login ke Fonnte:</strong> Kunjungi situs resmi Fonnte di{" "}
+                <a
+                  href="https://fonnte.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-700 font-bold underline inline-flex items-center gap-0.5"
+                >
+                  https://fonnte.com <ExternalLink className="w-3 h-3 inline" />
+                </a>{" "}
+                lalu login atau daftar akun baru.
+              </p>
+              <p>
+                <strong>2. Tambah Device & Scan QR:</strong> Masuk ke menu <strong>Device</strong> ➔ Klik <strong>+ Tambah Device</strong> ➔ Beri nama device (misal: <em>Sulthan Haramain WA</em>) ➔ Klik <strong>Scan QR</strong> menggunakan WhatsApp di HP travel Anda.
+              </p>
+              <p>
+                <strong>3. Salin Token:</strong> Setelah device berstatus <strong>Connected</strong>, salin kode <strong>API Token</strong> di samping nama device Anda, lalu tempelkan (*Paste*) ke kolom input <strong>API Key / Token</strong> di atas dan klik <strong>Simpan</strong>.
+              </p>
+            </div>
+            <p className="text-[10px] text-slate-400 italic">
+              *Tips: Jika belum memiliki token Fonnte, sistem tetap dapat mengirim pesan otomatis melalui tombol 1-Click WhatsApp Web tanpa biaya langganan API.
+            </p>
+          </div>
         </div>
       )}
 
