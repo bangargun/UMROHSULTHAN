@@ -78,6 +78,7 @@ model Package {
   itineraries        ItineraryDay[]
   registrations      Registration[]
   savingsAccounts    SavingsAccount[]
+  packageInfo        PackageInfo?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 }
@@ -831,6 +832,32 @@ model Certificate {
   notes             String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+}
+
+model PackageInfo {
+  id              String   @id @default(uuid())
+  packageId       String   @unique
+  package         Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  groupCode       String?  // e.g. GRP-20260908-01
+  subAgentName    String?  // e.g. PT. HAJAR ASWAD WISATA
+  adultPax        Int      @default(0)
+  childPax        Int      @default(0)
+  tourLeaderName  String?  // e.g. WAHIDAH RANGKUTI
+  tourLeaderPhone String?  // e.g. 085276550914
+  
+  // JSON arrays for flight legs, hotel rooms, bus schedules, and local contacts
+  flightInfoJson  String?  // JSON string: [{from, to, date, etd, eta, carrier, flightNo, remarks}]
+  hotelInfoJson   String?  // JSON string: [{city, hotel, checkIn, checkOut, dbl, trpl, quad, quint, resNo}]
+  busScheduleJson String?  // JSON string: [{date, from, to, time, busType, company}]
+  
+  // Local contacts
+  muthawwifName   String?  // e.g. Ustadz Agim Asyari
+  muthawwifPhone  String?  // e.g. 0812 6102 9910
+  handlingSaudi   String?  // e.g. Syarikah Transport / Muassasah Saudi
+  handlingPhone   String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 

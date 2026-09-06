@@ -27,6 +27,7 @@ import MasterDataView from "@/components/master/MasterDataView";
 import SettingsView from "@/components/settings/SettingsView";
 import SopManagementView from "@/components/sop/SopManagementView";
 import CertificatesManagementView from "@/components/certificates/CertificatesManagementView";
+import PackageInfoView from "@/components/packages/PackageInfoView";
 import LoginView from "@/components/auth/LoginView";
 import { Loader2 } from "lucide-react";
 
@@ -312,6 +313,15 @@ export default function Home() {
             />
           )}
 
+          {activeTab === "package-info" && (
+            <PackageInfoView
+              packages={packages}
+              pilgrims={pilgrims}
+              initialPackageId={activeSearchFilter}
+              onRefreshAll={fetchAllData}
+            />
+          )}
+
           {activeTab === "alumni" && (
             <AlumniPilgrimsView
               pilgrims={pilgrims}
@@ -419,6 +429,7 @@ export default function Home() {
               packages={packages}
               equipment={equipment}
               onRefreshAll={fetchAllData}
+              onNavigateTab={handleNavigateTab}
             />
           )}
 

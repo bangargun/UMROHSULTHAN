@@ -28,6 +28,7 @@ import {
   Users,
   KeyRound,
   Calendar,
+  FileSpreadsheet,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import PackageItineraryModal from "@/components/packages/PackageItineraryModal";
@@ -36,9 +37,10 @@ interface MasterDataViewProps {
   packages: any[];
   equipment: any[];
   onRefreshAll: () => void;
+  onNavigateTab?: (tab: string, filter?: string) => void;
 }
 
-export default function MasterDataView({ packages, equipment, onRefreshAll }: MasterDataViewProps) {
+export default function MasterDataView({ packages, equipment, onRefreshAll, onNavigateTab }: MasterDataViewProps) {
   const [activeTab, setActiveTab] = useState<"PACKAGES" | "LETTERS" | "ACCOUNTS" | "EQUIPMENT" | "DOCS" | "SETTINGS" | "STAFF">("PACKAGES");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAccountCategory, setSelectedAccountCategory] = useState<string>("ALL");
@@ -760,8 +762,17 @@ export default function MasterDataView({ packages, equipment, onRefreshAll }: Ma
 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 flex-wrap">
                   <button
+                    onClick={() => {
+                      if (onNavigateTab) onNavigateTab("package-info", p.id);
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 text-xs font-bold border border-blue-200 cursor-pointer"
+                    title="Buka & Cetak Dokumen Package Info / Handover Sheet"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-blue-700" /> 📋 Package Info
+                  </button>
+                  <button
                     onClick={() => setSelectedPackageForItinerary(p)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold border border-emerald-200"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold border border-emerald-200 cursor-pointer"
                   >
                     <Calendar className="w-3.5 h-3.5 text-emerald-700" /> 🗓️ Kelola Itinerary
                   </button>

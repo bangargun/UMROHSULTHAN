@@ -28,6 +28,7 @@ import {
   Coins,
   Heart,
   GraduationCap,
+  FileSpreadsheet,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -135,6 +136,12 @@ export default function Sidebar({ activeTab, onSelectTab, badgeCounts }: Sidebar
           label: "Ground Handling Saudi",
           icon: Hotel,
           desc: "Rooming list, Bus & Absensi",
+        },
+        {
+          id: "package-info",
+          label: "Package Info & Handover",
+          icon: FileSpreadsheet,
+          desc: "Manifest flight, hotel, bus & muthawwif",
         },
         {
           id: "requirements",
