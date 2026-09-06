@@ -107,6 +107,13 @@ export default function PackageInfoView({
       .catch((e) => console.error(e));
   }, []);
 
+  // Sync selectedPackageId with packages prop when loaded
+  useEffect(() => {
+    if (!selectedPackageId && packages && packages.length > 0) {
+      setSelectedPackageId(initialPackageId || packages[0].id);
+    }
+  }, [packages, initialPackageId, selectedPackageId]);
+
   // Fetch Package Info when selected package changes
   const loadPackageInfo = async (pkgId: string) => {
     if (!pkgId) return;
@@ -123,19 +130,31 @@ export default function PackageInfoView({
         let buses: BusRoute[] = [];
 
         try {
-          flights = data.flightInfoJson ? JSON.parse(data.flightInfoJson) : [];
+          flights = data.flightInfoJson
+            ? typeof data.flightInfoJson === "string"
+              ? JSON.parse(data.flightInfoJson)
+              : data.flightInfoJson
+            : [];
         } catch (e) {
           flights = [];
         }
 
         try {
-          hotels = data.hotelInfoJson ? JSON.parse(data.hotelInfoJson) : [];
+          hotels = data.hotelInfoJson
+            ? typeof data.hotelInfoJson === "string"
+              ? JSON.parse(data.hotelInfoJson)
+              : data.hotelInfoJson
+            : [];
         } catch (e) {
           hotels = [];
         }
 
         try {
-          buses = data.busScheduleJson ? JSON.parse(data.busScheduleJson) : [];
+          buses = data.busScheduleJson
+            ? typeof data.busScheduleJson === "string"
+              ? JSON.parse(data.busScheduleJson)
+              : data.busScheduleJson
+            : [];
         } catch (e) {
           buses = [];
         }
@@ -143,7 +162,7 @@ export default function PackageInfoView({
         setFormData({
           groupCode: data.groupCode || data.package?.code || "",
           subAgentName: data.subAgentName || "",
-          adultPax: data.adultPax || data.package?.pilgrims?.length || 0,
+          adultPax: data.adultPax !== undefined && data.adultPax !== null ? data.adultPax : (data.package?.pilgrims?.length || 0),
           childPax: data.childPax || 0,
           tourLeaderName: data.tourLeaderName || "",
           tourLeaderPhone: data.tourLeaderPhone || "",
@@ -169,6 +188,63 @@ export default function PackageInfoView({
     }
   }, [selectedPackageId]);
 
+  // Open edit modal with refreshed form data
+  const handleOpenEditModal = () => {
+    const curPkg = packages.find((p) => p.id === selectedPackageId) || packageInfo?.package;
+    const totalP = curPkg?.pilgrims?.length || 0;
+
+    let flights: FlightLeg[] = [];
+    let hotels: HotelRoom[] = [];
+    let buses: BusRoute[] = [];
+
+    try {
+      flights = packageInfo?.flightInfoJson
+        ? typeof packageInfo.flightInfoJson === "string"
+          ? JSON.parse(packageInfo.flightInfoJson)
+          : packageInfo.flightInfoJson
+        : formData.flights;
+    } catch (e) {
+      flights = formData.flights;
+    }
+
+    try {
+      hotels = packageInfo?.hotelInfoJson
+        ? typeof packageInfo.hotelInfoJson === "string"
+          ? JSON.parse(packageInfo.hotelInfoJson)
+          : packageInfo.hotelInfoJson
+        : formData.hotels;
+    } catch (e) {
+      hotels = formData.hotels;
+    }
+
+    try {
+      buses = packageInfo?.busScheduleJson
+        ? typeof packageInfo.busScheduleJson === "string"
+          ? JSON.parse(packageInfo.busScheduleJson)
+          : packageInfo.busScheduleJson
+        : formData.buses;
+    } catch (e) {
+      buses = formData.buses;
+    }
+
+    setFormData({
+      groupCode: packageInfo?.groupCode || curPkg?.code || "",
+      subAgentName: packageInfo?.subAgentName || travelSettings.companyName || "",
+      adultPax: packageInfo?.adultPax !== undefined && packageInfo?.adultPax !== null ? packageInfo.adultPax : totalP,
+      childPax: packageInfo?.childPax || 0,
+      tourLeaderName: packageInfo?.tourLeaderName || "",
+      tourLeaderPhone: packageInfo?.tourLeaderPhone || "",
+      muthawwifName: packageInfo?.muthawwifName || "",
+      muthawwifPhone: packageInfo?.muthawwifPhone || "",
+      handlingSaudi: packageInfo?.handlingSaudi || "",
+      handlingPhone: packageInfo?.handlingPhone || "",
+      flights: flights && flights.length > 0 ? flights : [],
+      hotels: hotels && hotels.length > 0 ? hotels : [],
+      buses: buses && buses.length > 0 ? buses : [],
+    });
+    setIsEditModalOpen(true);
+  };
+
   // Selected package object
   const currentPackage =
     packages.find((p) => p.id === selectedPackageId) || packageInfo?.package;
@@ -193,29 +269,35 @@ export default function PackageInfoView({
     : formData.buses;
 
   const totalPax =
-    (packageInfo?.adultPax || formData.adultPax || 0) +
+    (packageInfo?.adultPax !== undefined && packageInfo?.adultPax !== null ? packageInfo.adultPax : formData.adultPax || 0) +
     (packageInfo?.childPax || formData.childPax || 0);
 
   // Save handler
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const targetPkgId = selectedPackageId || packages[0]?.id;
+    if (!targetPkgId) {
+      alert("Pilih Paket Umroh terlebih dahulu");
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
-        packageId: selectedPackageId,
+        packageId: targetPkgId,
         groupCode: formData.groupCode,
         subAgentName: formData.subAgentName,
-        adultPax: formData.adultPax,
-        childPax: formData.childPax,
+        adultPax: Number(formData.adultPax) || 0,
+        childPax: Number(formData.childPax) || 0,
         tourLeaderName: formData.tourLeaderName,
         tourLeaderPhone: formData.tourLeaderPhone,
         muthawwifName: formData.muthawwifName,
         muthawwifPhone: formData.muthawwifPhone,
         handlingSaudi: formData.handlingSaudi,
         handlingPhone: formData.handlingPhone,
-        flightInfoJson: JSON.stringify(formData.flights),
-        hotelInfoJson: JSON.stringify(formData.hotels),
-        busScheduleJson: JSON.stringify(formData.buses),
+        flightInfoJson: JSON.stringify(formData.flights || []),
+        hotelInfoJson: JSON.stringify(formData.hotels || []),
+        busScheduleJson: JSON.stringify(formData.buses || []),
       };
 
       const res = await fetch("/api/package-info", {
@@ -226,16 +308,16 @@ export default function PackageInfoView({
 
       if (res.ok) {
         setIsEditModalOpen(false);
-        await loadPackageInfo(selectedPackageId);
+        await loadPackageInfo(targetPkgId);
         if (onRefreshAll) onRefreshAll();
-        alert("Data Package Info berhasil diperbarui!");
+        alert("✅ Data Package Info & Manifest Operasional berhasil disimpan!");
       } else {
         const err = await res.json();
-        alert(err.error || "Gagal menyimpan data");
+        alert(`❌ Gagal menyimpan: ${err.error || "Terjadi kesalahan pada server"}`);
       }
     } catch (e: any) {
       console.error(e);
-      alert("Terjadi kesalahan saat menyimpan data");
+      alert(`❌ Error: ${e.message || "Gagal menghubungi server"}`);
     } finally {
       setLoading(false);
     }
@@ -449,7 +531,7 @@ export default function PackageInfoView({
           </div>
 
           <button
-            onClick={() => setIsEditModalOpen(true)}
+            onClick={handleOpenEditModal}
             className="inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
             <Edit3 className="w-4 h-4" /> Edit Data Info

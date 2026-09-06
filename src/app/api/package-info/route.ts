@@ -186,14 +186,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Paket Umroh wajib dipilih" }, { status: 400 });
     }
 
+    const numAdult = typeof adultPax === "number" ? adultPax : (parseInt(String(adultPax || "0"), 10) || 0);
+    const numChild = typeof childPax === "number" ? childPax : (parseInt(String(childPax || "0"), 10) || 0);
+
     const saved = await prisma.packageInfo.upsert({
       where: { packageId },
       create: {
         packageId,
         groupCode: groupCode || null,
         subAgentName: subAgentName || null,
-        adultPax: parseInt(adultPax || "0", 10),
-        childPax: parseInt(childPax || "0", 10),
+        adultPax: numAdult,
+        childPax: numChild,
         tourLeaderName: tourLeaderName || null,
         tourLeaderPhone: tourLeaderPhone || null,
         flightInfoJson: typeof flightInfoJson === "string" ? flightInfoJson : JSON.stringify(flightInfoJson || []),
@@ -207,8 +210,8 @@ export async function POST(req: Request) {
       update: {
         groupCode: groupCode || null,
         subAgentName: subAgentName || null,
-        adultPax: parseInt(adultPax || "0", 10),
-        childPax: parseInt(childPax || "0", 10),
+        adultPax: numAdult,
+        childPax: numChild,
         tourLeaderName: tourLeaderName || null,
         tourLeaderPhone: tourLeaderPhone || null,
         flightInfoJson: typeof flightInfoJson === "string" ? flightInfoJson : JSON.stringify(flightInfoJson || []),

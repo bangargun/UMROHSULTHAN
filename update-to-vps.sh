@@ -34,9 +34,9 @@ if [ -f "public/sulthan-umroh.apk" ]; then
   scp "public/sulthan-umroh.apk" "${VPS_USER}@${VPS_HOST}:${VPS_DIR}/public/downloads/sulthan-umroh.apk"
 fi
 
-# 5. Hapus Cache & Rebuild Next.js di VPS
+# 5. Sinkronisasi DB, Hapus Cache, & Rebuild Next.js di VPS
 echo "[5/5] Membangun Ulang (Build) & Me-restart Server VPS (~30 Detik)..."
-ssh "${VPS_USER}@${VPS_HOST}" "cd ${VPS_DIR} && rm -f dev.db dev.db-wal dev.db-shm prisma/dev.db-wal prisma/dev.db-shm && npm install --include=dev && npx prisma generate && npx prisma db push && npm run build && pm2 restart all --update-env"
+ssh "${VPS_USER}@${VPS_HOST}" "cd ${VPS_DIR} && npm install --include=dev && npx prisma generate && npx prisma db push && cp -f prisma/dev.db dev.db && chmod 666 prisma/dev.db dev.db 2>/dev/null || true && chmod -R 777 prisma 2>/dev/null || true && npm run build && pm2 restart all --update-env"
 
 echo "=========================================================="
 echo "  ✅ ALHAMDULILLAH! UPDATE KODE, DATABASE & APK SELESAI!"
