@@ -82,11 +82,20 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
     bankMandiri: "137-00-9876543-2 a.n PT TRAVEL UMROH BERKAH NUSANTARA",
   });
 
+  const [agents, setAgents] = useState<any[]>([]);
+
   React.useEffect(() => {
     fetch("/api/settings")
       .then((r) => r.json())
       .then((data) => {
         if (data && data.companyName) setTravelSettings(data);
+      })
+      .catch((e) => console.error(e));
+
+    fetch("/api/agents")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setAgents(data);
       })
       .catch((e) => console.error(e));
   }, []);
@@ -110,6 +119,12 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
     discountAmount: "",
     discountReason: "",
     hasDiscount: false,
+    // Agent / Mitra payment fields
+    isAgentPayment: false,
+    agentId: "",
+    agentName: "",
+    agentPaymentScheme: "NET_COMMISSION_DEDUCTION" as "NET_COMMISSION_DEDUCTION" | "GROSS",
+    agentCommissionAmount: "",
   });
 
   const [paymentData, setPaymentData] = useState({
@@ -118,6 +133,12 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
     payerName: "",
     payerPhone: "",
     notes: "",
+    // Agent fields for payment confirmation
+    isAgentPayment: false,
+    agentId: "",
+    agentName: "",
+    agentPaymentScheme: "NET_COMMISSION_DEDUCTION" as "NET_COMMISSION_DEDUCTION" | "GROSS",
+    agentCommissionAmount: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -381,6 +402,11 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
           discountAmount: "",
           discountReason: "",
           hasDiscount: false,
+          isAgentPayment: false,
+          agentId: "",
+          agentName: "",
+          agentPaymentScheme: "NET_COMMISSION_DEDUCTION",
+          agentCommissionAmount: "",
         });
         onRefresh();
       } else {
@@ -392,6 +418,23 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenPayModal = (inv: any) => {
+    const invAgent = agents.find((a) => a.id === inv.agentId || a.name === inv.agentName);
+    setSelectedInvoiceForPayment(inv);
+    setPaymentData({
+      paymentMethod: inv.paymentMethod || "BANK_TRANSFER",
+      paymentDate: new Date().toISOString().split("T")[0],
+      payerName: inv.payerName || (invAgent ? `${invAgent.name} (Mitra/Agen)` : inv.pilgrim?.name || ""),
+      payerPhone: inv.payerPhone || invAgent?.phone || inv.pilgrim?.phone || "",
+      notes: inv.notes || "",
+      isAgentPayment: !!(inv.agentId || inv.agentName || invAgent),
+      agentId: inv.agentId || invAgent?.id || "",
+      agentName: inv.agentName || invAgent?.name || "",
+      agentPaymentScheme: "NET_COMMISSION_DEDUCTION",
+      agentCommissionAmount: "",
+    });
   };
 
   const handlePayInvoice = async (e: React.FormEvent) => {
@@ -706,7 +749,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                           {/* Record Payment */}
                           {!isPaid ? (
                             <button
-                              onClick={() => setSelectedInvoiceForPayment(inv)}
+                              onClick={() => handleOpenPayModal(inv)}
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors cursor-pointer"
                               title="Konfirmasi Pembayaran Diterima"
                             >
@@ -1054,6 +1097,23 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                     >
                       🏢 Sponsor / Donatur
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const firstAg = agents[0];
+                        setFormData({
+                          ...formData,
+                          isAgentPayment: true,
+                          agentId: firstAg?.id || "",
+                          agentName: firstAg?.name || "",
+                          payerName: `${firstAg?.name || "Mitra / Agen"} (Mitra/Agen)`,
+                          payerPhone: firstAg?.phone || "",
+                        });
+                      }}
+                      className="px-2 py-0.5 rounded-lg bg-teal-100 border border-teal-300 text-[10px] font-bold text-teal-900 hover:bg-teal-200"
+                    >
+                      🤝 Mitra / Agen
+                    </button>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1073,6 +1133,159 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Box Opsi Pembayaran via Mitra / Agen (Agent Payment & Settlement) */}
+              <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={formData.isAgentPayment}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        const firstAgent = agents[0];
+                        setFormData({
+                          ...formData,
+                          isAgentPayment: checked,
+                          agentId: checked ? (formData.agentId || firstAgent?.id || "") : "",
+                          agentName: checked ? (formData.agentName || firstAgent?.name || "") : "",
+                          payerName: checked ? `${firstAgent?.name || formData.agentName || "Mitra / Agen"} (Mitra/Agen)` : formData.payerName,
+                          payerPhone: checked ? (firstAgent?.phone || formData.payerPhone) : formData.payerPhone,
+                        });
+                      }}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className="font-bold text-blue-950 text-xs flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-blue-700" />
+                      Pembayaran Disetor oleh Mitra / Agen Perwakilan
+                    </span>
+                  </label>
+                  {formData.isAgentPayment && (
+                    <span className="text-[10px] font-bold bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full">
+                      Mitra Aktif
+                    </span>
+                  )}
+                </div>
+
+                {formData.isAgentPayment && (
+                  <div className="space-y-3 pt-1 border-t border-blue-200">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 block mb-0.5">Pilih Mitra / Agen Terdaftar</label>
+                        <select
+                          value={formData.agentId}
+                          onChange={(e) => {
+                            const aId = e.target.value;
+                            const selAgent = agents.find((a) => a.id === aId);
+                            setFormData({
+                              ...formData,
+                              agentId: aId,
+                              agentName: selAgent ? selAgent.name : "",
+                              payerName: selAgent ? `${selAgent.name} (Mitra/Agen)` : formData.payerName,
+                              payerPhone: selAgent ? selAgent.phone : formData.payerPhone,
+                            });
+                          }}
+                          className="w-full px-2.5 py-2 rounded-xl border border-blue-200 text-xs font-semibold bg-white text-slate-900 focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">-- Pilih Agen Database --</option>
+                          {agents.map((ag) => (
+                            <option key={ag.id} value={ag.id}>
+                              {ag.name} ({ag.city || "Mitra"}) • Komisi: {formatCurrency(ag.commissionPerPax || 1500000)}/pax
+                            </option>
+                          ))}
+                          <option value="CUSTOM">+ Input Agen Manual / Baru</option>
+                        </select>
+                      </div>
+
+                      {formData.agentId === "CUSTOM" && (
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-0.5">Nama Agen / Mitra Manual</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Ustadz Ahmad Dahlan"
+                            value={formData.agentName}
+                            onChange={(e) => setFormData({ ...formData, agentName: e.target.value, payerName: `${e.target.value} (Mitra/Agen)` })}
+                            className="w-full px-2.5 py-2 rounded-xl border border-blue-200 text-xs bg-white"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Skema Komisi Agen */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-700 block">Skema Pembayaran Komisi Agen:</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, agentPaymentScheme: "NET_COMMISSION_DEDUCTION" })}
+                          className={`p-2.5 rounded-xl border text-left transition-all ${
+                            formData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION"
+                              ? "bg-blue-600 text-white border-blue-700 shadow-xs"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          <p className="font-bold text-xs flex items-center gap-1">
+                            ⚡ Potong Komisi Langsung
+                          </p>
+                          <p className={`text-[10px] mt-0.5 ${formData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" ? "text-blue-100" : "text-slate-500"}`}>
+                            Agen menyetor setelah dipotong komisi. Invoice tetap lunas penuh.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, agentPaymentScheme: "GROSS" })}
+                          className={`p-2.5 rounded-xl border text-left transition-all ${
+                            formData.agentPaymentScheme === "GROSS"
+                              ? "bg-blue-600 text-white border-blue-700 shadow-xs"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          <p className="font-bold text-xs flex items-center gap-1">
+                            💰 Setoran Bruto (Utuh)
+                          </p>
+                          <p className={`text-[10px] mt-0.5 ${formData.agentPaymentScheme === "GROSS" ? "text-blue-100" : "text-slate-500"}`}>
+                            Agen setor utuh. Hak komisi dicatat ke pending payout.
+                          </p>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Interactive Calculation for Agent Settlement */}
+                    {(() => {
+                      const selAgent = agents.find((a) => a.id === formData.agentId);
+                      const paxCount = formData.isMultiPilgrim ? Math.max(1, formData.selectedPilgrimIds.length) : 1;
+                      const commRate = selAgent?.commissionPerPax || 1500000;
+                      const totalComm = formData.agentCommissionAmount ? (parseFloat(formData.agentCommissionAmount) || 0) : (commRate * paxCount);
+                      const grossAmount = parseFloat(formData.amount || "0");
+                      const netPayable = Math.max(0, grossAmount - totalComm);
+
+                      return (
+                        <div className="bg-white p-3 rounded-xl border border-blue-200 text-xs space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-600">Total Tagihan Jamaah (Gross):</span>
+                            <strong className="text-slate-900">{formatCurrency(grossAmount)}</strong>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-blue-700">
+                            <span className="flex items-center gap-1">
+                              <Tag className="w-3 h-3" /> Komisi Mitra ({paxCount} Pax @ {formatCurrency(commRate)}):
+                            </span>
+                            <strong>{formData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" ? `- ${formatCurrency(totalComm)}` : formatCurrency(totalComm)}</strong>
+                          </div>
+                          <div className="flex items-center justify-between pt-1 border-t border-blue-100 font-bold">
+                            <span className="text-slate-900">
+                              {formData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" ? "Total Kas Bersih yang Disetor Agen:" : "Total Kas Diterima (Bruto):"}
+                            </span>
+                            <span className="text-sm text-emerald-700">
+                              {formData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" ? formatCurrency(netPayable) : formatCurrency(grossAmount)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
 
               {/* Smart Financial Indicator Box (Supports Single & Multi-Jamaah Aggregation with Discount Support) */}
@@ -1762,6 +1975,23 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                   >
                     🏢 Sponsor
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const firstAg = agents[0];
+                      setPaymentData({
+                        ...paymentData,
+                        isAgentPayment: true,
+                        agentId: firstAg?.id || "",
+                        agentName: firstAg?.name || "",
+                        payerName: `${firstAg?.name || "Mitra / Agen"} (Mitra/Agen)`,
+                        payerPhone: firstAg?.phone || "",
+                      });
+                    }}
+                    className="px-2 py-0.5 rounded-lg bg-teal-100 border border-teal-300 text-[10px] font-bold text-teal-900 hover:bg-teal-200"
+                  >
+                    🤝 Mitra / Agen
+                  </button>
                 </div>
                 <input
                   type="text"
@@ -1770,6 +2000,113 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                   onChange={(e) => setPaymentData({ ...paymentData, payerName: e.target.value })}
                   className="w-full rounded-xl border border-slate-200 p-2 bg-white font-medium"
                 />
+              </div>
+
+              {/* Box Opsi Pembayaran via Mitra / Agen (Modal 2) */}
+              <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={paymentData.isAgentPayment}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        const firstAgent = agents[0];
+                        setPaymentData({
+                          ...paymentData,
+                          isAgentPayment: checked,
+                          agentId: checked ? (paymentData.agentId || firstAgent?.id || "") : "",
+                          agentName: checked ? (paymentData.agentName || firstAgent?.name || "") : "",
+                          payerName: checked ? `${firstAgent?.name || paymentData.agentName || "Mitra / Agen"} (Mitra/Agen)` : paymentData.payerName,
+                          payerPhone: checked ? (firstAgent?.phone || paymentData.payerPhone) : paymentData.payerPhone,
+                        });
+                      }}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className="font-bold text-blue-950 text-xs flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-blue-700" />
+                      Disetor oleh Mitra / Agen Perwakilan
+                    </span>
+                  </label>
+                  {paymentData.isAgentPayment && (
+                    <span className="text-[10px] font-bold bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full">
+                      Mitra Aktif
+                    </span>
+                  )}
+                </div>
+
+                {paymentData.isAgentPayment && (
+                  <div className="space-y-2 pt-1 border-t border-blue-200">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 block mb-0.5">Pilih Mitra / Agen</label>
+                      <select
+                        value={paymentData.agentId}
+                        onChange={(e) => {
+                          const aId = e.target.value;
+                          const selAgent = agents.find((a) => a.id === aId);
+                          setPaymentData({
+                            ...paymentData,
+                            agentId: aId,
+                            agentName: selAgent ? selAgent.name : "",
+                            payerName: selAgent ? `${selAgent.name} (Mitra/Agen)` : paymentData.payerName,
+                            payerPhone: selAgent ? selAgent.phone : paymentData.payerPhone,
+                          });
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-blue-200 text-xs font-semibold bg-white text-slate-900"
+                      >
+                        <option value="">-- Pilih Agen Database --</option>
+                        {agents.map((ag) => (
+                          <option key={ag.id} value={ag.id}>
+                            {ag.name} • Komisi: {formatCurrency(ag.commissionPerPax || 1500000)}/pax
+                          </option>
+                        ))}
+                        <option value="CUSTOM">+ Input Agen Manual</option>
+                      </select>
+                    </div>
+
+                    {paymentData.agentId === "CUSTOM" && (
+                      <input
+                        type="text"
+                        placeholder="Nama Agen / Mitra Manual"
+                        value={paymentData.agentName}
+                        onChange={(e) => setPaymentData({ ...paymentData, agentName: e.target.value, payerName: `${e.target.value} (Mitra/Agen)` })}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-blue-200 text-xs bg-white"
+                      />
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentData({ ...paymentData, agentPaymentScheme: "NET_COMMISSION_DEDUCTION" })}
+                        className={`p-2 rounded-xl border text-left transition-all ${
+                          paymentData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION"
+                            ? "bg-blue-600 text-white border-blue-700 shadow-xs"
+                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        <p className="font-bold text-[11px]">⚡ Potong Komisi</p>
+                        <p className={`text-[9px] ${paymentData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" ? "text-blue-100" : "text-slate-500"}`}>
+                          Potong komisi di depan
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPaymentData({ ...paymentData, agentPaymentScheme: "GROSS" })}
+                        className={`p-2 rounded-xl border text-left transition-all ${
+                          paymentData.agentPaymentScheme === "GROSS"
+                            ? "bg-blue-600 text-white border-blue-700 shadow-xs"
+                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        <p className="font-bold text-[11px]">💰 Setor Bruto</p>
+                        <p className={`text-[9px] ${paymentData.agentPaymentScheme === "GROSS" ? "text-blue-100" : "text-slate-500"}`}>
+                          Komisi dicairkan nanti
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1899,7 +2236,12 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                         ✨ Donatur Hamba Allah
                       </span>
                     )}
-                    {inv.payerName && !inv.payerName.toLowerCase().includes("hamba allah") && inv.payerName !== invPilgrim?.name && (
+                    {(inv.agentName || (inv.payerName && inv.payerName.toLowerCase().includes("mitra")) || (inv.payerName && inv.payerName.toLowerCase().includes("agen"))) && (
+                      <span className="ml-2 inline-block bg-teal-100 text-teal-900 text-[10px] font-bold px-2 py-0.5 rounded-md border border-teal-300">
+                        🤝 Mitra / Agen Resmi
+                      </span>
+                    )}
+                    {inv.payerName && !inv.payerName.toLowerCase().includes("hamba allah") && !inv.payerName.toLowerCase().includes("mitra") && !inv.payerName.toLowerCase().includes("agen") && !inv.agentName && inv.payerName !== invPilgrim?.name && (
                       <span className="ml-2 inline-block bg-blue-100 text-blue-900 text-[10px] font-bold px-2 py-0.5 rounded-md border border-blue-200">
                         Penyetor / Penanggung Jawab
                       </span>
@@ -2131,9 +2473,15 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                     <span className="font-bold text-slate-900 text-sm">
                       {groupPayerName}
                     </span>
-                    <span className="ml-2 inline-block bg-emerald-100 text-emerald-900 text-[10px] font-bold px-2 py-0.5 rounded-md border border-emerald-300">
-                      👨‍👩‍👧 Penanggung Jawab Rombongan ({groupInvoices.length} Jamaah)
-                    </span>
+                    {groupPayerName && (groupPayerName.toLowerCase().includes("mitra") || groupPayerName.toLowerCase().includes("agen")) ? (
+                      <span className="ml-2 inline-block bg-teal-100 text-teal-900 text-[10px] font-bold px-2 py-0.5 rounded-md border border-teal-300">
+                        🤝 Setoran Kolektif Mitra / Agen ({groupInvoices.length} Jamaah)
+                      </span>
+                    ) : (
+                      <span className="ml-2 inline-block bg-emerald-100 text-emerald-900 text-[10px] font-bold px-2 py-0.5 rounded-md border border-emerald-300">
+                        👨‍👩‍👧 Penanggung Jawab Rombongan ({groupInvoices.length} Jamaah)
+                      </span>
+                    )}
                   </div>
                 </div>
 

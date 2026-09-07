@@ -228,6 +228,8 @@ model Invoice {
   proofUrl      String?
   discountAmount Float?   @default(0)
   discountReason String?
+  agentId       String?
+  agentName     String?
   notes         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

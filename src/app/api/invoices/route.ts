@@ -46,11 +46,27 @@ export async function POST(request: Request) {
       isPaid,
       paymentMethod,
       paymentDate,
+      // Agent fields
+      isAgentPayment,
+      agentId,
+      agentName,
+      agentPaymentScheme,
+      agentCommissionAmount,
     } = body;
 
     const invoiceStatus = isPaid ? "PAID" : "PENDING";
     const actualPaymentDate = isPaid ? (paymentDate ? new Date(paymentDate) : new Date()) : null;
     const actualPaymentMethod = isPaid ? (paymentMethod || "CASH") : null;
+
+    let targetAgent: any = null;
+    if (agentId) {
+      targetAgent = await prisma.agent.findUnique({ where: { id: agentId } });
+    } else if (agentName) {
+      targetAgent = await prisma.agent.findFirst({ where: { name: agentName } });
+    }
+
+    const effectiveAgentId = targetAgent?.id || agentId || null;
+    const effectiveAgentName = targetAgent?.name || agentName || (isAgentPayment && payerName ? payerName : null);
 
     // Support detailed per-pilgrim allocations: [{ pilgrimId, amount, title? }]
     if (Array.isArray(allocations) && allocations.length > 0) {
@@ -83,10 +99,12 @@ export async function POST(request: Request) {
             status: invoiceStatus,
             paymentMethod: actualPaymentMethod,
             paymentDate: actualPaymentDate,
-            payerName: payerName || null,
-            payerPhone: payerPhone || null,
+            payerName: payerName || (effectiveAgentName ? `${effectiveAgentName} (Mitra/Agen)` : null),
+            payerPhone: payerPhone || targetAgent?.phone || null,
             discountAmount: pilgrimDiscount,
             discountReason: discountReason || null,
+            agentId: effectiveAgentId,
+            agentName: effectiveAgentName,
             notes: notes || null,
           },
           include: {
@@ -120,6 +138,54 @@ export async function POST(request: Request) {
         }
 
         createdInvoices.push(invoice);
+      }
+
+      // Handle Agent Commission Payout & Stat Updates if Agent is connected and payment is recorded
+      if (isPaid && targetAgent) {
+        const commPerPax = targetAgent.commissionPerPax || 1500000;
+        const totalComm = agentCommissionAmount !== undefined && agentCommissionAmount !== null && agentCommissionAmount !== ""
+          ? (parseFloat(agentCommissionAmount) || 0)
+          : commPerPax * createdInvoices.length;
+
+        if (totalComm > 0) {
+          if (agentPaymentScheme === "NET_COMMISSION_DEDUCTION") {
+            await prisma.agentCommissionPayout.create({
+              data: {
+                agentId: targetAgent.id,
+                amount: totalComm,
+                status: "PAID",
+                payoutDate: actualPaymentDate || new Date(),
+                notes: `Potong Komisi Langsung (${targetAgent.name}) untuk ${createdInvoices.length} pax: ${createdInvoices.map((inv) => inv.invoiceNumber).join(", ")}`,
+              },
+            });
+            await prisma.agent.update({
+              where: { id: targetAgent.id },
+              data: {
+                totalClosingPax: { increment: createdInvoices.length },
+                totalCommissionEarned: { increment: totalComm },
+                paidCommission: { increment: totalComm },
+              },
+            });
+          } else {
+            // GROSS Payment
+            await prisma.agentCommissionPayout.create({
+              data: {
+                agentId: targetAgent.id,
+                amount: totalComm,
+                status: "APPROVED",
+                notes: `Hak Komisi Agen (${targetAgent.name}) - Pembayaran Bruto Invoice: ${createdInvoices.map((inv) => inv.invoiceNumber).join(", ")}`,
+              },
+            });
+            await prisma.agent.update({
+              where: { id: targetAgent.id },
+              data: {
+                totalClosingPax: { increment: createdInvoices.length },
+                totalCommissionEarned: { increment: totalComm },
+                pendingCommission: { increment: totalComm },
+              },
+            });
+          }
+        }
       }
 
       return NextResponse.json({
@@ -157,10 +223,12 @@ export async function POST(request: Request) {
           status: invoiceStatus,
           paymentMethod: actualPaymentMethod,
           paymentDate: actualPaymentDate,
-          payerName: payerName || null,
-          payerPhone: payerPhone || null,
+          payerName: payerName || (effectiveAgentName ? `${effectiveAgentName} (Mitra/Agen)` : null),
+          payerPhone: payerPhone || targetAgent?.phone || null,
           discountAmount: discountAmount ? (parseFloat(discountAmount) || 0) : 0,
           discountReason: discountReason || null,
+          agentId: effectiveAgentId,
+          agentName: effectiveAgentName,
           notes: notes || null,
         },
         include: {
@@ -203,6 +271,54 @@ export async function POST(request: Request) {
       }
 
       createdInvoices.push(invoice);
+    }
+
+    // Handle Agent Commission Payout & Stat Updates if Agent is connected and payment is recorded
+    if (isPaid && targetAgent) {
+      const commPerPax = targetAgent.commissionPerPax || 1500000;
+      const totalComm = agentCommissionAmount !== undefined && agentCommissionAmount !== null && agentCommissionAmount !== ""
+        ? (parseFloat(agentCommissionAmount) || 0)
+        : commPerPax * createdInvoices.length;
+
+      if (totalComm > 0) {
+        if (agentPaymentScheme === "NET_COMMISSION_DEDUCTION") {
+          await prisma.agentCommissionPayout.create({
+            data: {
+              agentId: targetAgent.id,
+              amount: totalComm,
+              status: "PAID",
+              payoutDate: actualPaymentDate || new Date(),
+              notes: `Potong Komisi Langsung (${targetAgent.name}) untuk ${createdInvoices.length} pax: ${createdInvoices.map((inv) => inv.invoiceNumber).join(", ")}`,
+            },
+          });
+          await prisma.agent.update({
+            where: { id: targetAgent.id },
+            data: {
+              totalClosingPax: { increment: createdInvoices.length },
+              totalCommissionEarned: { increment: totalComm },
+              paidCommission: { increment: totalComm },
+            },
+          });
+        } else {
+          // GROSS Payment
+          await prisma.agentCommissionPayout.create({
+            data: {
+              agentId: targetAgent.id,
+              amount: totalComm,
+              status: "APPROVED",
+              notes: `Hak Komisi Agen (${targetAgent.name}) - Pembayaran Bruto Invoice: ${createdInvoices.map((inv) => inv.invoiceNumber).join(", ")}`,
+            },
+          });
+          await prisma.agent.update({
+            where: { id: targetAgent.id },
+            data: {
+              totalClosingPax: { increment: createdInvoices.length },
+              totalCommissionEarned: { increment: totalComm },
+              pendingCommission: { increment: totalComm },
+            },
+          });
+        }
+      }
     }
 
     if (createdInvoices.length === 1) {
