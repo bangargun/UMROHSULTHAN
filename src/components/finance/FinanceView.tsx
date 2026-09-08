@@ -420,6 +420,23 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
     }
   };
 
+  const handleOpenAddModal = () => {
+    const firstP = pilgrims[0];
+    const fin = firstP ? getPilgrimFinancials(firstP) : null;
+    const initialAmt = fin ? (fin.remaining > 0 ? String(fin.remaining) : (fin.netPrice > 0 ? String(fin.netPrice) : "")) : "";
+    setFormData((prev) => ({
+      ...prev,
+      pilgrimId: firstP?.id || "",
+      amount: prev.amount && prev.amount !== "0" ? prev.amount : initialAmt,
+      payerName: prev.payerName || firstP?.name || "",
+      payerPhone: prev.payerPhone || firstP?.phone || "",
+      hasDiscount: (firstP?.discountAmount || 0) > 0,
+      discountAmount: (firstP?.discountAmount || 0) > 0 ? String(firstP.discountAmount) : "",
+      discountReason: firstP?.discountReason || "",
+    }));
+    setIsAddModalOpen(true);
+  };
+
   const handleOpenPayModal = (inv: any) => {
     const invAgent = agents.find((a) => a.id === inv.agentId || a.name === inv.agentName);
     setSelectedInvoiceForPayment(inv);
@@ -580,8 +597,8 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
         </div>
 
         <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-all"
+          onClick={handleOpenAddModal}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-all cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           + Buat Tagihan / Invoice Baru
@@ -882,10 +899,13 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                       const sel = pilgrims.find((p) => p.id === pId);
                       const pDisc = sel?.discountAmount || 0;
                       const pReason = sel?.discountReason || "";
+                      const fin = getPilgrimFinancials(sel, pDisc);
+                      const autoAmt = fin ? (fin.remaining > 0 ? String(fin.remaining) : (fin.netPrice > 0 ? String(fin.netPrice) : "")) : "";
                       setFormData({
                         ...formData,
                         pilgrimId: pId,
-                        payerName: formData.payerName === "Hamba Allah" ? "Hamba Allah" : (sel?.name || ""),
+                        amount: autoAmt || formData.amount,
+                        payerName: formData.payerName === "Hamba Allah" ? "Hamba Allah" : (formData.isAgentPayment ? formData.payerName : (sel?.name || "")),
                         hasDiscount: pDisc > 0,
                         discountAmount: pDisc > 0 ? String(pDisc) : formData.discountAmount,
                         discountReason: pReason || formData.discountReason,
@@ -1252,32 +1272,136 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                       </div>
                     </div>
 
+                    {/* Manual / Custom Commission Input & Presets */}
+                    {formData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" && (
+                      <div className="p-3 bg-blue-100/70 rounded-2xl border border-blue-300 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-blue-950 flex items-center gap-1">
+                            <Tag className="w-3.5 h-3.5 text-blue-700" />
+                            Nominal Potongan Komisi Agen (Bisa Ketik Manual / Pilih Preset):
+                          </label>
+                          <span className="text-[9.5px] text-blue-800 font-bold bg-white px-2 py-0.5 rounded-md border border-blue-200">
+                            {formData.agentCommissionAmount !== "" ? "Kustom / Manual" : "Otomatis Sesuai Tarif"}
+                          </span>
+                        </div>
+
+                        {/* Preset Chips */}
+                        <div className="flex flex-wrap gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const selAgent = agents.find((a) => a.id === formData.agentId);
+                              const paxCount = formData.isMultiPilgrim ? Math.max(1, formData.selectedPilgrimIds.length) : 1;
+                              const def = (selAgent?.commissionPerPax || 1500000) * paxCount;
+                              setFormData({ ...formData, agentCommissionAmount: String(def) });
+                            }}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                              formData.agentCommissionAmount === String((agents.find((a) => a.id === formData.agentId)?.commissionPerPax || 1500000) * (formData.isMultiPilgrim ? Math.max(1, formData.selectedPilgrimIds.length) : 1))
+                                ? "bg-blue-600 text-white border-blue-700 shadow-2xs"
+                                : "bg-white text-slate-700 border-blue-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            🎯 Default ({formatCurrency((agents.find((a) => a.id === formData.agentId)?.commissionPerPax || 1500000) * (formData.isMultiPilgrim ? Math.max(1, formData.selectedPilgrimIds.length) : 1))})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, agentCommissionAmount: "2000000" })}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                              formData.agentCommissionAmount === "2000000"
+                                ? "bg-blue-600 text-white border-blue-700 shadow-2xs"
+                                : "bg-white text-slate-700 border-blue-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            Rp 2 Jt
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, agentCommissionAmount: "1500000" })}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                              formData.agentCommissionAmount === "1500000"
+                                ? "bg-blue-600 text-white border-blue-700 shadow-2xs"
+                                : "bg-white text-slate-700 border-blue-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            Rp 1.5 Jt
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, agentCommissionAmount: "1000000" })}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                              formData.agentCommissionAmount === "1000000"
+                                ? "bg-blue-600 text-white border-blue-700 shadow-2xs"
+                                : "bg-white text-slate-700 border-blue-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            Rp 1 Jt
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, agentCommissionAmount: "500000" })}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                              formData.agentCommissionAmount === "500000"
+                                ? "bg-blue-600 text-white border-blue-700 shadow-2xs"
+                                : "bg-white text-slate-700 border-blue-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            Rp 500 Rb
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, agentCommissionAmount: "0" })}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                              formData.agentCommissionAmount === "0"
+                                ? "bg-blue-600 text-white border-blue-700 shadow-2xs"
+                                : "bg-white text-slate-700 border-blue-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            0️⃣ Rp 0 (Nol)
+                          </button>
+                        </div>
+
+                        {/* Manual Numeric Input */}
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-blue-900">Rp</span>
+                          <input
+                            type="number"
+                            placeholder="Ketik nominal manual komisi di sini..."
+                            value={formData.agentCommissionAmount}
+                            onChange={(e) => setFormData({ ...formData, agentCommissionAmount: e.target.value })}
+                            className="w-full pl-8 pr-3 py-2 rounded-xl border border-blue-300 font-mono font-bold text-blue-950 text-xs bg-white focus:ring-2 focus:ring-blue-500 shadow-2xs"
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     {/* Interactive Calculation for Agent Settlement */}
                     {(() => {
                       const selAgent = agents.find((a) => a.id === formData.agentId);
                       const paxCount = formData.isMultiPilgrim ? Math.max(1, formData.selectedPilgrimIds.length) : 1;
                       const commRate = selAgent?.commissionPerPax || 1500000;
-                      const totalComm = formData.agentCommissionAmount ? (parseFloat(formData.agentCommissionAmount) || 0) : (commRate * paxCount);
-                      const grossAmount = parseFloat(formData.amount || "0");
+                      const totalComm = formData.agentCommissionAmount !== "" && formData.agentCommissionAmount !== undefined
+                        ? (parseFloat(formData.agentCommissionAmount) || 0)
+                        : (commRate * paxCount);
+                      const grossAmount = parseFloat(formData.amount || "0") || 0;
                       const netPayable = Math.max(0, grossAmount - totalComm);
 
                       return (
-                        <div className="bg-white p-3 rounded-xl border border-blue-200 text-xs space-y-1.5">
+                        <div className="bg-white p-3 rounded-xl border border-blue-200 text-xs space-y-1.5 shadow-2xs">
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="text-slate-600">Total Tagihan Jamaah (Gross):</span>
                             <strong className="text-slate-900">{formatCurrency(grossAmount)}</strong>
                           </div>
                           <div className="flex items-center justify-between text-[11px] text-blue-700">
                             <span className="flex items-center gap-1">
-                              <Tag className="w-3 h-3" /> Komisi Mitra ({paxCount} Pax @ {formatCurrency(commRate)}):
+                              <Tag className="w-3 h-3" /> Komisi Mitra ({paxCount} Pax):
                             </span>
-                            <strong>{formData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" ? `- ${formatCurrency(totalComm)}` : formatCurrency(totalComm)}</strong>
+                            <strong className="font-mono">{formData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" ? `- ${formatCurrency(totalComm)}` : formatCurrency(totalComm)}</strong>
                           </div>
                           <div className="flex items-center justify-between pt-1 border-t border-blue-100 font-bold">
                             <span className="text-slate-900">
                               {formData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" ? "Total Kas Bersih yang Disetor Agen:" : "Total Kas Diterima (Bruto):"}
                             </span>
-                            <span className="text-sm text-emerald-700">
+                            <span className="text-sm text-emerald-700 font-mono font-black">
                               {formData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" ? formatCurrency(netPayable) : formatCurrency(grossAmount)}
                             </span>
                           </div>
@@ -2105,6 +2229,115 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                         </p>
                       </button>
                     </div>
+
+                    {/* Manual / Custom Commission Input for Modal 2 */}
+                    {paymentData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" && (
+                      <div className="p-2.5 bg-blue-100/70 rounded-xl border border-blue-300 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-blue-950 flex items-center gap-1">
+                            <Tag className="w-3 h-3 text-blue-700" />
+                            Nominal Komisi (Manual / Preset):
+                          </label>
+                          <span className="text-[9px] text-blue-800 font-bold bg-white px-1.5 py-0.5 rounded border border-blue-200">
+                            {paymentData.agentCommissionAmount !== "" ? "Kustom" : "Otomatis"}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const selAgent = agents.find((a) => a.id === paymentData.agentId);
+                              const def = selAgent?.commissionPerPax || 1500000;
+                              setPaymentData({ ...paymentData, agentCommissionAmount: String(def) });
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold border transition-all ${
+                              paymentData.agentCommissionAmount === String(agents.find((a) => a.id === paymentData.agentId)?.commissionPerPax || 1500000)
+                                ? "bg-blue-600 text-white border-blue-700"
+                                : "bg-white text-slate-700 border-blue-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            🎯 Default ({formatCurrency(agents.find((a) => a.id === paymentData.agentId)?.commissionPerPax || 1500000)})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentData({ ...paymentData, agentCommissionAmount: "1500000" })}
+                            className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold border transition-all ${
+                              paymentData.agentCommissionAmount === "1500000"
+                                ? "bg-blue-600 text-white border-blue-700"
+                                : "bg-white text-slate-700 border-blue-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            Rp 1.5 Jt
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentData({ ...paymentData, agentCommissionAmount: "1000000" })}
+                            className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold border transition-all ${
+                              paymentData.agentCommissionAmount === "1000000"
+                                ? "bg-blue-600 text-white border-blue-700"
+                                : "bg-white text-slate-700 border-blue-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            Rp 1 Jt
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentData({ ...paymentData, agentCommissionAmount: "0" })}
+                            className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold border transition-all ${
+                              paymentData.agentCommissionAmount === "0"
+                                ? "bg-blue-600 text-white border-blue-700"
+                                : "bg-white text-slate-700 border-blue-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            0️⃣ Rp 0
+                          </button>
+                        </div>
+
+                        <div className="relative">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-blue-900">Rp</span>
+                          <input
+                            type="number"
+                            placeholder="Nominal komisi manual..."
+                            value={paymentData.agentCommissionAmount}
+                            onChange={(e) => setPaymentData({ ...paymentData, agentCommissionAmount: e.target.value })}
+                            className="w-full pl-7 pr-2.5 py-1.5 rounded-lg border border-blue-300 font-mono font-bold text-blue-950 text-xs bg-white focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Interactive Calculation for Modal 2 */}
+                    {(() => {
+                      const selAgent = agents.find((a) => a.id === paymentData.agentId);
+                      const commRate = selAgent?.commissionPerPax || 1500000;
+                      const totalComm = paymentData.agentCommissionAmount !== "" && paymentData.agentCommissionAmount !== undefined
+                        ? (parseFloat(paymentData.agentCommissionAmount) || 0)
+                        : commRate;
+                      const grossAmount = selectedInvoiceForPayment?.amount || 0;
+                      const netPayable = Math.max(0, grossAmount - totalComm);
+
+                      return (
+                        <div className="bg-white p-2.5 rounded-xl border border-blue-200 text-xs space-y-1 shadow-2xs">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-slate-600">Nominal Invoice (Gross):</span>
+                            <strong className="text-slate-900 font-mono">{formatCurrency(grossAmount)}</strong>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-blue-700">
+                            <span>Komisi Mitra:</span>
+                            <strong className="font-mono">{paymentData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" ? `- ${formatCurrency(totalComm)}` : formatCurrency(totalComm)}</strong>
+                          </div>
+                          <div className="flex items-center justify-between pt-1 border-t border-blue-100 text-xs font-bold">
+                            <span className="text-slate-900">
+                              {paymentData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" ? "Total Kas Bersih Disetor:" : "Kas Masuk Bruto:"}
+                            </span>
+                            <span className="text-emerald-700 font-mono font-black">
+                              {paymentData.agentPaymentScheme === "NET_COMMISSION_DEDUCTION" ? formatCurrency(netPayable) : formatCurrency(grossAmount)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
