@@ -102,7 +102,15 @@ export default function RequirementsChecklistView({
   };
 
   const handleExportCSV = () => {
-    const headers = "No,Nama Jamaah,NIK,No Paspor,Status Paspor,Paket Keberangkatan,Syarat Terverifikasi,Status Dokumen\n";
+    const kopSurat = [
+      `"PT SULTHAN HARAMAIN TOUR & TRAVEL (PT BAROKAH SULTHAN HARAMAIN)"`,
+      `"Penyelenggara Perjalanan Ibadah Umroh (PPIU) Resmi Kemenag RI"`,
+      `"DOKUMEN RESMI: CHECKLIST KESIAPAN DOKUMEN KEBERANGKATAN & HANDLING BANDARA"`,
+      `"Waktu Ekspor:","${new Date().toLocaleString("id-ID")}","Total Jamaah:","${filteredPilgrims.length} Calon Jamaah"`,
+      `""`,
+    ].join("\n");
+
+    const headers = "No,Nama Jamaah,NIK,No Paspor,Masa Berlaku Paspor,Paket Keberangkatan,Syarat Terverifikasi,Status Dokumen\n";
     const rows = filteredPilgrims
       .map((p, idx) => {
         const reqs = p.requirements || [];
@@ -112,7 +120,7 @@ export default function RequirementsChecklistView({
         return `"${idx + 1}","${p.name}","${p.nik}","${p.passportNumber || "Belum Ada"}","${p.passportExpiry ? formatDate(p.passportExpiry, "yyyy-MM-dd") : "-"}","${p.package?.name}","${verified}/${total}","${isReady ? "SIAP TERBANG" : "BELUM LENGKAP"}"`;
       })
       .join("\n");
-    const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([kopSurat + "\n" + headers + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -416,8 +424,12 @@ export default function RequirementsChecklistView({
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-[10px] hover:bg-emerald-200"
                       >
-                        <ExternalLink className="w-3 h-3" /> Vaksin Meningitis (Wajib)
+                        <ExternalLink className="w-3 h-3" /> Berkas Vaksin {pilgrim.vaccineNumber ? `(${pilgrim.vaccineNumber})` : "(Wajib)"}
                       </a>
+                    ) : pilgrim.vaccineNumber ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-cyan-900 font-bold bg-cyan-50 px-2 py-0.5 rounded border border-cyan-300">
+                        💉 No: {pilgrim.vaccineNumber}
+                      </span>
                     ) : (
                       <span className="text-[10px] text-rose-600 font-semibold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
                         Vaksin: Belum Diunggah

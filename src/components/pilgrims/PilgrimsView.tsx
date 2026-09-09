@@ -33,6 +33,8 @@ import {
   Copy,
   CheckCheck,
   MessageSquare,
+  Syringe,
+  FileSpreadsheet,
 } from "lucide-react";
 import { formatCurrency, formatDate, getStatusBadge } from "@/lib/utils";
 import RegistrationsAdminModal from "@/components/registrations/RegistrationsAdminModal";
@@ -42,7 +44,7 @@ interface PilgrimsViewProps {
   pilgrims: any[];
   packages: any[];
   onRefresh: () => void;
-  onOpenLetterGenerator?: (pilgrim: any) => void;
+  onOpenLetterGenerator?: (pilgrim: any, letterType?: string) => void;
   onNavigateTab?: (tab: string, searchFilter?: string) => void;
 }
 
@@ -60,6 +62,8 @@ export default function PilgrimsView({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRegistrationsModalOpen, setIsRegistrationsModalOpen] = useState(false);
+  const [isManifestVisaModalOpen, setIsManifestVisaModalOpen] = useState(false);
+  const [manifestVisaCopied, setManifestVisaCopied] = useState(false);
   const [editingPilgrimId, setEditingPilgrimId] = useState<string | null>(null);
 
   // Column Visibility Filter State
@@ -69,6 +73,7 @@ export default function PilgrimsView({
     fatherName: true,
     identity: true,
     passport: true,
+    vaccine: true,
     birth: true,
     address: true,
     phone: true,
@@ -88,6 +93,7 @@ export default function PilgrimsView({
         fatherName: true,
         identity: true,
         passport: true,
+        vaccine: true,
         birth: true,
         address: true,
         phone: true,
@@ -104,6 +110,7 @@ export default function PilgrimsView({
         fatherName: true,
         identity: true,
         passport: true,
+        vaccine: true,
         birth: true,
         address: true,
         phone: true,
@@ -120,6 +127,7 @@ export default function PilgrimsView({
         fatherName: false,
         identity: false,
         passport: true,
+        vaccine: true,
         birth: false,
         address: false,
         phone: true,
@@ -136,6 +144,7 @@ export default function PilgrimsView({
         fatherName: true,
         identity: true,
         passport: false,
+        vaccine: false,
         birth: true,
         address: true,
         phone: true,
@@ -418,6 +427,51 @@ export default function PilgrimsView({
     };
   };
 
+  // Helper to determine vaccine certificate validity & expiry status
+  const getVaccineExpiryStatus = (expiryDateStr: string | null | undefined, departureDateStr?: string | null | undefined) => {
+    if (!expiryDateStr) return null;
+    const expDate = new Date(expiryDateStr);
+    if (isNaN(expDate.getTime())) return null;
+
+    const targetDate = departureDateStr ? new Date(departureDateStr) : new Date();
+    const diffDays = Math.ceil((expDate.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 0) {
+      return {
+        status: "EXPIRED",
+        badgeClass: "bg-rose-100 text-rose-900 border-rose-300 font-bold",
+        shortBadge: "⛔ Vaksin Expired",
+        label: "⛔ Masa Berlaku Vaksin Sudah Habis",
+        recommendation: "Sertifikat vaksinasi sudah kedaluwarsa. Wajib suntik vaksin ulang sebelum proses visa dan pemeriksaan KKP bandara.",
+        isWarning: true,
+        isCritical: true,
+        diffDays,
+      };
+    } else if (diffDays <= 30) {
+      return {
+        status: "WARNING_30D",
+        badgeClass: "bg-amber-100 text-amber-950 border-amber-300 font-bold",
+        shortBadge: `⚠️ Exp < 30 Hari (${diffDays} hr)`,
+        label: `⚠️ Mendekati Expired (${diffDays} Hari Lagi)`,
+        recommendation: "Masa berlaku vaksin hampir habis kurang dari 30 hari. Pastikan masih aktif hingga tanggal kepulangan jamaah.",
+        isWarning: true,
+        isCritical: false,
+        diffDays,
+      };
+    }
+
+    return {
+      status: "VALID",
+      badgeClass: "bg-emerald-100 text-emerald-900 border-emerald-300 font-bold",
+      shortBadge: "✅ Vaksin Valid",
+      label: "✅ Sertifikat Vaksin Aktif & Valid",
+      recommendation: "Sertifikat vaksinasi aktif dan memenuhi syarat keberangkatan.",
+      isWarning: false,
+      isCritical: false,
+      diffDays,
+    };
+  };
+
   const handleBatchAddKkMembers = async () => {
     if (kkMembers.length === 0) return;
     if (!confirm(`Daftarkan ${kkMembers.length} anggota keluarga dari Kartu Keluarga ini ke dalam paket yang dipilih?`)) return;
@@ -517,6 +571,16 @@ export default function PilgrimsView({
     uniformSize: "L",
     bloodType: "O",
     healthNotes: "",
+    hasMeningitisVaccine: false,
+    meningitisVaccineNumber: "",
+    meningitisVaccineClinic: "",
+    meningitisVaccineDate: "",
+    meningitisVaccineExpiry: "",
+    hasPolioVaccine: false,
+    polioVaccineNumber: "",
+    polioVaccineClinic: "",
+    polioVaccineDate: "",
+    polioVaccineExpiry: "",
     initialDpAmount: "10000000",
     hasDiscount: false,
     discountAmount: "",
@@ -545,6 +609,16 @@ export default function PilgrimsView({
     mofaNumber: "",
     muassasahName: "",
     insuranceNumber: "",
+    hasMeningitisVaccine: false,
+    meningitisVaccineNumber: "",
+    meningitisVaccineClinic: "",
+    meningitisVaccineDate: "",
+    meningitisVaccineExpiry: "",
+    hasPolioVaccine: false,
+    polioVaccineNumber: "",
+    polioVaccineClinic: "",
+    polioVaccineDate: "",
+    polioVaccineExpiry: "",
     placeOfBirth: "",
     dateOfBirth: "",
     gender: "MALE",
@@ -579,7 +653,10 @@ export default function PilgrimsView({
     setEditingPilgrimId(p.id);
     const hasPass = Boolean(p.passportNumber && p.passportNumber.trim() !== "");
     const hasVis = Boolean(p.visaNumber && p.visaNumber.trim() !== "");
+    const hasMen = Boolean(p.hasMeningitisVaccine || (p.meningitisVaccineNumber && p.meningitisVaccineNumber.trim() !== "") || (p.vaccineType === "MENINGITIS" && p.vaccineNumber));
+    const hasPol = Boolean(p.hasPolioVaccine || (p.polioVaccineNumber && p.polioVaccineNumber.trim() !== "") || (p.vaccineType === "POLIO" && p.vaccineNumber));
     const pDisc = p.discountAmount || 0;
+
     setEditFormData({
       packageId: p.packageId || "",
       title: p.title || "Bpk",
@@ -601,6 +678,16 @@ export default function PilgrimsView({
       mofaNumber: p.mofaNumber || "",
       muassasahName: p.muassasahName || "",
       insuranceNumber: p.insuranceNumber || "",
+      hasMeningitisVaccine: hasMen,
+      meningitisVaccineNumber: p.meningitisVaccineNumber || (p.vaccineType === "MENINGITIS" ? p.vaccineNumber : "") || "",
+      meningitisVaccineClinic: p.meningitisVaccineClinic || (p.vaccineType === "MENINGITIS" ? p.vaccineClinicName : "") || "",
+      meningitisVaccineDate: p.meningitisVaccineDate ? p.meningitisVaccineDate.split("T")[0] : (p.vaccineType === "MENINGITIS" && p.vaccineDate ? p.vaccineDate.split("T")[0] : ""),
+      meningitisVaccineExpiry: p.meningitisVaccineExpiry ? p.meningitisVaccineExpiry.split("T")[0] : (p.vaccineType === "MENINGITIS" && p.vaccineExpiryDate ? p.vaccineExpiryDate.split("T")[0] : ""),
+      hasPolioVaccine: hasPol,
+      polioVaccineNumber: p.polioVaccineNumber || (p.vaccineType === "POLIO" ? p.vaccineNumber : "") || "",
+      polioVaccineClinic: p.polioVaccineClinic || (p.vaccineType === "POLIO" ? p.vaccineClinicName : "") || "",
+      polioVaccineDate: p.polioVaccineDate ? p.polioVaccineDate.split("T")[0] : (p.vaccineType === "POLIO" && p.vaccineDate ? p.vaccineDate.split("T")[0] : ""),
+      polioVaccineExpiry: p.polioVaccineExpiry ? p.polioVaccineExpiry.split("T")[0] : (p.vaccineType === "POLIO" && p.vaccineExpiryDate ? p.vaccineExpiryDate.split("T")[0] : ""),
       placeOfBirth: p.placeOfBirth || "",
       dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split("T")[0] : "",
       gender: p.gender || "MALE",
@@ -661,6 +748,16 @@ export default function PilgrimsView({
         mofaNumber: editFormData.hasVisa ? editFormData.mofaNumber : null,
         muassasahName: editFormData.hasVisa ? editFormData.muassasahName : null,
         insuranceNumber: editFormData.hasVisa ? editFormData.insuranceNumber : null,
+        hasMeningitisVaccine: editFormData.hasMeningitisVaccine,
+        meningitisVaccineNumber: editFormData.hasMeningitisVaccine ? editFormData.meningitisVaccineNumber : null,
+        meningitisVaccineClinic: editFormData.hasMeningitisVaccine ? editFormData.meningitisVaccineClinic : null,
+        meningitisVaccineDate: editFormData.hasMeningitisVaccine && editFormData.meningitisVaccineDate ? editFormData.meningitisVaccineDate : null,
+        meningitisVaccineExpiry: editFormData.hasMeningitisVaccine && editFormData.meningitisVaccineExpiry ? editFormData.meningitisVaccineExpiry : null,
+        hasPolioVaccine: editFormData.hasPolioVaccine,
+        polioVaccineNumber: editFormData.hasPolioVaccine ? editFormData.polioVaccineNumber : null,
+        polioVaccineClinic: editFormData.hasPolioVaccine ? editFormData.polioVaccineClinic : null,
+        polioVaccineDate: editFormData.hasPolioVaccine && editFormData.polioVaccineDate ? editFormData.polioVaccineDate : null,
+        polioVaccineExpiry: editFormData.hasPolioVaccine && editFormData.polioVaccineExpiry ? editFormData.polioVaccineExpiry : null,
       };
       const res = await fetch(`/api/pilgrims/${editingPilgrimId}`, {
         method: "PUT",
@@ -767,6 +864,9 @@ export default function PilgrimsView({
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.nik.includes(searchTerm) ||
       (p.passportNumber && p.passportNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.meningitisVaccineNumber && p.meningitisVaccineNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.polioVaccineNumber && p.polioVaccineNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.vaccineNumber && p.vaccineNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
       p.phone.includes(searchTerm);
     const matchPackage = selectedPackageId === "ALL" || p.packageId === selectedPackageId;
     const matchStatus = selectedStatus === "ALL" || p.status === selectedStatus;
@@ -803,6 +903,16 @@ export default function PilgrimsView({
         mofaNumber: formData.hasVisa ? formData.mofaNumber : null,
         muassasahName: formData.hasVisa ? formData.muassasahName : null,
         insuranceNumber: formData.hasVisa ? formData.insuranceNumber : null,
+        hasMeningitisVaccine: formData.hasMeningitisVaccine,
+        meningitisVaccineNumber: formData.hasMeningitisVaccine ? formData.meningitisVaccineNumber : null,
+        meningitisVaccineClinic: formData.hasMeningitisVaccine ? formData.meningitisVaccineClinic : null,
+        meningitisVaccineDate: formData.hasMeningitisVaccine && formData.meningitisVaccineDate ? formData.meningitisVaccineDate : null,
+        meningitisVaccineExpiry: formData.hasMeningitisVaccine && formData.meningitisVaccineExpiry ? formData.meningitisVaccineExpiry : null,
+        hasPolioVaccine: formData.hasPolioVaccine,
+        polioVaccineNumber: formData.hasPolioVaccine ? formData.polioVaccineNumber : null,
+        polioVaccineClinic: formData.hasPolioVaccine ? formData.polioVaccineClinic : null,
+        polioVaccineDate: formData.hasPolioVaccine && formData.polioVaccineDate ? formData.polioVaccineDate : null,
+        polioVaccineExpiry: formData.hasPolioVaccine && formData.polioVaccineExpiry ? formData.polioVaccineExpiry : null,
       };
       const res = await fetch("/api/pilgrims", {
         method: "POST",
@@ -856,6 +966,16 @@ export default function PilgrimsView({
           uniformSize: "L",
           bloodType: "O",
           healthNotes: "",
+          hasMeningitisVaccine: false,
+          meningitisVaccineNumber: "",
+          meningitisVaccineClinic: "",
+          meningitisVaccineDate: "",
+          meningitisVaccineExpiry: "",
+          hasPolioVaccine: false,
+          polioVaccineNumber: "",
+          polioVaccineClinic: "",
+          polioVaccineDate: "",
+          polioVaccineExpiry: "",
           initialDpAmount: "10000000",
           hasDiscount: false,
           discountAmount: "",
@@ -873,6 +993,150 @@ export default function PilgrimsView({
     }
   };
 
+  const INDO_MONTHS_UPPER = [
+    "JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI",
+    "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"
+  ];
+
+  const formatDateIndoUpper = (dateVal: string | Date | null | undefined): string => {
+    if (!dateVal) return "-";
+    if (typeof dateVal === "string" && /^\d{4}-\d{2}-\d{2}/.test(dateVal)) {
+      const parts = dateVal.split("T")[0].split("-");
+      const year = parts[0];
+      const monthIdx = parseInt(parts[1], 10) - 1;
+      const day = parts[2].padStart(2, "0");
+      if (monthIdx >= 0 && monthIdx < 12) {
+        return `${day} ${INDO_MONTHS_UPPER[monthIdx]} ${year}`;
+      }
+    }
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return "-";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = INDO_MONTHS_UPPER[d.getMonth()];
+    const year = d.getFullYear();
+    return `${day} ${month} ${year}`;
+  };
+
+  const getManifestVisaTitle = () => {
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    if (selectedPkg?.departureDate) {
+      return `MANIFEST VISA ${formatDateIndoUpper(selectedPkg.departureDate)}`;
+    }
+    if (selectedPkg?.name) {
+      return `MANIFEST VISA ${selectedPkg.name.toUpperCase()}`;
+    }
+    return "MANIFEST VISA SEMUA KEBERANGKATAN";
+  };
+
+  const getManifestVisaFileName = (ext: "xls" | "csv") => {
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    const dateOrName = selectedPkg?.departureDate
+      ? formatDateIndoUpper(selectedPkg.departureDate)
+      : selectedPkg?.name
+      ? selectedPkg.name.toUpperCase().replace(/[^A-Z0-9]/g, "_")
+      : "SEMUA_KEBERANGKATAN";
+    const paxCount = filteredPilgrims.length;
+    return `(MANIFEST VISA ${dateOrName})(${paxCount} PAX).${ext}`;
+  };
+
+  const handleExportManifestVisaExcel = () => {
+    if (filteredPilgrims.length === 0) {
+      alert("Tidak ada data jamaah untuk diekspor ke Manifest Visa.");
+      return;
+    }
+
+    const title = getManifestVisaTitle();
+    const fileName = getManifestVisaFileName("xls");
+
+    const tableRows = filteredPilgrims
+      .map((p, idx) => {
+        const sex = p.gender === "FEMALE" || p.gender === "F" ? "F" : "M";
+        const fullName = (p.name || p.passportName || "-").toUpperCase();
+        const pob = (p.placeOfBirth || "-").toUpperCase();
+        const dob = formatDateIndoUpper(p.dateOfBirth);
+        const passNo = (p.passportNumber || "-").toUpperCase();
+        const doi = formatDateIndoUpper(p.passportIssuedDate);
+        const doe = formatDateIndoUpper(p.passportExpiry);
+        const office = (p.passportIssuedCity || "-").toUpperCase();
+
+        return `<tr><td class="td-center">${idx + 1}</td><td class="td-center">${sex}</td><td class="td-left">${fullName}</td><td class="td-left">${pob}</td><td class="td-center">${dob}</td><td class="td-center">${passNo}</td><td class="td-center">${doi}</td><td class="td-center">${doe}</td><td class="td-center">${office}</td></tr>`;
+      })
+      .join("\n");
+
+    const excelHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>MANIFEST VISA</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><style>body { font-family: Calibri, Arial, sans-serif; } table { border-collapse: collapse; width: 100%; } .banner { background-color: #FFFF00; font-weight: bold; font-size: 13pt; text-align: center; height: 38px; border: 1.5pt solid #000000; } .th-header { background-color: #FFFF00; font-weight: bold; font-size: 10pt; text-align: center; border: 1pt solid #000000; padding: 6px 8px; } .td-center { text-align: center; border: 0.5pt solid #000000; padding: 4px 6px; font-size: 10pt; mso-number-format: "\\@"; } .td-left { text-align: left; border: 0.5pt solid #000000; padding: 4px 6px; font-size: 10pt; mso-number-format: "\\@"; }</style></head><body><table><tr><td colspan="9" class="banner">${title}</td></tr><tr><th class="th-header" style="width: 45px;">NO</th><th class="th-header" style="width: 55px;">SEX</th><th class="th-header" style="width: 250px;">FULL NAME</th><th class="th-header" style="width: 160px;">PLACE OF BIRTH</th><th class="th-header" style="width: 150px;">DATE OF BIRTH</th><th class="th-header" style="width: 140px;">NOMOR PASSPORT</th><th class="th-header" style="width: 140px;">DATE OF ISSUE</th><th class="th-header" style="width: 140px;">DATE OF EXPIRY</th><th class="th-header" style="width: 160px;">ISSUING OFFICE</th></tr>${tableRows}</table></body></html>`;
+
+    const blob = new Blob([excelHtml], { type: "application/vnd.ms-excel;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportManifestVisaCSV = () => {
+    if (filteredPilgrims.length === 0) {
+      alert("Tidak ada data jamaah untuk diekspor ke Manifest Visa.");
+      return;
+    }
+
+    const title = getManifestVisaTitle();
+    const fileName = getManifestVisaFileName("csv");
+
+    const csvContent = [
+      `"${title}"`,
+      `"NO","SEX","FULL NAME","PLACE OF BIRTH","DATE OF BIRTH","NOMOR PASSPORT","DATE OF ISSUE","DATE OF EXPIRY","ISSUING OFFICE"`,
+      ...filteredPilgrims.map((p, idx) => {
+        const sex = p.gender === "FEMALE" || p.gender === "F" ? "F" : "M";
+        const fullName = (p.name || p.passportName || "-").toUpperCase().replace(/"/g, '""');
+        const pob = (p.placeOfBirth || "-").toUpperCase().replace(/"/g, '""');
+        const dob = formatDateIndoUpper(p.dateOfBirth);
+        const passNo = (p.passportNumber || "-").toUpperCase().replace(/"/g, '""');
+        const doi = formatDateIndoUpper(p.passportIssuedDate);
+        const doe = formatDateIndoUpper(p.passportExpiry);
+        const office = (p.passportIssuedCity || "-").toUpperCase().replace(/"/g, '""');
+        return `"${idx + 1}","${sex}","${fullName}","${pob}","${dob}","${passNo}","${doi}","${doe}","${office}"`;
+      }),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyManifestVisaToClipboard = () => {
+    if (filteredPilgrims.length === 0) return;
+    const title = getManifestVisaTitle();
+    const headers = ["NO", "SEX", "FULL NAME", "PLACE OF BIRTH", "DATE OF BIRTH", "NOMOR PASSPORT", "DATE OF ISSUE", "DATE OF EXPIRY", "ISSUING OFFICE"].join("\t");
+    const rows = filteredPilgrims
+      .map((p, idx) => {
+        const sex = p.gender === "FEMALE" || p.gender === "F" ? "F" : "M";
+        const fullName = (p.name || p.passportName || "-").toUpperCase();
+        const pob = (p.placeOfBirth || "-").toUpperCase();
+        const dob = formatDateIndoUpper(p.dateOfBirth);
+        const passNo = (p.passportNumber || "-").toUpperCase();
+        const doi = formatDateIndoUpper(p.passportIssuedDate);
+        const doe = formatDateIndoUpper(p.passportExpiry);
+        const office = (p.passportIssuedCity || "-").toUpperCase();
+        return [idx + 1, sex, fullName, pob, dob, passNo, doi, doe, office].join("\t");
+      })
+      .join("\n");
+
+    const text = `${title}\n${headers}\n${rows}`;
+    navigator.clipboard.writeText(text).then(() => {
+      setManifestVisaCopied(true);
+      setTimeout(() => setManifestVisaCopied(false), 2500);
+    });
+  };
+
   const handleExportCSV = () => {
     if (filteredPilgrims.length === 0) {
       alert("Tidak ada data jamaah untuk diekspor.");
@@ -884,8 +1148,27 @@ export default function PilgrimsView({
     const pkgNameClean = selectedPkg
       ? selectedPkg.name.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase()
       : "SEMUA_PROGRAM";
+    const pkgNameFull = selectedPkg ? selectedPkg.name : "Semua Program Paket Keberangkatan";
+    const depDateStr = selectedPkg?.departureDate ? formatDate(selectedPkg.departureDate, "dd MMMM yyyy") : "Seluruh Jadwal Keberangkatan";
+    const retDateStr = selectedPkg?.returnDate ? formatDate(selectedPkg.returnDate, "dd MMMM yyyy") : "-";
+    const airlineStr = selectedPkg?.airline || "-";
+    const hotelsStr = [selectedPkg?.hotelMakkah ? `Makkah: ${selectedPkg.hotelMakkah}` : "", selectedPkg?.hotelMadinah ? `Madinah: ${selectedPkg.hotelMadinah}` : ""].filter(Boolean).join(" | ") || "-";
 
-    const headers = "No,Nama Jamaah,NIK,No Paspor,Masa Berlaku Paspor,No WhatsApp,Paket Umroh,Tgl Berangkat,Tgl Pulang,Kamar,Ukuran Baju,Catatan Medis,Status\n";
+    const exportTimestamp = new Date().toLocaleString("id-ID", {
+      dateStyle: "full",
+      timeStyle: "medium",
+    });
+
+    const kopSurat = [
+      `"PT SULTHAN HARAMAIN TOUR & TRAVEL (PT BAROKAH SULTHAN HARAMAIN)"`,
+      `"Penyelenggara Perjalanan Ibadah Umroh (PPIU) Resmi Kemenag RI • Sistem Manajemen Operasional Terpadu"`,
+      `"DOKUMEN RESMI: MANIFEST DATA CALON JAMAAH UMROH & STATUS VAKSINASI (ICV / SATUSEHAT)"`,
+      `"Program Paket:","${pkgNameFull}","Kode Paket:","${pkgCode}","Tgl Berangkat:","${depDateStr}","Tgl Pulang:","${retDateStr}"`,
+      `"Fasilitas Paket:","Maskapai: ${airlineStr} | Hotel: ${hotelsStr}","Total Terdaftar:","${filteredPilgrims.length} Calon Jamaah","Waktu Ekspor:","${exportTimestamp}"`,
+      `""`,
+    ].join("\n");
+
+    const headers = "No,Nama Jamaah,NIK,No Paspor,Masa Berlaku Paspor,Vaksin Meningitis,No Sertifikat Meningitis,Faskes Meningitis,Tgl Suntik Meningitis,Expired Meningitis,Vaksin Polio,No Sertifikat Polio,Faskes Polio,Tgl Suntik Polio,Expired Polio,No WhatsApp,Paket Umroh,Tgl Berangkat,Tgl Pulang,Kamar,Ukuran Baju,Catatan Medis,Status\n";
     const rows = filteredPilgrims
       .map((p, idx) => {
         const dep = p.package?.departureDate ? formatDate(p.package.departureDate, "yyyy-MM-dd") : "-";
@@ -896,11 +1179,26 @@ export default function PilgrimsView({
           ret = formatDate(d, "yyyy-MM-dd");
         }
         const health = (p.healthNotes || "-").replace(/"/g, '""');
-        return `"${idx + 1}","${p.name}","${p.nik}","${p.passportNumber || "-"}","${p.passportExpiry ? formatDate(p.passportExpiry, "yyyy-MM-dd") : "-"}","${p.phone}","${p.package?.name}","${dep}","${ret}","${p.roomType}","${p.uniformSize || "L"}","${health}","${p.status}"`;
+        
+        // Meningitis
+        const hasMen = Boolean(p.hasMeningitisVaccine || p.meningitisVaccineNumber || (p.vaccineType === "MENINGITIS" && p.vaccineNumber));
+        const menNum = p.meningitisVaccineNumber || (p.vaccineType === "MENINGITIS" ? p.vaccineNumber : "") || "-";
+        const menClinic = (p.meningitisVaccineClinic || (p.vaccineType === "MENINGITIS" ? p.vaccineClinicName : "") || "-").replace(/"/g, '""');
+        const menDate = p.meningitisVaccineDate ? formatDate(p.meningitisVaccineDate, "yyyy-MM-dd") : (p.vaccineType === "MENINGITIS" && p.vaccineDate ? formatDate(p.vaccineDate, "yyyy-MM-dd") : "-");
+        const menExp = p.meningitisVaccineExpiry ? formatDate(p.meningitisVaccineExpiry, "yyyy-MM-dd") : (p.vaccineType === "MENINGITIS" && p.vaccineExpiryDate ? formatDate(p.vaccineExpiryDate, "yyyy-MM-dd") : "-");
+
+        // Polio
+        const hasPol = Boolean(p.hasPolioVaccine || p.polioVaccineNumber || (p.vaccineType === "POLIO" && p.vaccineNumber));
+        const polNum = p.polioVaccineNumber || (p.vaccineType === "POLIO" ? p.vaccineNumber : "") || "-";
+        const polClinic = (p.polioVaccineClinic || (p.vaccineType === "POLIO" ? p.vaccineClinicName : "") || "-").replace(/"/g, '""');
+        const polDate = p.polioVaccineDate ? formatDate(p.polioVaccineDate, "yyyy-MM-dd") : (p.vaccineType === "POLIO" && p.vaccineDate ? formatDate(p.vaccineDate, "yyyy-MM-dd") : "-");
+        const polExp = p.polioVaccineExpiry ? formatDate(p.polioVaccineExpiry, "yyyy-MM-dd") : (p.vaccineType === "POLIO" && p.vaccineExpiryDate ? formatDate(p.vaccineExpiryDate, "yyyy-MM-dd") : "-");
+
+        return `"${idx + 1}","${p.name}","${p.nik}","${p.passportNumber || "-"}","${p.passportExpiry ? formatDate(p.passportExpiry, "yyyy-MM-dd") : "-"}","${hasMen ? "SUDAH" : "BELUM"}","${menNum}","${menClinic}","${menDate}","${menExp}","${hasPol ? "SUDAH" : "BELUM"}","${polNum}","${polClinic}","${polDate}","${polExp}","${p.phone}","${p.package?.name}","${dep}","${ret}","${p.roomType}","${p.uniformSize || "L"}","${health}","${p.status}"`;
       })
       .join("\n");
 
-    const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([kopSurat + "\n" + headers + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -924,7 +1222,7 @@ export default function PilgrimsView({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setIsRegistrationsModalOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs font-black text-amber-900 shadow-2xs hover:bg-amber-100 transition-all cursor-pointer"
@@ -933,15 +1231,23 @@ export default function PilgrimsView({
             📥 Antrean Pendaftaran Online
           </button>
           <button
+            onClick={() => setIsManifestVisaModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-400 bg-amber-300 hover:bg-amber-400 text-slate-950 px-3.5 py-2.5 text-xs font-black shadow-xs transition-all cursor-pointer"
+            title="Export Manifest Visa Simple (Format Standar Provider & Kedutaan)"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-slate-900" />
+            ✈️ Manifest Visa (Simple)
+          </button>
+          <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-all cursor-pointer"
           >
             <Download className="h-4 w-4 text-slate-500" />
-            Export Manifest CSV
+            Export CSV Lengkap
           </button>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-all"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-all cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             + Tambah Jamaah Baru
@@ -1145,6 +1451,10 @@ export default function PilgrimsView({
                     <span>Paspor Lengkap</span>
                   </label>
                   <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={columns.vaccine} onChange={(e) => setColumns({ ...columns, vaccine: e.target.checked })} className="rounded text-emerald-600" />
+                    <span>Vaksinasi / ICV</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
                     <input type="checkbox" checked={columns.birth} onChange={(e) => setColumns({ ...columns, birth: e.target.checked })} className="rounded text-emerald-600" />
                     <span>Tempat & Tgl Lahir</span>
                   </label>
@@ -1194,6 +1504,7 @@ export default function PilgrimsView({
                 {columns.fatherName && <th className="py-3 px-3">Nama Ayah</th>}
                 {columns.identity && <th className="py-3 px-3">Identitas</th>}
                 {columns.passport && <th className="py-3 px-4">Paspor RI & Exp</th>}
+                {columns.vaccine && <th className="py-3 px-4">Vaksin / ICV & Exp</th>}
                 {columns.birth && <th className="py-3 px-3">Tempat & Tgl Lahir</th>}
                 {columns.address && <th className="py-3 px-4">Alamat Domisili</th>}
                 {columns.phone && <th className="py-3 px-3">Kontak (HP/Telp)</th>}
@@ -1286,6 +1597,90 @@ export default function PilgrimsView({
                               </span>
                             )}
                           </div>
+                        </td>
+                      )}
+
+                      {/* Vaccine & ICV */}
+                      {columns.vaccine && (
+                        <td className="py-3.5 px-4 min-w-[190px]">
+                          {(() => {
+                            const hasMen = Boolean(p.hasMeningitisVaccine || p.meningitisVaccineNumber || (p.vaccineType === "MENINGITIS" && p.vaccineNumber));
+                            const menNum = p.meningitisVaccineNumber || (p.vaccineType === "MENINGITIS" ? p.vaccineNumber : "");
+                            const menExpDate = p.meningitisVaccineExpiry || (p.vaccineType === "MENINGITIS" ? p.vaccineExpiryDate : null);
+                            const menClinic = p.meningitisVaccineClinic || (p.vaccineType === "MENINGITIS" ? p.vaccineClinicName : "");
+
+                            const hasPol = Boolean(p.hasPolioVaccine || p.polioVaccineNumber || (p.vaccineType === "POLIO" && p.vaccineNumber));
+                            const polNum = p.polioVaccineNumber || (p.vaccineType === "POLIO" ? p.vaccineNumber : "");
+                            const polExpDate = p.polioVaccineExpiry || (p.vaccineType === "POLIO" ? p.vaccineExpiryDate : null);
+                            const polClinic = p.polioVaccineClinic || (p.vaccineType === "POLIO" ? p.vaccineClinicName : "");
+
+                            if (!hasMen && !hasPol) {
+                              return (
+                                <span className="inline-block text-[10px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 font-medium">
+                                  ⏳ Belum Ada Vaksin
+                                </span>
+                              );
+                            }
+
+                            const menExp = getVaccineExpiryStatus(menExpDate, p.package?.departureDate);
+                            const polExp = getVaccineExpiryStatus(polExpDate, p.package?.departureDate);
+
+                            return (
+                              <div className="space-y-1.5 text-[11px]">
+                                {/* Meningitis */}
+                                <div className="border-b border-slate-100 pb-1">
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-1 py-0.2 rounded border border-teal-200">
+                                      🦠 Meningitis
+                                    </span>
+                                    {hasMen ? (
+                                      <span className="font-mono font-bold text-slate-900 text-[10px]">
+                                        {menNum || "✓ Ada"}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[9px] text-slate-400 font-medium">❌ Belum</span>
+                                    )}
+                                    {menExp && (
+                                      <span className={`text-[8px] px-1 py-0.2 rounded font-bold border ${menExp.badgeClass}`}>
+                                        {menExp.shortBadge}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {hasMen && menExpDate && (
+                                    <p className="text-[9px] text-slate-500 mt-0.5">
+                                      Exp: {formatDate(menExpDate, "dd/MM/yyyy")}{menClinic ? ` • ${menClinic}` : ""}
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* Polio */}
+                                <div>
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-1 py-0.2 rounded border border-blue-200">
+                                      💧 Polio
+                                    </span>
+                                    {hasPol ? (
+                                      <span className="font-mono font-bold text-slate-900 text-[10px]">
+                                        {polNum || "✓ Ada"}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[9px] text-slate-400 font-medium">❌ Belum</span>
+                                    )}
+                                    {polExp && (
+                                      <span className={`text-[8px] px-1 py-0.2 rounded font-bold border ${polExp.badgeClass}`}>
+                                        {polExp.shortBadge}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {hasPol && polExpDate && (
+                                    <p className="text-[9px] text-slate-500 mt-0.5">
+                                      Exp: {formatDate(polExpDate, "dd/MM/yyyy")}{polClinic ? ` • ${polClinic}` : ""}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </td>
                       )}
 
@@ -1762,6 +2157,145 @@ export default function PilgrimsView({
                 </div>
               </div>
             </div>
+
+            {/* Banner Khusus Sertifikat Vaksinasi Meningitis & Polio */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Card 1: Vaksin Meningitis */}
+              {(() => {
+                const hasMen = Boolean(
+                  selectedPilgrim.hasMeningitisVaccine ||
+                  selectedPilgrim.meningitisVaccineNumber ||
+                  (selectedPilgrim.vaccineType === "MENINGITIS" && selectedPilgrim.vaccineNumber)
+                );
+                const menNum = selectedPilgrim.meningitisVaccineNumber || (selectedPilgrim.vaccineType === "MENINGITIS" ? selectedPilgrim.vaccineNumber : "");
+                const menClinic = selectedPilgrim.meningitisVaccineClinic || (selectedPilgrim.vaccineType === "MENINGITIS" ? selectedPilgrim.vaccineClinicName : "");
+                const menDate = selectedPilgrim.meningitisVaccineDate || (selectedPilgrim.vaccineType === "MENINGITIS" ? selectedPilgrim.vaccineDate : null);
+                const menExpDate = selectedPilgrim.meningitisVaccineExpiry || (selectedPilgrim.vaccineType === "MENINGITIS" ? selectedPilgrim.vaccineExpiryDate : null);
+                const vacExp = getVaccineExpiryStatus(menExpDate, selectedPilgrim.package?.departureDate);
+
+                return (
+                  <div className="rounded-2xl bg-teal-50/60 border border-teal-200 p-3.5 space-y-2 text-xs">
+                    <div className="flex items-center justify-between border-b border-teal-200/60 pb-2">
+                      <p className="font-bold text-teal-950 flex items-center gap-1.5">
+                        <Syringe className="w-4 h-4 text-teal-700" />
+                        Vaksin Meningitis (MenACWY)
+                      </p>
+                      {hasMen ? (
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${vacExp ? vacExp.badgeClass : "bg-teal-600 text-white"}`}>
+                          {vacExp ? vacExp.shortBadge : "✅ Sudah Vaksin"}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-300 text-[10px] font-bold">
+                          ❌ Belum Vaksin
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-0.5">
+                      <div>
+                        <span className="text-[10px] text-teal-800">Nomor Sertifikat / Barcode:</span>
+                        <p className="font-mono font-bold text-teal-950 truncate">
+                          {menNum || "-"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-teal-800">Faskes / KKP / RS:</span>
+                        <p className="font-semibold text-teal-950 truncate" title={menClinic || "-"}>
+                          {menClinic || "-"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-teal-800">Tanggal Suntik:</span>
+                        <p className="font-bold text-teal-950">
+                          {menDate ? formatDate(menDate, "dd/MM/yyyy") : "-"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-teal-800">Masa Berlaku (Exp):</span>
+                        <p className="font-bold text-teal-950">
+                          {menExpDate ? formatDate(menExpDate, "dd/MM/yyyy") : "-"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Card 2: Vaksin Polio */}
+              {(() => {
+                const hasPol = Boolean(
+                  selectedPilgrim.hasPolioVaccine ||
+                  selectedPilgrim.polioVaccineNumber ||
+                  (selectedPilgrim.vaccineType === "POLIO" && selectedPilgrim.vaccineNumber)
+                );
+                const polNum = selectedPilgrim.polioVaccineNumber || (selectedPilgrim.vaccineType === "POLIO" ? selectedPilgrim.vaccineNumber : "");
+                const polClinic = selectedPilgrim.polioVaccineClinic || (selectedPilgrim.vaccineType === "POLIO" ? selectedPilgrim.vaccineClinicName : "");
+                const polDate = selectedPilgrim.polioVaccineDate || (selectedPilgrim.vaccineType === "POLIO" ? selectedPilgrim.vaccineDate : null);
+                const polExpDate = selectedPilgrim.polioVaccineExpiry || (selectedPilgrim.vaccineType === "POLIO" ? selectedPilgrim.vaccineExpiryDate : null);
+                const vacExp = getVaccineExpiryStatus(polExpDate, selectedPilgrim.package?.departureDate);
+
+                return (
+                  <div className="rounded-2xl bg-blue-50/60 border border-blue-200 p-3.5 space-y-2 text-xs">
+                    <div className="flex items-center justify-between border-b border-blue-200/60 pb-2">
+                      <p className="font-bold text-blue-950 flex items-center gap-1.5">
+                        <Syringe className="w-4 h-4 text-blue-700" />
+                        Vaksin Polio (nOPV2 / IPV)
+                      </p>
+                      {hasPol ? (
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${vacExp ? vacExp.badgeClass : "bg-blue-600 text-white"}`}>
+                          {vacExp ? vacExp.shortBadge : "✅ Sudah Vaksin"}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-300 text-[10px] font-bold">
+                          ❌ Belum Vaksin
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-0.5">
+                      <div>
+                        <span className="text-[10px] text-blue-800">Nomor Sertifikat / PIN:</span>
+                        <p className="font-mono font-bold text-blue-950 truncate">
+                          {polNum || "-"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-blue-800">Faskes / Puskesmas / Pos PIN:</span>
+                        <p className="font-semibold text-blue-950 truncate" title={polClinic || "-"}>
+                          {polClinic || "-"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-blue-800">Tanggal Suntik:</span>
+                        <p className="font-bold text-blue-950">
+                          {polDate ? formatDate(polDate, "dd/MM/yyyy") : "-"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-blue-800">Masa Berlaku (Exp):</span>
+                        <p className="font-bold text-blue-950">
+                          {polExpDate ? formatDate(polExpDate, "dd/MM/yyyy") : "-"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {selectedPilgrim.vaccineCardFileUrl && (
+              <div className="pt-1.5 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                <span className="text-[11px] text-slate-600 font-medium">Lampiran Dokumen Kartu/Sertifikat Vaksin:</span>
+                <a
+                  href={selectedPilgrim.vaccineCardFileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-800 bg-white px-2.5 py-1 rounded-lg border border-teal-300 hover:bg-teal-50 transition-all"
+                >
+                  📄 Buka / Unduh Bukti Sertifikat Vaksin
+                </a>
+              </div>
+            )}
 
             {/* Kartu Status Keuangan, DP & Kekurangan Pelunasan */}
             {(() => {
@@ -2782,6 +3316,312 @@ export default function PilgrimsView({
                       <span>E-Visa belum terbit dari Kementerian Haji & Umrah Saudi. Kolom data visa disembunyikan dan dapat diinput menyusul saat edit data.</span>
                     </div>
                   )}
+                </div>
+
+                {/* SUB-SECTION 3: DATA VAKSINASI MENINGITIS & POLIO (DUAL CHECKLIST) */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200 pb-1.5">
+                    <Syringe className="w-4 h-4 text-teal-600" />
+                    <span>STATUS VAKSINASI KESEHATAN (MENINGITIS & POLIO)</span>
+                  </div>
+
+                  {/* 1. KARTU CHECKLIST VAKSIN MENINGITIS */}
+                  <div className="rounded-2xl border border-teal-200 bg-teal-50/40 p-3.5 space-y-3 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-teal-100">
+                      <div>
+                        <label className="font-bold text-slate-900 flex items-center gap-1.5">
+                          <span className="text-base">🦠</span>
+                          <span>1. Vaksin Meningitis (MenACWY)</span>
+                        </label>
+                        <p className="text-[11px] text-slate-500">
+                          Sertifikat Vaksin Meningitis Kemenkes / Barcode SatuSehat (Wajib Regulasi Saudi & Kemenkes)
+                        </p>
+                      </div>
+
+                      <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              hasMeningitisVaccine: false,
+                              meningitisVaccineNumber: "",
+                              meningitisVaccineClinic: "",
+                              meningitisVaccineDate: "",
+                              meningitisVaccineExpiry: "",
+                            })
+                          }
+                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            !formData.hasMeningitisVaccine
+                              ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          ❌ Belum Vaksin
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              hasMeningitisVaccine: true,
+                            })
+                          }
+                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            formData.hasMeningitisVaccine
+                              ? "bg-teal-700 text-white shadow-xs"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          ✅ Sudah Vaksin
+                        </button>
+                      </div>
+                    </div>
+
+                    {formData.hasMeningitisVaccine ? (
+                      <div className="space-y-3 pt-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="font-bold text-slate-700 text-xs">Nomor Sertifikat Vaksin Meningitis / Barcode SatuSehat *</label>
+                            <input
+                              type="text"
+                              required={formData.hasMeningitisVaccine}
+                              placeholder="e.g. MEN-2026/MM-9821 / Barcode SatuSehat"
+                              value={formData.meningitisVaccineNumber}
+                              onChange={(e) => setFormData({ ...formData, meningitisVaccineNumber: e.target.value.toUpperCase() })}
+                              className="mt-1 w-full rounded-xl border border-teal-300 p-2.5 bg-white font-mono font-bold text-teal-950 focus:bg-white text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="font-bold text-slate-700 text-xs">Tempat Vaksin / Faskes / KKP / RS / Puskesmas</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. KKP Kelas I Medan / RSUD Deliserdang"
+                              value={formData.meningitisVaccineClinic}
+                              onChange={(e) => setFormData({ ...formData, meningitisVaccineClinic: e.target.value })}
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-medium text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="font-bold text-slate-700 text-xs">Tanggal Suntik Vaksin Meningitis</label>
+                            <input
+                              type="date"
+                              value={formData.meningitisVaccineDate}
+                              onChange={(e) => {
+                                const newDate = e.target.value;
+                                let autoExpiry = formData.meningitisVaccineExpiry;
+                                if (newDate && !formData.meningitisVaccineExpiry) {
+                                  const d = new Date(newDate);
+                                  d.setFullYear(d.getFullYear() + 3);
+                                  autoExpiry = d.toISOString().split("T")[0];
+                                }
+                                setFormData({
+                                  ...formData,
+                                  meningitisVaccineDate: newDate,
+                                  meningitisVaccineExpiry: autoExpiry,
+                                });
+                              }}
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold text-xs"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <label className="font-bold text-slate-700 text-xs">Masa Berlaku (Expired Meningitis)</label>
+                              {formData.meningitisVaccineDate && (
+                                <div className="flex gap-1 text-[10px]">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const d = new Date(formData.meningitisVaccineDate);
+                                      d.setFullYear(d.getFullYear() + 2);
+                                      setFormData({ ...formData, meningitisVaccineExpiry: d.toISOString().split("T")[0] });
+                                    }}
+                                    className="px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 font-bold hover:bg-teal-200 cursor-pointer"
+                                  >
+                                    +2 Thn
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const d = new Date(formData.meningitisVaccineDate);
+                                      d.setFullYear(d.getFullYear() + 3);
+                                      setFormData({ ...formData, meningitisVaccineExpiry: d.toISOString().split("T")[0] });
+                                    }}
+                                    className="px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 font-bold hover:bg-teal-200 cursor-pointer"
+                                  >
+                                    +3 Thn
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <input
+                              type="date"
+                              value={formData.meningitisVaccineExpiry}
+                              onChange={(e) => setFormData({ ...formData, meningitisVaccineExpiry: e.target.value })}
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
+                        <span className="text-base">🦠</span>
+                        <span>Vaksin Meningitis belum dilakukan atau belum diinput. Anda dapat melengkapinya kapan saja saat edit data.</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. KARTU CHECKLIST VAKSIN POLIO */}
+                  <div className="rounded-2xl border border-blue-200 bg-blue-50/40 p-3.5 space-y-3 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-blue-100">
+                      <div>
+                        <label className="font-bold text-slate-900 flex items-center gap-1.5">
+                          <span className="text-base">💧</span>
+                          <span>2. Vaksin Polio (nOPV2 / IPV / PIN Polio)</span>
+                        </label>
+                        <p className="text-[11px] text-slate-500">
+                          Sertifikat Vaksin / Tetes Polio Pekan Imunisasi Nasional (PIN) / SatuSehat
+                        </p>
+                      </div>
+
+                      <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              hasPolioVaccine: false,
+                              polioVaccineNumber: "",
+                              polioVaccineClinic: "",
+                              polioVaccineDate: "",
+                              polioVaccineExpiry: "",
+                            })
+                          }
+                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            !formData.hasPolioVaccine
+                              ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          ❌ Belum Vaksin
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              hasPolioVaccine: true,
+                            })
+                          }
+                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            formData.hasPolioVaccine
+                              ? "bg-blue-700 text-white shadow-xs"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          ✅ Sudah Vaksin
+                        </button>
+                      </div>
+                    </div>
+
+                    {formData.hasPolioVaccine ? (
+                      <div className="space-y-3 pt-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="font-bold text-slate-700 text-xs">Nomor Sertifikat Vaksin Polio / PIN / Barcode *</label>
+                            <input
+                              type="text"
+                              required={formData.hasPolioVaccine}
+                              placeholder="e.g. POLIO-2026/PL-4501 / Barcode SatuSehat"
+                              value={formData.polioVaccineNumber}
+                              onChange={(e) => setFormData({ ...formData, polioVaccineNumber: e.target.value.toUpperCase() })}
+                              className="mt-1 w-full rounded-xl border border-blue-300 p-2.5 bg-white font-mono font-bold text-blue-950 focus:bg-white text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="font-bold text-slate-700 text-xs">Tempat Vaksin / Faskes / Puskesmas / Pos PIN</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Puskesmas Medan Baru / Pos PIN Melati"
+                              value={formData.polioVaccineClinic}
+                              onChange={(e) => setFormData({ ...formData, polioVaccineClinic: e.target.value })}
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-medium text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="font-bold text-slate-700 text-xs">Tanggal Suntik / Pemberian Vaksin Polio</label>
+                            <input
+                              type="date"
+                              value={formData.polioVaccineDate}
+                              onChange={(e) => {
+                                const newDate = e.target.value;
+                                let autoExpiry = formData.polioVaccineExpiry;
+                                if (newDate && !formData.polioVaccineExpiry) {
+                                  const d = new Date(newDate);
+                                  d.setFullYear(d.getFullYear() + 1);
+                                  autoExpiry = d.toISOString().split("T")[0];
+                                }
+                                setFormData({
+                                  ...formData,
+                                  polioVaccineDate: newDate,
+                                  polioVaccineExpiry: autoExpiry,
+                                });
+                              }}
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold text-xs"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <label className="font-bold text-slate-700 text-xs">Masa Berlaku (Expired Polio)</label>
+                              {formData.polioVaccineDate && (
+                                <div className="flex gap-1 text-[10px]">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const d = new Date(formData.polioVaccineDate);
+                                      d.setFullYear(d.getFullYear() + 1);
+                                      setFormData({ ...formData, polioVaccineExpiry: d.toISOString().split("T")[0] });
+                                    }}
+                                    className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold hover:bg-blue-200 cursor-pointer"
+                                  >
+                                    +1 Thn
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const d = new Date(formData.polioVaccineDate);
+                                      d.setFullYear(d.getFullYear() + 2);
+                                      setFormData({ ...formData, polioVaccineExpiry: d.toISOString().split("T")[0] });
+                                    }}
+                                    className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold hover:bg-blue-200 cursor-pointer"
+                                  >
+                                    +2 Thn
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <input
+                              type="date"
+                              value={formData.polioVaccineExpiry}
+                              onChange={(e) => setFormData({ ...formData, polioVaccineExpiry: e.target.value })}
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
+                        <span className="text-base">💧</span>
+                        <span>Vaksin Polio belum dilakukan atau belum diinput. Anda dapat melengkapinya kapan saja saat edit data.</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -3951,6 +4791,312 @@ export default function PilgrimsView({
                     </div>
                   )}
                 </div>
+
+                {/* SUB-SECTION 3: DATA VAKSINASI MENINGITIS & POLIO (DUAL CHECKLIST) */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 border-b border-slate-200 pb-1.5">
+                    <Syringe className="w-4 h-4 text-teal-600" />
+                    <span>STATUS VAKSINASI KESEHATAN (MENINGITIS & POLIO)</span>
+                  </div>
+
+                  {/* 1. KARTU CHECKLIST VAKSIN MENINGITIS */}
+                  <div className="rounded-2xl border border-teal-200 bg-teal-50/40 p-3.5 space-y-3 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-teal-100">
+                      <div>
+                        <label className="font-bold text-slate-900 flex items-center gap-1.5">
+                          <span className="text-base">🦠</span>
+                          <span>1. Vaksin Meningitis (MenACWY)</span>
+                        </label>
+                        <p className="text-[11px] text-slate-500">
+                          Sertifikat Vaksin Meningitis Kemenkes / Barcode SatuSehat (Wajib Regulasi Saudi & Kemenkes)
+                        </p>
+                      </div>
+
+                      <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditFormData({
+                              ...editFormData,
+                              hasMeningitisVaccine: false,
+                              meningitisVaccineNumber: "",
+                              meningitisVaccineClinic: "",
+                              meningitisVaccineDate: "",
+                              meningitisVaccineExpiry: "",
+                            })
+                          }
+                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            !editFormData.hasMeningitisVaccine
+                              ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          ❌ Belum Vaksin
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditFormData({
+                              ...editFormData,
+                              hasMeningitisVaccine: true,
+                            })
+                          }
+                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            editFormData.hasMeningitisVaccine
+                              ? "bg-teal-700 text-white shadow-xs"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          ✅ Sudah Vaksin
+                        </button>
+                      </div>
+                    </div>
+
+                    {editFormData.hasMeningitisVaccine ? (
+                      <div className="space-y-3 pt-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="font-bold text-slate-700 text-xs">Nomor Sertifikat Vaksin Meningitis / Barcode SatuSehat *</label>
+                            <input
+                              type="text"
+                              required={editFormData.hasMeningitisVaccine}
+                              placeholder="e.g. MEN-2026/MM-9821 / Barcode SatuSehat"
+                              value={editFormData.meningitisVaccineNumber}
+                              onChange={(e) => setEditFormData({ ...editFormData, meningitisVaccineNumber: e.target.value.toUpperCase() })}
+                              className="mt-1 w-full rounded-xl border border-teal-300 p-2.5 bg-white font-mono font-bold text-teal-950 focus:bg-white text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="font-bold text-slate-700 text-xs">Tempat Vaksin / Faskes / KKP / RS / Puskesmas</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. KKP Kelas I Medan / RSUD Deliserdang"
+                              value={editFormData.meningitisVaccineClinic}
+                              onChange={(e) => setEditFormData({ ...editFormData, meningitisVaccineClinic: e.target.value })}
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-medium text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="font-bold text-slate-700 text-xs">Tanggal Suntik Vaksin Meningitis</label>
+                            <input
+                              type="date"
+                              value={editFormData.meningitisVaccineDate}
+                              onChange={(e) => {
+                                const newDate = e.target.value;
+                                let autoExpiry = editFormData.meningitisVaccineExpiry;
+                                if (newDate && !editFormData.meningitisVaccineExpiry) {
+                                  const d = new Date(newDate);
+                                  d.setFullYear(d.getFullYear() + 3);
+                                  autoExpiry = d.toISOString().split("T")[0];
+                                }
+                                setEditFormData({
+                                  ...editFormData,
+                                  meningitisVaccineDate: newDate,
+                                  meningitisVaccineExpiry: autoExpiry,
+                                });
+                              }}
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold text-xs"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <label className="font-bold text-slate-700 text-xs">Masa Berlaku (Expired Meningitis)</label>
+                              {editFormData.meningitisVaccineDate && (
+                                <div className="flex gap-1 text-[10px]">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const d = new Date(editFormData.meningitisVaccineDate);
+                                      d.setFullYear(d.getFullYear() + 2);
+                                      setEditFormData({ ...editFormData, meningitisVaccineExpiry: d.toISOString().split("T")[0] });
+                                    }}
+                                    className="px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 font-bold hover:bg-teal-200 cursor-pointer"
+                                  >
+                                    +2 Thn
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const d = new Date(editFormData.meningitisVaccineDate);
+                                      d.setFullYear(d.getFullYear() + 3);
+                                      setEditFormData({ ...editFormData, meningitisVaccineExpiry: d.toISOString().split("T")[0] });
+                                    }}
+                                    className="px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 font-bold hover:bg-teal-200 cursor-pointer"
+                                  >
+                                    +3 Thn
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <input
+                              type="date"
+                              value={editFormData.meningitisVaccineExpiry}
+                              onChange={(e) => setEditFormData({ ...editFormData, meningitisVaccineExpiry: e.target.value })}
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
+                        <span className="text-base">🦠</span>
+                        <span>Vaksin Meningitis belum dilakukan atau belum diinput. Anda dapat melengkapinya kapan saja saat edit data.</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. KARTU CHECKLIST VAKSIN POLIO */}
+                  <div className="rounded-2xl border border-blue-200 bg-blue-50/40 p-3.5 space-y-3 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-blue-100">
+                      <div>
+                        <label className="font-bold text-slate-900 flex items-center gap-1.5">
+                          <span className="text-base">💧</span>
+                          <span>2. Vaksin Polio (nOPV2 / IPV / PIN Polio)</span>
+                        </label>
+                        <p className="text-[11px] text-slate-500">
+                          Sertifikat Vaksin / Tetes Polio Pekan Imunisasi Nasional (PIN) / SatuSehat
+                        </p>
+                      </div>
+
+                      <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditFormData({
+                              ...editFormData,
+                              hasPolioVaccine: false,
+                              polioVaccineNumber: "",
+                              polioVaccineClinic: "",
+                              polioVaccineDate: "",
+                              polioVaccineExpiry: "",
+                            })
+                          }
+                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            !editFormData.hasPolioVaccine
+                              ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          ❌ Belum Vaksin
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditFormData({
+                              ...editFormData,
+                              hasPolioVaccine: true,
+                            })
+                          }
+                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            editFormData.hasPolioVaccine
+                              ? "bg-blue-700 text-white shadow-xs"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          ✅ Sudah Vaksin
+                        </button>
+                      </div>
+                    </div>
+
+                    {editFormData.hasPolioVaccine ? (
+                      <div className="space-y-3 pt-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="font-bold text-slate-700 text-xs">Nomor Sertifikat Vaksin Polio / PIN / Barcode *</label>
+                            <input
+                              type="text"
+                              required={editFormData.hasPolioVaccine}
+                              placeholder="e.g. POLIO-2026/PL-4501 / Barcode SatuSehat"
+                              value={editFormData.polioVaccineNumber}
+                              onChange={(e) => setEditFormData({ ...editFormData, polioVaccineNumber: e.target.value.toUpperCase() })}
+                              className="mt-1 w-full rounded-xl border border-blue-300 p-2.5 bg-white font-mono font-bold text-blue-950 focus:bg-white text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="font-bold text-slate-700 text-xs">Tempat Vaksin / Faskes / Puskesmas / Pos PIN</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Puskesmas Medan Baru / Pos PIN Melati"
+                              value={editFormData.polioVaccineClinic}
+                              onChange={(e) => setEditFormData({ ...editFormData, polioVaccineClinic: e.target.value })}
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-medium text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="font-bold text-slate-700 text-xs">Tanggal Suntik / Pemberian Vaksin Polio</label>
+                            <input
+                              type="date"
+                              value={editFormData.polioVaccineDate}
+                              onChange={(e) => {
+                                const newDate = e.target.value;
+                                let autoExpiry = editFormData.polioVaccineExpiry;
+                                if (newDate && !editFormData.polioVaccineExpiry) {
+                                  const d = new Date(newDate);
+                                  d.setFullYear(d.getFullYear() + 1);
+                                  autoExpiry = d.toISOString().split("T")[0];
+                                }
+                                setEditFormData({
+                                  ...editFormData,
+                                  polioVaccineDate: newDate,
+                                  polioVaccineExpiry: autoExpiry,
+                                });
+                              }}
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold text-xs"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <label className="font-bold text-slate-700 text-xs">Masa Berlaku (Expired Polio)</label>
+                              {editFormData.polioVaccineDate && (
+                                <div className="flex gap-1 text-[10px]">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const d = new Date(editFormData.polioVaccineDate);
+                                      d.setFullYear(d.getFullYear() + 1);
+                                      setEditFormData({ ...editFormData, polioVaccineExpiry: d.toISOString().split("T")[0] });
+                                    }}
+                                    className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold hover:bg-blue-200 cursor-pointer"
+                                  >
+                                    +1 Thn
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const d = new Date(editFormData.polioVaccineDate);
+                                      d.setFullYear(d.getFullYear() + 2);
+                                      setEditFormData({ ...editFormData, polioVaccineExpiry: d.toISOString().split("T")[0] });
+                                    }}
+                                    className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold hover:bg-blue-200 cursor-pointer"
+                                  >
+                                    +2 Thn
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <input
+                              type="date"
+                              value={editFormData.polioVaccineExpiry}
+                              onChange={(e) => setEditFormData({ ...editFormData, polioVaccineExpiry: e.target.value })}
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
+                        <span className="text-base">💧</span>
+                        <span>Vaksin Polio belum dilakukan atau belum diinput. Anda dapat melengkapinya kapan saja saat edit data.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* SEKSI 4: ALAMAT LENGKAP & DOMISILI */}
@@ -4499,6 +5645,221 @@ export default function PilgrimsView({
         onClose={() => setIsRegistrationsModalOpen(false)}
         onRefreshPilgrims={onRefresh}
       />
+
+      {/* Manifest Visa Simple Modal (Format Provider & Kedutaan) */}
+      {isManifestVisaModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative flex max-h-[92vh] w-full max-w-6xl flex-col rounded-3xl bg-white shadow-2xl border border-slate-100 overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-200/80 bg-gradient-to-r from-amber-50 via-yellow-50/50 to-white px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-yellow-400/20 text-yellow-800 rounded-2xl border border-yellow-400/40">
+                  <FileSpreadsheet className="h-6 w-6 text-yellow-700" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    Manifest Visa Umroh (Format Simple)
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-yellow-400 text-yellow-950">
+                      Standar Provider & Kedutaan
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Tabel ringkas 9 kolom sesuai standar input provider visa, muassasah Saudi, dan kedutaan.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsManifestVisaModalOpen(false)}
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Quick Action Bar & Summary */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/80 px-6 py-3 border-b border-slate-200/80">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="font-bold text-slate-700">Filter Paket:</span>
+                <select
+                  value={selectedPackageId}
+                  onChange={(e) => setSelectedPackageId(e.target.value)}
+                  className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                >
+                  <option value="ALL">Semua Paket ({pilgrims.length} Jamaah)</option>
+                  {packages.map((pkg) => (
+                    <option key={pkg.id} value={pkg.id}>
+                      {pkg.name} ({pilgrims.filter((p) => p.packageId === pkg.id).length} Jamaah)
+                    </option>
+                  ))}
+                </select>
+
+                <div className="flex items-center gap-1.5 ml-2">
+                  <span className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg font-bold text-slate-700">
+                    Total: <span className="text-yellow-700">{filteredPilgrims.length} Pax</span>
+                  </span>
+                  <span className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg font-bold text-slate-700">
+                    M: <span className="text-blue-700">{filteredPilgrims.filter((p) => p.gender === "MALE" || p.gender === "M").length}</span>
+                  </span>
+                  <span className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg font-bold text-slate-700">
+                    F: <span className="text-pink-700">{filteredPilgrims.filter((p) => p.gender === "FEMALE" || p.gender === "F").length}</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCopyManifestVisaToClipboard}
+                  disabled={filteredPilgrims.length === 0}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-100 transition-all disabled:opacity-50 cursor-pointer"
+                  title="Salin tabel untuk langsung di-paste ke file Microsoft Excel"
+                >
+                  {manifestVisaCopied ? (
+                    <>
+                      <CheckCheck className="h-4 w-4 text-emerald-600" />
+                      <span className="text-emerald-700 font-black">Tersalin!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4 text-slate-600" />
+                      Salin Tabel (Excel)
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleExportManifestVisaCSV}
+                  disabled={filteredPilgrims.length === 0}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-100 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  <Download className="h-4 w-4 text-slate-600" />
+                  Download CSV
+                </button>
+                <button
+                  onClick={handleExportManifestVisaExcel}
+                  disabled={filteredPilgrims.length === 0}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-yellow-950 px-4 py-2 text-xs font-black shadow-sm transition-all disabled:opacity-50 cursor-pointer border border-yellow-500/40"
+                >
+                  <Download className="h-4 w-4" />
+                  Download Excel (.xls)
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: Spreadsheet-like Table Preview */}
+            <div className="flex-1 overflow-auto p-6 bg-slate-100/60">
+              <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
+                {/* Yellow Banner Header */}
+                <div className="bg-[#FFFF00] text-black font-black text-center py-2.5 px-4 text-sm sm:text-base tracking-wide border-b-2 border-slate-900 select-all">
+                  {getManifestVisaTitle()}
+                </div>
+
+                {filteredPilgrims.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <AlertCircle className="mx-auto h-10 w-10 text-slate-400 mb-2" />
+                    <h4 className="font-bold text-slate-700">Belum Ada Data Calon Jamaah</h4>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Silakan pilih paket lain atau tambahkan data jamaah baru untuk menghasilkan Manifest Visa.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs border-collapse text-left">
+                      <thead>
+                        <tr className="bg-[#FFFF00] text-black font-black border-b border-slate-900">
+                          <th className="border border-slate-900/60 px-2 py-2 text-center w-12">NO</th>
+                          <th className="border border-slate-900/60 px-2 py-2 text-center w-14">SEX</th>
+                          <th className="border border-slate-900/60 px-3 py-2 text-left min-w-[200px]">FULL NAME</th>
+                          <th className="border border-slate-900/60 px-3 py-2 text-left min-w-[140px]">PLACE OF BIRTH</th>
+                          <th className="border border-slate-900/60 px-3 py-2 text-center min-w-[140px]">DATE OF BIRTH</th>
+                          <th className="border border-slate-900/60 px-3 py-2 text-center min-w-[130px]">NOMOR PASSPORT</th>
+                          <th className="border border-slate-900/60 px-3 py-2 text-center min-w-[130px]">DATE OF ISSUE</th>
+                          <th className="border border-slate-900/60 px-3 py-2 text-center min-w-[130px]">DATE OF EXPIRY</th>
+                          <th className="border border-slate-900/60 px-3 py-2 text-center min-w-[140px]">ISSUING OFFICE</th>
+                        </tr>
+                      </thead>
+                      <tbody className="font-medium text-slate-900 divide-y divide-slate-200">
+                        {filteredPilgrims.map((p, idx) => {
+                          const sex = p.gender === "FEMALE" || p.gender === "F" ? "F" : "M";
+                          const fullName = (p.name || p.passportName || "-").toUpperCase();
+                          const pob = (p.placeOfBirth || "-").toUpperCase();
+                          const dob = formatDateIndoUpper(p.dateOfBirth);
+                          const passNo = (p.passportNumber || "-").toUpperCase();
+                          const doi = formatDateIndoUpper(p.passportIssuedDate);
+                          const doe = formatDateIndoUpper(p.passportExpiry);
+                          const office = (p.passportIssuedCity || "-").toUpperCase();
+
+                          const isPassportIncomplete = !p.passportNumber || !p.passportExpiry || !p.passportIssuedDate || !p.passportIssuedCity;
+
+                          return (
+                            <tr
+                              key={p.id || idx}
+                              className={`hover:bg-yellow-50/50 transition-colors ${
+                                isPassportIncomplete ? "bg-amber-50/30" : ""
+                              }`}
+                            >
+                              <td className="border border-slate-300 px-2 py-1.5 text-center font-bold">{idx + 1}</td>
+                              <td className="border border-slate-300 px-2 py-1.5 text-center font-bold">
+                                <span className={sex === "M" ? "text-blue-700" : "text-pink-700"}>{sex}</span>
+                              </td>
+                              <td className="border border-slate-300 px-3 py-1.5 font-bold">{fullName}</td>
+                              <td className="border border-slate-300 px-3 py-1.5">{pob}</td>
+                              <td className="border border-slate-300 px-3 py-1.5 text-center">{dob}</td>
+                              <td className="border border-slate-300 px-3 py-1.5 text-center font-mono font-bold">
+                                {passNo !== "-" ? passNo : <span className="text-red-500 font-sans italic text-[11px]">Belum Diisi</span>}
+                              </td>
+                              <td className="border border-slate-300 px-3 py-1.5 text-center font-mono">
+                                {doi !== "-" ? doi : <span className="text-slate-400 font-sans italic text-[11px]">-</span>}
+                              </td>
+                              <td className="border border-slate-300 px-3 py-1.5 text-center font-mono">
+                                {doe !== "-" ? doe : <span className="text-slate-400 font-sans italic text-[11px]">-</span>}
+                              </td>
+                              <td className="border border-slate-300 px-3 py-1.5 text-center">
+                                {office !== "-" ? office : <span className="text-slate-400 italic text-[11px]">-</span>}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {filteredPilgrims.some((p) => !p.passportNumber || !p.passportExpiry) && (
+                <div className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-900 border border-amber-200">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                  <p>
+                    <span className="font-bold">Perhatian:</span> Beberapa calon jamaah memiliki data paspor yang belum lengkap. Pastikan melengkapi Nomor Paspor, Tanggal Dikeluarkan, Tanggal Expired, dan Kantor Penerbit Paspor sebelum proses submit visa ke provider/kedutaan.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between border-t border-slate-200 bg-white px-6 py-3">
+              <div className="text-xs text-slate-500 font-medium">
+                Nama File: <span className="font-mono font-bold text-slate-700">{getManifestVisaFileName("xls")}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsManifestVisaModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                >
+                  Tutup
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportManifestVisaExcel}
+                  disabled={filteredPilgrims.length === 0}
+                  className="px-5 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-yellow-950 text-xs font-black shadow-sm disabled:opacity-50 cursor-pointer border border-yellow-500/40"
+                >
+                  Download Format Excel (.xls)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

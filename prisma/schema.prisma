@@ -188,6 +188,27 @@ model Pilgrim {
   discountAmount        Float?                @default(0)
   discountReason        String?               // misal: "Promo Spesial September", "Diskon Tokoh", "Diskon Keluarga / Referral"
 
+  // Data Vaksinasi Wajib Umroh (Meningitis & Polio)
+  hasMeningitisVaccine  Boolean   @default(false)
+  meningitisVaccineNumber String? // Nomor Sertifikat / ICV / SatuSehat Meningitis
+  meningitisVaccineClinic String? // Faskes / KKP / RS Vaksin Meningitis
+  meningitisVaccineDate   DateTime? // Tanggal Suntik Vaksin Meningitis
+  meningitisVaccineExpiry DateTime? // Tanggal Expired Vaksin Meningitis
+
+  hasPolioVaccine       Boolean   @default(false)
+  polioVaccineNumber    String?   // Nomor Sertifikat / PIN Polio / SatuSehat
+  polioVaccineClinic    String?   // Faskes / Puskesmas / Pos PIN Polio
+  polioVaccineDate      DateTime? // Tanggal Pemberian / Tetes / Suntik Polio
+  polioVaccineExpiry    DateTime? // Tanggal Expired Vaksin Polio
+
+  // Legacy fallback fields
+  vaccineNumber         String?   // Nomor Sertifikat Vaksin / No. Buku Kuning / ID SatuSehat
+  vaccineType           String?   // Jenis Vaksin
+  vaccineClinicName     String?   // Nama Fasilitas Kesehatan
+  vaccineDate           DateTime? // Tanggal Vaksinasi / Suntik
+  vaccineExpiryDate     DateTime? // Tanggal Akhir Masa Berlaku Vaksin
+  vaccineStatus         String?   @default("NOT_VACCINATED") // NOT_VACCINATED, VACCINATED, EXPIRED, SCHEDULED
+
   // Berkas Dokumen Google Drive
   ktpFileUrl            String?   // 1. Berkas KTP (Wajib)
   familyCardFileUrl     String?   // 2. Berkas Kartu Keluarga (Wajib)
@@ -659,6 +680,23 @@ model Registration {
   leadId              String?   // Terkoneksi ke Leads CRM
 
   // Dokumen Unggahan Google Drive (Wajib KTP, KK, Vaksin; Lainnya Opsional)
+  hasMeningitisVaccine  Boolean   @default(false)
+  meningitisVaccineNumber String?
+  meningitisVaccineClinic String?
+  meningitisVaccineDate   DateTime?
+  meningitisVaccineExpiry DateTime?
+
+  hasPolioVaccine       Boolean   @default(false)
+  polioVaccineNumber    String?
+  polioVaccineClinic    String?
+  polioVaccineDate      DateTime?
+  polioVaccineExpiry    DateTime?
+
+  vaccineNumber       String?   // Nomor Sertifikat Vaksin / ICV / SatuSehat
+  vaccineType         String?   // Jenis Vaksin
+  vaccineClinicName   String?   // Faskes / KKP
+  vaccineDate         DateTime? // Tanggal Vaksin
+  vaccineExpiryDate   DateTime? // Tanggal Expired Vaksin
   ktpFileUrl          String?   // 1. Berkas KTP (WAJIB)
   familyCardFileUrl   String?   // 2. Berkas Kartu Keluarga / KK (WAJIB)
   vaccineCardFileUrl  String?   // 3. Berkas Sertifikat Vaksin Meningitis (WAJIB)

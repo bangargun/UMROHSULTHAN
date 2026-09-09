@@ -323,151 +323,318 @@ export default function PackageInfoView({
     }
   };
 
-  // Export to Excel (.xlsx)
+  // Export to Excel (.xls) with authentic styled layout matching Image 1 template
   const handleExportExcel = () => {
     try {
       const departureDateStr = currentPackage?.departureDate
         ? formatDate(currentPackage.departureDate, "dd MMM yyyy")
         : "TBA";
-      const subAgentLabel = packageInfo?.subAgentName || "SULTHAN_HARAMAIN";
-      const fileName = `PACKAGE INFO_${subAgentLabel.replace(/\s+/g, "_")}_${departureDateStr.replace(/\s+/g, "_")}_${totalPax}PAX.xlsx`;
+      const subAgentLabel = packageInfo?.subAgentName || travelSettings?.companyName || "SULTHAN_HARAMAIN";
+      const fileName = `PACKAGE INFO_${subAgentLabel.replace(/\s+/g, "_")}_${departureDateStr.replace(/\s+/g, "_")}_${totalPax}PAX.xls`;
 
-      const wb = XLSX.utils.book_new();
+      const groupCode = packageInfo?.groupCode || currentPackage?.code || "";
+      const subAgentName = packageInfo?.subAgentName || travelSettings.companyName || "";
+      const adultPax = packageInfo?.adultPax !== undefined && packageInfo?.adultPax !== null ? packageInfo.adultPax : (formData.adultPax || 0);
+      const childPax = packageInfo?.childPax || formData.childPax || 0;
+      const tourLeaderName = packageInfo?.tourLeaderName || "";
+      const tourLeaderPhone = packageInfo?.tourLeaderPhone || "";
+      const muthawwifName = packageInfo?.muthawwifName || "";
+      const muthawwifPhone = packageInfo?.muthawwifPhone || "";
+      const handlingSaudi = packageInfo?.handlingSaudi || "";
+      const handlingPhone = packageInfo?.handlingPhone || "";
 
-      // Flatten structure into worksheet rows
-      const rows: any[][] = [
-        ["PACKAGE INFO"],
-        [],
-        [
-          "GROUP CODE",
-          "SUB AGENT NAME",
-          "NO. OF PAX",
-          "",
-          "TOUR LEADER",
-          "MOBILE",
-        ],
-        [
-          "",
-          "",
-          "ADULT",
-          "CHILD",
-          "",
-          "",
-        ],
-        [
-          packageInfo?.groupCode || currentPackage?.code || "",
-          packageInfo?.subAgentName || travelSettings.companyName,
-          packageInfo?.adultPax || 0,
-          packageInfo?.childPax || 0,
-          packageInfo?.tourLeaderName || "",
-          packageInfo?.tourLeaderPhone || "",
-        ],
-        [],
-        ["FLIGHT INFORMATION"],
-        ["FROM", "TO", "DATE", "ETD", "ETA", "CARRIER", "FLIGHT NO", "REMARKS"],
-      ];
+      // Pad flights to at least 4-5 rows
+      const targetFlightCount = Math.max(activeFlights.length, 4);
+      let flightRowsHtml = "";
+      for (let i = 0; i < targetFlightCount; i++) {
+        const f = activeFlights[i];
+        if (f) {
+          flightRowsHtml += `
+            <tr>
+              <td class="td-center font-bold">${f.from || ""}</td>
+              <td class="td-center font-bold">${f.to || ""}</td>
+              <td class="td-center font-bold">${f.date || ""}</td>
+              <td class="td-center font-bold">${f.etd || ""}</td>
+              <td class="td-center font-bold">${f.eta || ""}</td>
+              <td class="td-center font-bold">${f.carrier || ""}</td>
+              <td class="td-center font-bold">${f.flightNo || ""}</td>
+              <td class="td-center font-bold">${f.remarks || ""}</td>
+            </tr>
+          `;
+        } else {
+          flightRowsHtml += `
+            <tr>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+            </tr>
+          `;
+        }
+      }
 
-      activeFlights.forEach((f) => {
-        rows.push([
-          f.from,
-          f.to,
-          f.date,
-          f.etd,
-          f.eta,
-          f.carrier,
-          f.flightNo,
-          f.remarks,
-        ]);
-      });
+      // Pad hotels to at least 3-4 rows
+      const targetHotelCount = Math.max(activeHotels.length, 3);
+      let hotelRowsHtml = "";
+      for (let i = 0; i < targetHotelCount; i++) {
+        const h = activeHotels[i];
+        if (h) {
+          hotelRowsHtml += `
+            <tr>
+              <td class="td-center font-bold uppercase">${h.city || ""}</td>
+              <td class="td-center font-bold uppercase">${h.hotel || ""}</td>
+              <td class="td-center">${h.checkIn || ""}</td>
+              <td class="td-center">${h.checkOut || ""}</td>
+              <td class="td-center">${h.dbl || ""}</td>
+              <td class="td-center">${h.trpl || ""}</td>
+              <td class="td-center font-bold">${h.quad || ""}</td>
+              <td class="td-center">${h.resNo || h.quint || ""}</td>
+            </tr>
+          `;
+        } else {
+          hotelRowsHtml += `
+            <tr>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+            </tr>
+          `;
+        }
+      }
 
-      rows.push([]);
-      rows.push(["HOTEL ACCOMODATION"]);
-      rows.push([
-        "CITY",
-        "HOTEL",
-        "DATE",
-        "",
-        "TYPE ROOM",
-        "",
-        "",
-        "",
-        "RES NO",
-      ]);
-      rows.push([
-        "",
-        "",
-        "IN",
-        "OUT",
-        "DBL",
-        "TRPL",
-        "QUAD",
-        "QUINT",
-        "",
-      ]);
+      // Pad buses to at least 6 rows
+      const targetBusCount = Math.max(activeBuses.length, 6);
+      let busRowsHtml = "";
+      for (let i = 0; i < targetBusCount; i++) {
+        const b = activeBuses[i];
+        if (b) {
+          busRowsHtml += `
+            <tr>
+              <td class="td-center font-bold">${b.date || ""}</td>
+              <td class="td-center font-bold uppercase">${b.from || ""}</td>
+              <td colspan="2" class="td-center font-bold uppercase">${b.to || ""}</td>
+              <td class="td-center font-bold">${b.time || ""}</td>
+              <td class="td-center font-bold">${b.busType || ""}</td>
+              <td colspan="2" class="td-center font-bold uppercase">${b.company || ""}</td>
+            </tr>
+          `;
+        } else {
+          busRowsHtml += `
+            <tr>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td colspan="2" class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td class="td-center">&nbsp;</td>
+              <td colspan="2" class="td-center">&nbsp;</td>
+            </tr>
+          `;
+        }
+      }
 
-      activeHotels.forEach((h) => {
-        rows.push([
-          h.city,
-          h.hotel,
-          h.checkIn,
-          h.checkOut,
-          h.dbl || "",
-          h.trpl || "",
-          h.quad || "",
-          h.quint || "",
-          h.resNo || "",
-        ]);
-      });
+      const excelHtml = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+          <!--[if gte mso 9]>
+          <xml>
+            <x:ExcelWorkbook>
+              <x:ExcelWorksheets>
+                <x:ExcelWorksheet>
+                  <x:Name>PACKAGE INFO</x:Name>
+                  <x:WorksheetOptions>
+                    <x:DisplayGridlines/>
+                  </x:WorksheetOptions>
+                </x:ExcelWorksheet>
+              </x:ExcelWorksheets>
+            </x:ExcelWorkbook>
+          </xml>
+          <![endif]-->
+          <style>
+            body { font-family: Calibri, Arial, sans-serif; }
+            table { border-collapse: collapse; width: 100%; }
+            .banner-main {
+              background-color: #6FA8DC;
+              color: #000000;
+              font-weight: bold;
+              font-size: 15pt;
+              text-align: center;
+              height: 36px;
+              border: 1.5pt solid #000000;
+              letter-spacing: 2px;
+            }
+            .banner-blank {
+              background-color: #6FA8DC;
+              height: 18px;
+              border-left: 1.5pt solid #000000;
+              border-right: 1.5pt solid #000000;
+              border-bottom: 1.5pt solid #000000;
+            }
+            .sec-banner {
+              background-color: #6FA8DC;
+              color: #000000;
+              font-weight: bold;
+              font-size: 10pt;
+              text-align: center;
+              height: 24px;
+              border: 1pt solid #000000;
+              letter-spacing: 1px;
+            }
+            .th-blue {
+              background-color: #6FA8DC;
+              color: #000000;
+              font-weight: bold;
+              font-size: 9.5pt;
+              text-align: center;
+              border: 1pt solid #000000;
+              padding: 5px 6px;
+            }
+            .th-white {
+              background-color: #FFFFFF;
+              color: #000000;
+              font-weight: bold;
+              font-size: 9.5pt;
+              text-align: center;
+              border: 1pt solid #000000;
+              padding: 5px 6px;
+            }
+            .td-center {
+              text-align: center;
+              border: 1pt solid #000000;
+              padding: 5px 6px;
+              font-size: 9.5pt;
+              mso-number-format: "\\@";
+            }
+            .td-left {
+              text-align: left;
+              border: 1pt solid #000000;
+              padding: 5px 8px;
+              font-size: 9.5pt;
+              mso-number-format: "\\@";
+            }
+            .font-bold { font-weight: bold; }
+            .uppercase { text-transform: uppercase; }
+          </style>
+        </head>
+        <body>
+          <!-- 1. PACKAGE INFO HEADER & GROUP DETAILS -->
+          <table>
+            <tr>
+              <td colspan="8" class="banner-main">PACKAGE INFO</td>
+            </tr>
+            <tr>
+              <td colspan="8" class="banner-blank">&nbsp;</td>
+            </tr>
+            <tr>
+              <th rowspan="2" class="th-blue" style="width: 110px;">GROUP CODE</th>
+              <th rowspan="2" class="th-blue" style="width: 220px;">SUB AGENT NAME</th>
+              <th colspan="2" class="th-blue" style="width: 140px;">NO. OF PAX</th>
+              <th colspan="2" rowspan="2" class="th-blue" style="width: 200px;">TOUR LEADER</th>
+              <th colspan="2" rowspan="2" class="th-blue" style="width: 170px;">MOBILE</th>
+            </tr>
+            <tr>
+              <th class="th-blue" style="width: 70px;">ADULT</th>
+              <th class="th-blue" style="width: 70px;">CHILD</th>
+            </tr>
+            <tr>
+              <td class="td-center font-bold">${groupCode}</td>
+              <td class="td-center font-bold uppercase">${subAgentName}</td>
+              <td class="td-center font-bold">${adultPax}</td>
+              <td class="td-center font-bold">${childPax}</td>
+              <td colspan="2" class="td-center font-bold uppercase">${tourLeaderName}</td>
+              <td colspan="2" class="td-center font-bold">${tourLeaderPhone}</td>
+            </tr>
 
-      rows.push([]);
-      rows.push(["TRANSPORTATION & BUS SCHEDULE"]);
-      rows.push(["DATE", "FROM", "TO", "TIME", "BUS TYPE", "COMPANY"]);
+            <!-- 2. FLIGHT INFORMATION -->
+            <tr>
+              <td colspan="8" class="sec-banner">FLIGHT INFORMATION</td>
+            </tr>
+            <tr>
+              <th class="th-white" style="width: 110px;">FROM</th>
+              <th class="th-white" style="width: 110px;">TO</th>
+              <th class="th-white" style="width: 120px;">DATE</th>
+              <th class="th-white" style="width: 90px;">ETD</th>
+              <th class="th-white" style="width: 90px;">ETA</th>
+              <th class="th-white" style="width: 120px;">CARRIER</th>
+              <th class="th-white" style="width: 110px;">FLIGHT NO</th>
+              <th class="th-white" style="width: 160px;">REMARKS</th>
+            </tr>
+            ${flightRowsHtml}
 
-      activeBuses.forEach((b) => {
-        rows.push([
-          b.date,
-          b.from,
-          b.to,
-          b.time,
-          b.busType,
-          b.company,
-        ]);
-      });
+            <!-- 3. HOTEL ACCOMODATION -->
+            <tr>
+              <td colspan="8" class="sec-banner">HOTEL ACCOMODATION</td>
+            </tr>
+            <tr>
+              <th rowspan="2" class="th-white">CITY</th>
+              <th rowspan="2" class="th-white">HOTEL</th>
+              <th colspan="2" class="th-white">DATE</th>
+              <th colspan="3" class="th-white">TYPE ROOM</th>
+              <th rowspan="2" class="th-white">RES NO</th>
+            </tr>
+            <tr>
+              <th class="th-white" style="width: 85px;">IN</th>
+              <th class="th-white" style="width: 85px;">OUT</th>
+              <th class="th-white" style="width: 55px;">DBL</th>
+              <th class="th-white" style="width: 55px;">TRPL</th>
+              <th class="th-white" style="width: 55px;">QUAD</th>
+            </tr>
+            ${hotelRowsHtml}
 
-      rows.push([]);
-      rows.push(["LOCAL CONTACT PERSON"]);
-      rows.push([
-        "NAME",
-        `MUTHOWWIF : ${packageInfo?.muthawwifName || "-"}`,
-        "",
-        "MOBILE :",
-        packageInfo?.muthawwifPhone || "-",
-      ]);
-      rows.push([
-        "HANDLING SAUDI :",
-        packageInfo?.handlingSaudi || "-",
-        "",
-        "MOBILE :",
-        packageInfo?.handlingPhone || "-",
-      ]);
+            <!-- 4. TRANSPORTATION & BUS SCHEDULE -->
+            <tr>
+              <th class="th-blue" style="width: 110px;">DATE</th>
+              <th class="th-blue" style="width: 180px;">FROM</th>
+              <th colspan="2" class="th-blue" style="width: 180px;">TO</th>
+              <th class="th-blue" style="width: 90px;">TIME</th>
+              <th class="th-blue" style="width: 130px;">BUS TYPE</th>
+              <th colspan="2" class="th-blue" style="width: 150px;">COMPANY</th>
+            </tr>
+            ${busRowsHtml}
 
-      const ws = XLSX.utils.aoa_to_sheet(rows);
+            <!-- 5. LOCAL CONTACT PERSON -->
+            <tr>
+              <td colspan="8" class="sec-banner">LOCAL CONTACT PERSON</td>
+            </tr>
+            <tr>
+              <td colspan="4" class="td-left font-bold" style="padding: 6px 12px;">
+                NAME :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MUTHOWWIF : ${muthawwifName}
+              </td>
+              <td colspan="4" class="td-left font-bold" style="padding: 6px 12px;">
+                MOBILE :&nbsp;&nbsp;&nbsp;&nbsp;${muthawwifPhone}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="4" class="td-left font-bold" style="padding: 6px 12px;">
+                HANDLING SAUDI :&nbsp;&nbsp;${handlingSaudi}
+              </td>
+              <td colspan="4" class="td-left font-bold" style="padding: 6px 12px;">
+                MOBILE :&nbsp;&nbsp;&nbsp;&nbsp;${handlingPhone}
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `;
 
-      // Set column widths
-      ws["!cols"] = [
-        { wch: 15 },
-        { wch: 28 },
-        { wch: 16 },
-        { wch: 16 },
-        { wch: 22 },
-        { wch: 20 },
-        { wch: 15 },
-        { wch: 20 },
-        { wch: 15 },
-      ];
-
-      XLSX.utils.book_append_sheet(wb, ws, "PACKAGE INFO");
-      XLSX.writeFile(wb, fileName);
+      const blob = new Blob([excelHtml], { type: "application/vnd.ms-excel;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (e) {
       console.error(e);
       alert("Gagal mengunduh file Excel");
@@ -540,9 +707,9 @@ export default function PackageInfoView({
           <button
             onClick={handleExportExcel}
             className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-            title="Download file Excel .xlsx asli"
+            title="Download file Excel (.xls) berformat lengkap sama persis dengan tampilan PDF"
           >
-            <Download className="w-4 h-4" /> Excel (.xlsx)
+            <Download className="w-4 h-4" /> Excel (.xls)
           </button>
 
           <button
@@ -563,214 +730,232 @@ export default function PackageInfoView({
         </div>
       </div>
 
-      {/* Printable Sheet View: Authentic Excel Document Layout */}
-      <div className="bg-white rounded-3xl border border-slate-300 shadow-xl p-6 sm:p-10 text-slate-900 printable-modal-content print-sheet relative overflow-x-auto space-y-4">
-        {/* Document Header Table Banner */}
-        <div className="w-full bg-[#4a86e8] text-white text-center py-2.5 rounded-t-lg shadow-xs">
-          <h2 className="text-xl sm:text-2xl font-black tracking-widest uppercase">
+      {/* Printable Sheet View: 100% Authentic Excel Document Layout Matching Image 1 */}
+      <div className="bg-white rounded-3xl border border-slate-300 shadow-xl p-6 sm:p-10 text-slate-900 printable-modal-content print-sheet relative overflow-x-auto">
+        <div className="border-2 border-black max-w-[1000px] mx-auto bg-white text-black font-sans text-xs">
+          {/* Header Banner */}
+          <div className="bg-[#6FA8DC] text-black text-center py-2 font-black text-lg sm:text-xl border-b border-black tracking-widest uppercase">
             PACKAGE INFO
-          </h2>
-        </div>
+          </div>
+          <div className="bg-[#6FA8DC] h-4 border-b-2 border-black"></div>
 
-        {/* Section 1: Top Grid Info (Group Code, Sub Agent, Pax, TL, Mobile) */}
-        <div className="overflow-x-auto border-2 border-slate-400 rounded-sm">
+          {/* Section 1: Group & Tour Leader Details */}
           <table className="w-full text-xs text-center border-collapse">
             <thead>
-              <tr className="bg-[#4a86e8] text-white font-bold border-b border-slate-400">
-                <th className="py-2 px-3 border-r border-slate-400 uppercase w-1/5">GROUP CODE</th>
-                <th className="py-2 px-3 border-r border-slate-400 uppercase w-1/4">SUB AGENT NAME</th>
-                <th colSpan={2} className="py-1 px-3 border-r border-slate-400 uppercase w-1/5">
-                  NO. OF PAX
-                  <div className="flex border-t border-slate-300 mt-1 pt-0.5 text-[10px]">
-                    <span className="w-1/2 border-r border-slate-300">ADULT</span>
-                    <span className="w-1/2">CHILD</span>
-                  </div>
-                </th>
-                <th className="py-2 px-3 border-r border-slate-400 uppercase w-1/6">TOUR LEADER</th>
-                <th className="py-2 px-3 uppercase w-1/6">MOBILE</th>
+              <tr className="bg-[#6FA8DC] text-black font-bold border-b border-black">
+                <th rowSpan={2} className="py-2 px-2 border-r border-black uppercase w-[15%]">GROUP CODE</th>
+                <th rowSpan={2} className="py-2 px-2 border-r border-black uppercase w-[25%]">SUB AGENT NAME</th>
+                <th colSpan={2} className="py-1 px-2 border-r border-black uppercase w-[20%]">NO. OF PAX</th>
+                <th colSpan={2} rowSpan={2} className="py-2 px-2 border-r border-black uppercase w-[22%]">TOUR LEADER</th>
+                <th colSpan={2} rowSpan={2} className="py-2 px-2 uppercase w-[18%]">MOBILE</th>
+              </tr>
+              <tr className="bg-[#6FA8DC] text-black font-bold border-b border-black text-[11px]">
+                <th className="py-1 px-1 border-r border-black">ADULT</th>
+                <th className="py-1 px-1 border-r border-black">CHILD</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="font-bold text-slate-900 bg-white hover:bg-blue-50/30">
-                <td className="py-3 px-3 border-r border-slate-400 font-mono">
+              <tr className="font-bold text-black bg-white border-b-2 border-black">
+                <td className="py-2.5 px-2 border-r border-black font-mono">
                   {packageInfo?.groupCode || currentPackage?.code || "-"}
                 </td>
-                <td className="py-3 px-3 border-r border-slate-400 uppercase">
+                <td className="py-2.5 px-2 border-r border-black uppercase">
                   {packageInfo?.subAgentName || travelSettings.companyName || "-"}
                 </td>
-                <td className="py-3 px-2 border-r border-slate-400 w-1/10 font-mono text-sm">
+                <td className="py-2.5 px-1 border-r border-black font-mono text-sm">
                   {packageInfo?.adultPax || formData.adultPax || 0}
                 </td>
-                <td className="py-3 px-2 border-r border-slate-400 w-1/10 font-mono text-sm">
+                <td className="py-2.5 px-1 border-r border-black font-mono text-sm">
                   {packageInfo?.childPax || formData.childPax || 0}
                 </td>
-                <td className="py-3 px-3 border-r border-slate-400 uppercase">
+                <td colSpan={2} className="py-2.5 px-2 border-r border-black uppercase">
                   {packageInfo?.tourLeaderName || "-"}
                 </td>
-                <td className="py-3 px-3 font-mono">
+                <td colSpan={2} className="py-2.5 px-2 font-mono">
                   {packageInfo?.tourLeaderPhone || "-"}
                 </td>
               </tr>
             </tbody>
           </table>
-        </div>
 
-        {/* Section 2: FLIGHT INFORMATION */}
-        <div className="overflow-x-auto border-2 border-slate-400 rounded-sm">
-          <div className="bg-[#4a86e8] text-white text-center py-1.5 font-bold tracking-wider text-xs border-b border-slate-400 uppercase">
+          {/* Section 2: FLIGHT INFORMATION */}
+          <div className="bg-[#6FA8DC] text-black text-center py-1.5 font-bold tracking-wider text-xs border-b border-black uppercase">
             FLIGHT INFORMATION
           </div>
           <table className="w-full text-xs text-center border-collapse">
             <thead>
-              <tr className="bg-slate-100 text-slate-900 font-black border-b border-slate-400 text-[11px]">
-                <th className="py-2 px-3 border-r border-slate-400 uppercase">FROM</th>
-                <th className="py-2 px-3 border-r border-slate-400 uppercase">TO</th>
-                <th className="py-2 px-3 border-r border-slate-400 uppercase">DATE</th>
-                <th className="py-2 px-3 border-r border-slate-400 uppercase">ETD</th>
-                <th className="py-2 px-3 border-r border-slate-400 uppercase">ETA</th>
-                <th className="py-2 px-3 border-r border-slate-400 uppercase">CARRIER</th>
-                <th className="py-2 px-3 border-r border-slate-400 uppercase">FLIGHT NO</th>
-                <th className="py-2 px-3 uppercase">REMARKS</th>
+              <tr className="bg-white text-black font-bold border-b border-black text-[11px]">
+                <th className="py-2 px-2 border-r border-black uppercase w-[12%]">FROM</th>
+                <th className="py-2 px-2 border-r border-black uppercase w-[12%]">TO</th>
+                <th className="py-2 px-2 border-r border-black uppercase w-[14%]">DATE</th>
+                <th className="py-2 px-2 border-r border-black uppercase w-[11%]">ETD</th>
+                <th className="py-2 px-2 border-r border-black uppercase w-[11%]">ETA</th>
+                <th className="py-2 px-2 border-r border-black uppercase w-[14%]">CARRIER</th>
+                <th className="py-2 px-2 border-r border-black uppercase w-[12%]">FLIGHT NO</th>
+                <th className="py-2 px-2 uppercase w-[14%]">REMARKS</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-300">
+            <tbody className="divide-y divide-black">
               {activeFlights.length > 0 ? (
                 activeFlights.map((flight, idx) => (
-                  <tr key={idx} className="font-bold text-slate-800 hover:bg-blue-50/20">
-                    <td className="py-2 px-3 border-r border-slate-400 font-mono">{flight.from || "-"}</td>
-                    <td className="py-2 px-3 border-r border-slate-400 font-mono">{flight.to || "-"}</td>
-                    <td className="py-2 px-3 border-r border-slate-400 font-mono">{flight.date || "-"}</td>
-                    <td className="py-2 px-3 border-r border-slate-400 font-mono text-emerald-800">{flight.etd || "-"}</td>
-                    <td className="py-2 px-3 border-r border-slate-400 font-mono text-blue-800">{flight.eta || "-"}</td>
-                    <td className="py-2 px-3 border-r border-slate-400 uppercase">{flight.carrier || "-"}</td>
-                    <td className="py-2 px-3 border-r border-slate-400 font-mono">{flight.flightNo || "-"}</td>
-                    <td className="py-2 px-3 text-slate-600">{flight.remarks || "-"}</td>
+                  <tr key={idx} className="font-bold text-black hover:bg-blue-50/20">
+                    <td className="py-2 px-2 border-r border-black">{flight.from || "-"}</td>
+                    <td className="py-2 px-2 border-r border-black">{flight.to || "-"}</td>
+                    <td className="py-2 px-2 border-r border-black font-mono">{flight.date || "-"}</td>
+                    <td className="py-2 px-2 border-r border-black font-mono">{flight.etd || "-"}</td>
+                    <td className="py-2 px-2 border-r border-black font-mono">{flight.eta || "-"}</td>
+                    <td className="py-2 px-2 border-r border-black uppercase">{flight.carrier || "-"}</td>
+                    <td className="py-2 px-2 border-r border-black font-mono">{flight.flightNo || "-"}</td>
+                    <td className="py-2 px-2 text-slate-700">{flight.remarks || "-"}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-4 text-slate-400 italic">
-                    Belum ada data penerbangan. Klik tombol "Edit Data Info" untuk menambah rute.
+                  <td colSpan={8} className="py-3 text-slate-400 italic">
+                    Belum ada data penerbangan.
                   </td>
                 </tr>
               )}
+              {Array.from({ length: Math.max(0, 3 - activeFlights.length) }).map((_, idx) => (
+                <tr key={`flight-pad-${idx}`} className="h-7 border-t border-black">
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td>&nbsp;</td>
+                </tr>
+              ))}
             </tbody>
           </table>
-        </div>
 
-        {/* Section 3: HOTEL ACCOMODATION */}
-        <div className="overflow-x-auto border-2 border-slate-400 rounded-sm">
-          <div className="bg-[#4a86e8] text-white text-center py-1.5 font-bold tracking-wider text-xs border-b border-slate-400 uppercase">
+          {/* Section 3: HOTEL ACCOMODATION */}
+          <div className="bg-[#6FA8DC] text-black text-center py-1.5 font-bold tracking-wider text-xs border-t-2 border-b border-black uppercase">
             HOTEL ACCOMODATION
           </div>
           <table className="w-full text-xs text-center border-collapse">
             <thead>
-              <tr className="bg-slate-100 text-slate-900 font-black border-b border-slate-400 text-[11px]">
-                <th rowSpan={2} className="py-2 px-3 border-r border-slate-400 uppercase w-1/6">CITY</th>
-                <th rowSpan={2} className="py-2 px-3 border-r border-slate-400 uppercase w-1/4">HOTEL</th>
-                <th colSpan={2} className="py-1 px-3 border-r border-slate-400 uppercase">DATE</th>
-                <th colSpan={4} className="py-1 px-3 border-r border-slate-400 uppercase">TYPE ROOM</th>
-                <th rowSpan={2} className="py-2 px-3 uppercase w-1/6">RES NO</th>
+              <tr className="bg-white text-black font-bold border-b border-black text-[11px]">
+                <th rowSpan={2} className="py-2 px-2 border-r border-black uppercase w-[18%]">CITY</th>
+                <th rowSpan={2} className="py-2 px-2 border-r border-black uppercase w-[28%]">HOTEL</th>
+                <th colSpan={2} className="py-1 px-2 border-r border-black uppercase w-[24%]">DATE</th>
+                <th colSpan={3} className="py-1 px-2 border-r border-black uppercase w-[18%]">TYPE ROOM</th>
+                <th rowSpan={2} className="py-2 px-2 uppercase w-[12%]">RES NO</th>
               </tr>
-              <tr className="bg-slate-200 text-slate-800 font-bold border-b border-slate-400 text-[10px]">
-                <th className="py-1 px-2 border-r border-slate-400">IN</th>
-                <th className="py-1 px-2 border-r border-slate-400">OUT</th>
-                <th className="py-1 px-2 border-r border-slate-400">DBL</th>
-                <th className="py-1 px-2 border-r border-slate-400">TRPL</th>
-                <th className="py-1 px-2 border-r border-slate-400">QUAD</th>
-                <th className="py-1 px-2 border-r border-slate-400">QUINT</th>
+              <tr className="bg-white text-black font-bold border-b border-black text-[10px]">
+                <th className="py-1 px-1 border-r border-black w-[12%]">IN</th>
+                <th className="py-1 px-1 border-r border-black w-[12%]">OUT</th>
+                <th className="py-1 px-1 border-r border-black w-[6%]">DBL</th>
+                <th className="py-1 px-1 border-r border-black w-[6%]">TRPL</th>
+                <th className="py-1 px-1 border-r border-black w-[6%]">QUAD</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-300">
+            <tbody className="divide-y divide-black">
               {activeHotels.length > 0 ? (
                 activeHotels.map((h, idx) => (
-                  <tr key={idx} className="font-bold text-slate-800 hover:bg-blue-50/20">
-                    <td className="py-2.5 px-3 border-r border-slate-400 font-black text-slate-950 uppercase">{h.city || "-"}</td>
-                    <td className="py-2.5 px-3 border-r border-slate-400 uppercase text-slate-900">{h.hotel || "-"}</td>
-                    <td className="py-2.5 px-2 border-r border-slate-400 font-mono">{h.checkIn || "-"}</td>
-                    <td className="py-2.5 px-2 border-r border-slate-400 font-mono">{h.checkOut || "-"}</td>
-                    <td className="py-2.5 px-2 border-r border-slate-400 font-mono">{h.dbl || "-"}</td>
-                    <td className="py-2.5 px-2 border-r border-slate-400 font-mono">{h.trpl || "-"}</td>
-                    <td className="py-2.5 px-2 border-r border-slate-400 font-mono font-black text-blue-900">{h.quad || "-"}</td>
-                    <td className="py-2.5 px-2 border-r border-slate-400 font-mono">{h.quint || "-"}</td>
-                    <td className="py-2.5 px-3 font-mono text-slate-700">{h.resNo || "-"}</td>
+                  <tr key={idx} className="font-bold text-black hover:bg-blue-50/20">
+                    <td className="py-2 px-2 border-r border-black uppercase">{h.city || "-"}</td>
+                    <td className="py-2 px-2 border-r border-black uppercase">{h.hotel || "-"}</td>
+                    <td className="py-2 px-1 border-r border-black font-mono">{h.checkIn || "-"}</td>
+                    <td className="py-2 px-1 border-r border-black font-mono">{h.checkOut || "-"}</td>
+                    <td className="py-2 px-1 border-r border-black font-mono">{h.dbl || "-"}</td>
+                    <td className="py-2 px-1 border-r border-black font-mono">{h.trpl || "-"}</td>
+                    <td className="py-2 px-1 border-r border-black font-mono">{h.quad || "-"}</td>
+                    <td className="py-2 px-2 font-mono text-slate-700">{h.resNo || "-"}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={9} className="py-4 text-slate-400 italic">
+                  <td colSpan={8} className="py-3 text-slate-400 italic">
                     Belum ada data akomodasi hotel.
                   </td>
                 </tr>
               )}
+              {Array.from({ length: Math.max(0, 2 - activeHotels.length) }).map((_, idx) => (
+                <tr key={`hotel-pad-${idx}`} className="h-7 border-t border-black">
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td>&nbsp;</td>
+                </tr>
+              ))}
             </tbody>
           </table>
-        </div>
 
-        {/* Section 4: TRANSPORTATION & BUS SCHEDULE */}
-        <div className="overflow-x-auto border-2 border-slate-400 rounded-sm">
-          <div className="bg-[#4a86e8] text-white text-center py-1.5 font-bold tracking-wider text-xs border-b border-slate-400 uppercase">
-            TRANSPORTATION & BUS SCHEDULE
-          </div>
-          <table className="w-full text-xs text-center border-collapse">
+          {/* Section 4: TRANSPORTATION & BUS SCHEDULE */}
+          <table className="w-full text-xs text-center border-collapse border-t-2 border-black">
             <thead>
-              <tr className="bg-slate-100 text-slate-900 font-black border-b border-slate-400 text-[11px]">
-                <th className="py-2 px-3 border-r border-slate-400 uppercase w-1/8">DATE</th>
-                <th className="py-2 px-3 border-r border-slate-400 uppercase w-1/4">FROM</th>
-                <th className="py-2 px-3 border-r border-slate-400 uppercase w-1/4">TO</th>
-                <th className="py-2 px-3 border-r border-slate-400 uppercase w-1/10">TIME</th>
-                <th className="py-2 px-3 border-r border-slate-400 uppercase w-1/6">BUS TYPE</th>
-                <th className="py-2 px-3 uppercase w-1/6">COMPANY</th>
+              <tr className="bg-[#6FA8DC] text-black font-bold border-b border-black text-[11px]">
+                <th className="py-2 px-2 border-r border-black uppercase w-[14%]">DATE</th>
+                <th className="py-2 px-2 border-r border-black uppercase w-[22%]">FROM</th>
+                <th colSpan={2} className="py-2 px-2 border-r border-black uppercase w-[24%]">TO</th>
+                <th className="py-2 px-2 border-r border-black uppercase w-[10%]">TIME</th>
+                <th className="py-2 px-2 border-r border-black uppercase w-[15%]">BUS TYPE</th>
+                <th colSpan={2} className="py-2 px-2 uppercase w-[15%]">COMPANY</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-300">
+            <tbody className="divide-y divide-black">
               {activeBuses.length > 0 ? (
                 activeBuses.map((b, idx) => (
-                  <tr key={idx} className="font-bold text-slate-800 hover:bg-blue-50/20">
-                    <td className="py-2 px-3 border-r border-slate-400 font-mono">{b.date || "-"}</td>
-                    <td className="py-2 px-3 border-r border-slate-400 uppercase text-slate-900">{b.from || "-"}</td>
-                    <td className="py-2 px-3 border-r border-slate-400 uppercase text-blue-900">{b.to || "-"}</td>
-                    <td className="py-2 px-3 border-r border-slate-400 font-mono text-emerald-800">{b.time || "-"}</td>
-                    <td className="py-2 px-3 border-r border-slate-400 uppercase">{b.busType || "-"}</td>
-                    <td className="py-2 px-3 uppercase font-semibold text-slate-700">{b.company || "-"}</td>
+                  <tr key={idx} className="font-bold text-black hover:bg-blue-50/20">
+                    <td className="py-2 px-2 border-r border-black font-mono">{b.date || "-"}</td>
+                    <td className="py-2 px-2 border-r border-black uppercase">{b.from || "-"}</td>
+                    <td colSpan={2} className="py-2 px-2 border-r border-black uppercase">{b.to || "-"}</td>
+                    <td className="py-2 px-2 border-r border-black font-mono">{b.time || "-"}</td>
+                    <td className="py-2 px-2 border-r border-black">{b.busType || "-"}</td>
+                    <td colSpan={2} className="py-2 px-2 uppercase font-semibold">{b.company || "-"}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="py-4 text-slate-400 italic">
+                  <td colSpan={8} className="py-3 text-slate-400 italic">
                     Belum ada data jadwal bus.
                   </td>
                 </tr>
               )}
+              {Array.from({ length: Math.max(0, 4 - activeBuses.length) }).map((_, idx) => (
+                <tr key={`bus-pad-${idx}`} className="h-7 border-t border-black">
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td colSpan={2} className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td className="border-r border-black">&nbsp;</td>
+                  <td colSpan={2}>&nbsp;</td>
+                </tr>
+              ))}
             </tbody>
           </table>
-        </div>
 
-        {/* Section 5: LOCAL CONTACT PERSON */}
-        <div className="overflow-x-auto border-2 border-slate-400 rounded-sm">
-          <div className="bg-[#4a86e8] text-white text-center py-1.5 font-bold tracking-wider text-xs border-b border-slate-400 uppercase">
+          {/* Section 5: LOCAL CONTACT PERSON */}
+          <div className="bg-[#6FA8DC] text-black text-center py-1.5 font-bold tracking-wider text-xs border-t-2 border-b border-black uppercase">
             LOCAL CONTACT PERSON
           </div>
           <table className="w-full text-xs border-collapse">
-            <tbody className="divide-y divide-slate-300 font-bold text-slate-900">
+            <tbody className="divide-y divide-black font-bold text-black">
               <tr className="bg-white">
-                <td className="py-2.5 px-4 w-1/2 border-r border-slate-400">
-                  <span className="text-slate-500 uppercase mr-2">NAME :</span>
-                  <span className="text-blue-950 font-black">MUTHOWWIF : {packageInfo?.muthawwifName || "-"}</span>
+                <td colSpan={4} className="py-2.5 px-4 w-1/2 border-r border-black">
+                  <span className="uppercase mr-3 font-black">NAME :</span>
+                  <span>MUTHOWWIF : {packageInfo?.muthawwifName || "-"}</span>
                 </td>
-                <td className="py-2.5 px-4 w-1/2">
-                  <span className="text-slate-500 uppercase mr-2">MOBILE :</span>
-                  <span className="font-mono text-emerald-800">{packageInfo?.muthawwifPhone || "-"}</span>
+                <td colSpan={4} className="py-2.5 px-4 w-1/2">
+                  <span className="uppercase mr-3 font-black">MOBILE :</span>
+                  <span className="font-mono">{packageInfo?.muthawwifPhone || "-"}</span>
                 </td>
               </tr>
-              <tr className="bg-slate-50">
-                <td className="py-2.5 px-4 w-1/2 border-r border-slate-400">
-                  <span className="text-slate-500 uppercase mr-2">HANDLING SAUDI :</span>
-                  <span className="text-slate-900">{packageInfo?.handlingSaudi || "-"}</span>
+              <tr className="bg-white">
+                <td colSpan={4} className="py-2.5 px-4 w-1/2 border-r border-black">
+                  <span className="uppercase mr-3 font-black">HANDLING SAUDI :</span>
+                  <span>{packageInfo?.handlingSaudi || "-"}</span>
                 </td>
-                <td className="py-2.5 px-4 w-1/2">
-                  <span className="text-slate-500 uppercase mr-2">MOBILE :</span>
-                  <span className="font-mono text-slate-800">{packageInfo?.handlingPhone || "-"}</span>
+                <td colSpan={4} className="py-2.5 px-4 w-1/2">
+                  <span className="uppercase mr-3 font-black">MOBILE :</span>
+                  <span className="font-mono">{packageInfo?.handlingPhone || "-"}</span>
                 </td>
               </tr>
             </tbody>

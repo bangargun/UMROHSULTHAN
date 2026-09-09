@@ -21,6 +21,8 @@ import {
   CreditCard,
   RefreshCw,
   ExternalLink,
+  Copy,
+  CheckCheck,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -30,8 +32,9 @@ interface ComplianceViewProps {
 }
 
 export default function ComplianceView({ packages, pilgrims }: ComplianceViewProps) {
-  const [activeSubTab, setActiveSubTab] = useState<"SISKOPATUH" | "IDCARD">("SISKOPATUH");
+  const [activeSubTab, setActiveSubTab] = useState<"SISKOPATUH" | "IDCARD" | "MANIFEST_VISA">("SISKOPATUH");
   const [selectedPackageId, setSelectedPackageId] = useState<string>("ALL");
+  const [manifestVisaCopied, setManifestVisaCopied] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [siskopatuhData, setSiskopatuhData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -178,6 +181,150 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
     document.body.removeChild(link);
   };
 
+  const INDO_MONTHS_UPPER = [
+    "JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI",
+    "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"
+  ];
+
+  const formatDateIndoUpper = (dateVal: string | Date | null | undefined): string => {
+    if (!dateVal) return "-";
+    if (typeof dateVal === "string" && /^\d{4}-\d{2}-\d{2}/.test(dateVal)) {
+      const parts = dateVal.split("T")[0].split("-");
+      const year = parts[0];
+      const monthIdx = parseInt(parts[1], 10) - 1;
+      const day = parts[2].padStart(2, "0");
+      if (monthIdx >= 0 && monthIdx < 12) {
+        return `${day} ${INDO_MONTHS_UPPER[monthIdx]} ${year}`;
+      }
+    }
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return "-";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = INDO_MONTHS_UPPER[d.getMonth()];
+    const year = d.getFullYear();
+    return `${day} ${month} ${year}`;
+  };
+
+  const getManifestVisaTitle = () => {
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    if (selectedPkg?.departureDate) {
+      return `MANIFEST VISA ${formatDateIndoUpper(selectedPkg.departureDate)}`;
+    }
+    if (selectedPkg?.name) {
+      return `MANIFEST VISA ${selectedPkg.name.toUpperCase()}`;
+    }
+    return "MANIFEST VISA SEMUA KEBERANGKATAN";
+  };
+
+  const getManifestVisaFileName = (ext: "xls" | "csv") => {
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    const dateOrName = selectedPkg?.departureDate
+      ? formatDateIndoUpper(selectedPkg.departureDate)
+      : selectedPkg?.name
+      ? selectedPkg.name.toUpperCase().replace(/[^A-Z0-9]/g, "_")
+      : "SEMUA_KEBERANGKATAN";
+    const paxCount = filteredPilgrims.length;
+    return `(MANIFEST VISA ${dateOrName})(${paxCount} PAX).${ext}`;
+  };
+
+  const handleExportManifestVisaExcel = () => {
+    if (filteredPilgrims.length === 0) {
+      alert("Tidak ada data jamaah untuk diekspor ke Manifest Visa.");
+      return;
+    }
+
+    const title = getManifestVisaTitle();
+    const fileName = getManifestVisaFileName("xls");
+
+    const tableRows = filteredPilgrims
+      .map((p, idx) => {
+        const sex = p.gender === "FEMALE" || p.gender === "F" ? "F" : "M";
+        const fullName = (p.name || p.passportName || "-").toUpperCase();
+        const pob = (p.placeOfBirth || "-").toUpperCase();
+        const dob = formatDateIndoUpper(p.dateOfBirth);
+        const passNo = (p.passportNumber || "-").toUpperCase();
+        const doi = formatDateIndoUpper(p.passportIssuedDate);
+        const doe = formatDateIndoUpper(p.passportExpiry);
+        const office = (p.passportIssuedCity || "-").toUpperCase();
+
+        return `<tr><td class="td-center">${idx + 1}</td><td class="td-center">${sex}</td><td class="td-left">${fullName}</td><td class="td-left">${pob}</td><td class="td-center">${dob}</td><td class="td-center">${passNo}</td><td class="td-center">${doi}</td><td class="td-center">${doe}</td><td class="td-center">${office}</td></tr>`;
+      })
+      .join("\n");
+
+    const excelHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>MANIFEST VISA</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><style>body { font-family: Calibri, Arial, sans-serif; } table { border-collapse: collapse; width: 100%; } .banner { background-color: #FFFF00; font-weight: bold; font-size: 13pt; text-align: center; height: 38px; border: 1.5pt solid #000000; } .th-header { background-color: #FFFF00; font-weight: bold; font-size: 10pt; text-align: center; border: 1pt solid #000000; padding: 6px 8px; } .td-center { text-align: center; border: 0.5pt solid #000000; padding: 4px 6px; font-size: 10pt; mso-number-format: "\\@"; } .td-left { text-align: left; border: 0.5pt solid #000000; padding: 4px 6px; font-size: 10pt; mso-number-format: "\\@"; }</style></head><body><table><tr><td colspan="9" class="banner">${title}</td></tr><tr><th class="th-header" style="width: 45px;">NO</th><th class="th-header" style="width: 55px;">SEX</th><th class="th-header" style="width: 250px;">FULL NAME</th><th class="th-header" style="width: 160px;">PLACE OF BIRTH</th><th class="th-header" style="width: 150px;">DATE OF BIRTH</th><th class="th-header" style="width: 140px;">NOMOR PASSPORT</th><th class="th-header" style="width: 140px;">DATE OF ISSUE</th><th class="th-header" style="width: 140px;">DATE OF EXPIRY</th><th class="th-header" style="width: 160px;">ISSUING OFFICE</th></tr>${tableRows}</table></body></html>`;
+
+    const blob = new Blob([excelHtml], { type: "application/vnd.ms-excel;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportManifestVisaCSV = () => {
+    if (filteredPilgrims.length === 0) {
+      alert("Tidak ada data jamaah untuk diekspor ke Manifest Visa.");
+      return;
+    }
+
+    const title = getManifestVisaTitle();
+    const fileName = getManifestVisaFileName("csv");
+
+    const csvContent = [
+      `"${title}"`,
+      `"NO","SEX","FULL NAME","PLACE OF BIRTH","DATE OF BIRTH","NOMOR PASSPORT","DATE OF ISSUE","DATE OF EXPIRY","ISSUING OFFICE"`,
+      ...filteredPilgrims.map((p, idx) => {
+        const sex = p.gender === "FEMALE" || p.gender === "F" ? "F" : "M";
+        const fullName = (p.name || p.passportName || "-").toUpperCase().replace(/"/g, '""');
+        const pob = (p.placeOfBirth || "-").toUpperCase().replace(/"/g, '""');
+        const dob = formatDateIndoUpper(p.dateOfBirth);
+        const passNo = (p.passportNumber || "-").toUpperCase().replace(/"/g, '""');
+        const doi = formatDateIndoUpper(p.passportIssuedDate);
+        const doe = formatDateIndoUpper(p.passportExpiry);
+        const office = (p.passportIssuedCity || "-").toUpperCase().replace(/"/g, '""');
+        return `"${idx + 1}","${sex}","${fullName}","${pob}","${dob}","${passNo}","${doi}","${doe}","${office}"`;
+      }),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyManifestVisaToClipboard = () => {
+    if (filteredPilgrims.length === 0) return;
+    const title = getManifestVisaTitle();
+    const headers = ["NO", "SEX", "FULL NAME", "PLACE OF BIRTH", "DATE OF BIRTH", "NOMOR PASSPORT", "DATE OF ISSUE", "DATE OF EXPIRY", "ISSUING OFFICE"].join("\t");
+    const rows = filteredPilgrims
+      .map((p, idx) => {
+        const sex = p.gender === "FEMALE" || p.gender === "F" ? "F" : "M";
+        const fullName = (p.name || p.passportName || "-").toUpperCase();
+        const pob = (p.placeOfBirth || "-").toUpperCase();
+        const dob = formatDateIndoUpper(p.dateOfBirth);
+        const passNo = (p.passportNumber || "-").toUpperCase();
+        const doi = formatDateIndoUpper(p.passportIssuedDate);
+        const doe = formatDateIndoUpper(p.passportExpiry);
+        const office = (p.passportIssuedCity || "-").toUpperCase();
+        return [idx + 1, sex, fullName, pob, dob, passNo, doi, doe, office].join("\t");
+      })
+      .join("\n");
+
+    const text = `${title}\n${headers}\n${rows}`;
+    navigator.clipboard.writeText(text).then(() => {
+      setManifestVisaCopied(true);
+      setTimeout(() => setManifestVisaCopied(false), 2500);
+    });
+  };
+
   const currentSelectedPkg = packages.find((p) => p.id === selectedPackageId);
 
   return (
@@ -188,14 +335,14 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
           <div>
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/30 px-2.5 py-0.5 text-xs font-semibold text-emerald-100 backdrop-blur-sm">
-                <ShieldCheck className="w-3.5 h-3.5" /> Standar Kemenag RI & SISKOPATUH
+                <ShieldCheck className="w-3.5 h-3.5" /> Standar Kemenag RI & Provider Visa
               </span>
             </div>
             <h2 className="mt-2 text-2xl font-black tracking-tight">
-              Regulasi SISKOPATUH & Generator ID Card QR
+              Regulasi SISKOPATUH, Manifest Visa & ID Card QR
             </h2>
             <p className="mt-1 text-sm text-emerald-100/90 max-w-2xl">
-              Ekspor manifest data jamaah sesuai format resmi SISKOPATUH Kementerian Agama RI per program paket keberangkatan.
+              Ekspor manifest data jamaah sesuai format resmi SISKOPATUH Kemenag RI & format Manifest Visa 9-kolom standar provider.
             </p>
           </div>
 
@@ -221,7 +368,7 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
               </select>
             </div>
 
-            {activeSubTab === "SISKOPATUH" ? (
+            {activeSubTab === "SISKOPATUH" && (
               <button
                 onClick={handleExportCsv}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 px-4 py-2.5 text-xs font-black text-slate-950 shadow-sm transition-all cursor-pointer"
@@ -229,7 +376,28 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
                 <Download className="h-4 w-4" />
                 Ekspor SISKOPATUH {currentSelectedPkg ? `(${currentSelectedPkg.code})` : "Semua"} (.CSV)
               </button>
-            ) : (
+            )}
+
+            {activeSubTab === "MANIFEST_VISA" && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportManifestVisaCSV}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-white/90 hover:bg-white px-3.5 py-2.5 text-xs font-bold text-slate-900 shadow-sm transition-all cursor-pointer"
+                >
+                  <Download className="h-4 w-4 text-slate-600" />
+                  CSV
+                </button>
+                <button
+                  onClick={handleExportManifestVisaExcel}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 px-4 py-2.5 text-xs font-black text-yellow-950 shadow-sm transition-all cursor-pointer"
+                >
+                  <Download className="h-4 w-4" />
+                  Download Excel (.xls)
+                </button>
+              </div>
+            )}
+
+            {activeSubTab === "IDCARD" && (
               <button
                 onClick={() => window.print()}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-emerald-900 shadow-sm transition-all hover:bg-emerald-50 hover:shadow cursor-pointer"
@@ -243,10 +411,10 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
       </div>
 
       {/* Navigation SubTabs */}
-      <div className="flex border-b border-slate-200 bg-white rounded-2xl p-1.5 shadow-xs no-print">
+      <div className="flex flex-wrap border-b border-slate-200 bg-white rounded-2xl p-1.5 shadow-xs no-print gap-1">
         <button
           onClick={() => setActiveSubTab("SISKOPATUH")}
-          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
             activeSubTab === "SISKOPATUH"
               ? "bg-emerald-600 text-white shadow-xs"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
@@ -257,8 +425,20 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
         </button>
 
         <button
+          onClick={() => setActiveSubTab("MANIFEST_VISA")}
+          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            activeSubTab === "MANIFEST_VISA"
+              ? "bg-yellow-400 text-yellow-950 shadow-xs font-black"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          <Plane className="w-4 h-4" />
+          ✈️ Manifest Visa (Format Simple)
+        </button>
+
+        <button
           onClick={() => setActiveSubTab("IDCARD")}
-          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
             activeSubTab === "IDCARD"
               ? "bg-emerald-600 text-white shadow-xs"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
@@ -392,7 +572,131 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
         </div>
       )}
 
-      {/* TAB 2: ID CARD & GELANG JAMAAH DIGITAL */}
+      {/* TAB 2: MANIFEST VISA SIMPLE (FORMAT PROVIDER & KEDUTAAN) */}
+      {activeSubTab === "MANIFEST_VISA" && (
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+          {/* Header Bar */}
+          <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Plane className="w-4 h-4 text-amber-600" />
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                Manifest Visa Umroh Simple ({filteredPilgrims.length} Jamaah)
+              </h3>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleCopyManifestVisaToClipboard}
+                disabled={filteredPilgrims.length === 0}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {manifestVisaCopied ? (
+                  <>
+                    <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-emerald-700 font-bold">Tersalin!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5 text-slate-600" />
+                    Salin Tabel (Excel)
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleExportManifestVisaCSV}
+                disabled={filteredPilgrims.length === 0}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5 text-slate-600" />
+                CSV
+              </button>
+              <button
+                onClick={handleExportManifestVisaExcel}
+                disabled={filteredPilgrims.length === 0}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-yellow-950 px-4 py-1.5 text-xs font-black shadow-xs transition-all disabled:opacity-50 cursor-pointer border border-yellow-500/40"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Excel (.xls)
+              </button>
+            </div>
+          </div>
+
+          {/* Yellow Banner & Table */}
+          <div className="p-4 bg-slate-100/50">
+            <div className="bg-white rounded-xl shadow-xs border border-slate-300 overflow-hidden">
+              <div className="bg-[#FFFF00] text-black font-black text-center py-2.5 px-4 text-sm sm:text-base tracking-wide border-b-2 border-slate-900 select-all">
+                {getManifestVisaTitle()}
+              </div>
+
+              {filteredPilgrims.length === 0 ? (
+                <div className="p-12 text-center">
+                  <FileSpreadsheet className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <p className="text-sm font-bold text-slate-700">Belum Ada Data Calon Jamaah</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Silakan pilih paket lain atau tambahkan data jamaah baru untuk menyusun Manifest Visa.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border-collapse text-left">
+                    <thead>
+                      <tr className="bg-[#FFFF00] text-black font-black border-b border-slate-900">
+                        <th className="border border-slate-900/60 px-2 py-2 text-center w-12">NO</th>
+                        <th className="border border-slate-900/60 px-2 py-2 text-center w-14">SEX</th>
+                        <th className="border border-slate-900/60 px-3 py-2 text-left min-w-[200px]">FULL NAME</th>
+                        <th className="border border-slate-900/60 px-3 py-2 text-left min-w-[140px]">PLACE OF BIRTH</th>
+                        <th className="border border-slate-900/60 px-3 py-2 text-center min-w-[140px]">DATE OF BIRTH</th>
+                        <th className="border border-slate-900/60 px-3 py-2 text-center min-w-[130px]">NOMOR PASSPORT</th>
+                        <th className="border border-slate-900/60 px-3 py-2 text-center min-w-[130px]">DATE OF ISSUE</th>
+                        <th className="border border-slate-900/60 px-3 py-2 text-center min-w-[130px]">DATE OF EXPIRY</th>
+                        <th className="border border-slate-900/60 px-3 py-2 text-center min-w-[140px]">ISSUING OFFICE</th>
+                      </tr>
+                    </thead>
+                    <tbody className="font-medium text-slate-900 divide-y divide-slate-200">
+                      {filteredPilgrims.map((p, idx) => {
+                        const sex = p.gender === "FEMALE" || p.gender === "F" ? "F" : "M";
+                        const fullName = (p.name || p.passportName || "-").toUpperCase();
+                        const pob = (p.placeOfBirth || "-").toUpperCase();
+                        const dob = formatDateIndoUpper(p.dateOfBirth);
+                        const passNo = (p.passportNumber || "-").toUpperCase();
+                        const doi = formatDateIndoUpper(p.passportIssuedDate);
+                        const doe = formatDateIndoUpper(p.passportExpiry);
+                        const office = (p.passportIssuedCity || "-").toUpperCase();
+
+                        return (
+                          <tr key={p.id || idx} className="hover:bg-yellow-50/50 transition-colors">
+                            <td className="border border-slate-300 px-2 py-1.5 text-center font-bold">{idx + 1}</td>
+                            <td className="border border-slate-300 px-2 py-1.5 text-center font-bold">
+                              <span className={sex === "M" ? "text-blue-700" : "text-pink-700"}>{sex}</span>
+                            </td>
+                            <td className="border border-slate-300 px-3 py-1.5 font-bold">{fullName}</td>
+                            <td className="border border-slate-300 px-3 py-1.5">{pob}</td>
+                            <td className="border border-slate-300 px-3 py-1.5 text-center">{dob}</td>
+                            <td className="border border-slate-300 px-3 py-1.5 text-center font-mono font-bold">
+                              {passNo !== "-" ? passNo : <span className="text-red-500 font-sans italic text-[11px]">Belum Diisi</span>}
+                            </td>
+                            <td className="border border-slate-300 px-3 py-1.5 text-center font-mono">
+                              {doi !== "-" ? doi : <span className="text-slate-400 font-sans italic text-[11px]">-</span>}
+                            </td>
+                            <td className="border border-slate-300 px-3 py-1.5 text-center font-mono">
+                              {doe !== "-" ? doe : <span className="text-slate-400 font-sans italic text-[11px]">-</span>}
+                            </td>
+                            <td className="border border-slate-300 px-3 py-1.5 text-center">
+                              {office !== "-" ? office : <span className="text-slate-400 italic text-[11px]">-</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: ID CARD & GELANG JAMAAH DIGITAL */}
       {activeSubTab === "IDCARD" && (
         <div>
           {filteredPilgrims.length === 0 ? (
