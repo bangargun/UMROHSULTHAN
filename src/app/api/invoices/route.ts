@@ -68,6 +68,19 @@ export async function POST(request: Request) {
     const effectiveAgentId = targetAgent?.id || agentId || null;
     const effectiveAgentName = targetAgent?.name || agentName || (isAgentPayment && payerName ? payerName : null);
 
+    const generateUniqueInvoiceNumber = async (offset = 0) => {
+      const yearMonth = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+      const timeSuffix = Date.now().toString().slice(-4);
+      let candidate = `INV-${yearMonth}-${timeSuffix}${offset > 0 ? `-${offset}` : ""}`;
+      let exists = await prisma.invoice.findUnique({ where: { invoiceNumber: candidate } });
+      while (exists) {
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        candidate = `INV-${yearMonth}-${rand}`;
+        exists = await prisma.invoice.findUnique({ where: { invoiceNumber: candidate } });
+      }
+      return candidate;
+    };
+
     // Support detailed per-pilgrim allocations: [{ pilgrimId, amount, title? }]
     if (Array.isArray(allocations) && allocations.length > 0) {
       if (!dueDate) {
@@ -82,8 +95,7 @@ export async function POST(request: Request) {
       const createdInvoices = [];
       for (let i = 0; i < validAllocations.length; i++) {
         const item = validAllocations[i];
-        const count = await prisma.invoice.count();
-        const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(count + 1 + i).padStart(4, "0")}`;
+        const invoiceNumber = await generateUniqueInvoiceNumber(i + 1);
 
         const totalDiscount = discountAmount ? (parseFloat(discountAmount) || 0) : 0;
         const pilgrimDiscount = totalDiscount > 0 ? (totalDiscount / validAllocations.length) : 0;
@@ -209,8 +221,7 @@ export async function POST(request: Request) {
 
     for (let i = 0; i < targetPilgrimIds.length; i++) {
       const pid = targetPilgrimIds[i];
-      const count = await prisma.invoice.count();
-      const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(count + 1 + i).padStart(4, "0")}`;
+      const invoiceNumber = await generateUniqueInvoiceNumber(i + 1);
 
       const invoice = await prisma.invoice.create({
         data: {

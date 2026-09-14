@@ -24,9 +24,21 @@ export default async function CertificateVerificationPage({ params }: PageProps)
     },
   });
 
+  const badal = !cert
+    ? await prisma.badalUmroh.findFirst({
+        where: {
+          OR: [
+            { orderNumber: decodedNumber },
+            { orderNumber: decodedNumber.replace("CERT-", "") },
+            { id: decodedNumber },
+          ],
+        },
+      })
+    : null;
+
   const setting = await prisma.travelSetting.findFirst();
 
-  if (!cert) {
+  if (!cert && !badal) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
         <div className="bg-white max-w-md w-full p-8 rounded-3xl border border-rose-200 shadow-xl text-center space-y-4">
@@ -91,71 +103,136 @@ export default async function CertificateVerificationPage({ params }: PageProps)
           </div>
 
           {/* Certificate Card Summary */}
-          <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-4 text-xs">
-            <div className="text-center border-b border-amber-200 pb-3">
-              <span className="text-[10px] uppercase font-bold text-amber-900 tracking-widest block">
-                Nomor Piagam Resmi
-              </span>
-              <span className="font-mono font-black text-base text-slate-950">
-                {cert.certificateNumber}
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <User className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-slate-500 text-[10px] block">Nama Lengkap Jamaah:</span>
-                  <span className="font-black text-slate-950 text-sm">{cert.pilgrim?.name}</span>
-                  {cert.pilgrim?.passportNumber && (
-                    <span className="text-slate-500 text-[11px] block">
-                      No. Paspor: <strong className="font-mono text-slate-800">{cert.pilgrim.passportNumber}</strong>
-                    </span>
-                  )}
-                </div>
+          {cert ? (
+            <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-4 text-xs">
+              <div className="text-center border-b border-amber-200 pb-3">
+                <span className="text-[10px] uppercase font-bold text-amber-900 tracking-widest block">
+                  Nomor Piagam Resmi
+                </span>
+                <span className="font-mono font-black text-base text-slate-950">
+                  {cert.certificateNumber}
+                </span>
               </div>
 
-              <div className="flex items-start gap-3">
-                <Award className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-slate-500 text-[10px] block">Program Ibadah Umroh:</span>
-                  <span className="font-bold text-slate-900">{cert.packageName}</span>
-                </div>
-              </div>
-
-              {(cert.departureDate || cert.returnDate) && (
+              <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <Calendar className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                  <User className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
                   <div>
-                    <span className="text-slate-500 text-[10px] block">Periode Keberangkatan & Kepulangan:</span>
-                    <span className="font-semibold text-slate-800">
-                      {cert.departureDate ? formatDate(cert.departureDate, "dd MMMM yyyy") : "-"} s/d{" "}
-                      {cert.returnDate ? formatDate(cert.returnDate, "dd MMMM yyyy") : "-"}
+                    <span className="text-slate-500 text-[10px] block">Nama Lengkap Jamaah:</span>
+                    <span className="font-black text-slate-950 text-sm">{cert.pilgrim?.name}</span>
+                    {cert.pilgrim?.passportNumber && (
+                      <span className="text-slate-500 text-[11px] block">
+                        No. Paspor: <strong className="font-mono text-slate-800">{cert.pilgrim.passportNumber}</strong>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Award className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-slate-500 text-[10px] block">Program Ibadah Umroh:</span>
+                    <span className="font-bold text-slate-900">{cert.packageName}</span>
+                  </div>
+                </div>
+
+                {(cert.departureDate || cert.returnDate) && (
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-slate-500 text-[10px] block">Periode Keberangkatan & Kepulangan:</span>
+                      <span className="font-semibold text-slate-800">
+                        {cert.departureDate ? formatDate(cert.departureDate, "dd MMMM yyyy") : "-"} s/d{" "}
+                        {cert.returnDate ? formatDate(cert.returnDate, "dd MMMM yyyy") : "-"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-3 border-t border-amber-200 text-[11px] flex items-center justify-between">
+                  <div>
+                    <span className="text-slate-500 text-[10px] block">Diterbitkan Oleh:</span>
+                    <span className="font-bold text-slate-900">{setting?.companyName || "PT BAROKAH SULTHAN HARAMAIN"}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-slate-500 text-[10px] block">Direktur Utama:</span>
+                    <span className="font-black text-slate-900">{cert.directorName || "ATIYATUL AMRA"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : badal ? (
+            <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-4 text-xs">
+              <div className="text-center border-b border-amber-200 pb-3">
+                <span className="text-[10px] uppercase font-bold text-amber-900 tracking-widest block">
+                  Nomor Sertifikat Badal Umroh
+                </span>
+                <span className="font-mono font-black text-base text-slate-950">
+                  {badal.orderNumber}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <User className="w-4 h-4 text-rose-700 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-slate-500 text-[10px] block">Diniatkan & Dihadiahkan Kepada:</span>
+                    <span className="font-black text-slate-950 text-base uppercase">{badal.recipientName}</span>
+                    <span className="text-slate-600 text-[11px] block mt-0.5">
+                      {badal.recipientGender === "MALE" ? "Bin" : "Binti"} — {badal.recipientStatus === "DECEASED" ? "Almarhum/ah (Semoga Allah Merahmati Beliau)" : "Uzur / Sakit Permanen"}
+                      {badal.recipientBirthPlace ? ` • Lahir di ${badal.recipientBirthPlace}` : ""}
                     </span>
                   </div>
                 </div>
-              )}
 
-              <div className="pt-3 border-t border-amber-200 text-[11px] flex items-center justify-between">
-                <div>
-                  <span className="text-slate-500 text-[10px] block">Diterbitkan Oleh:</span>
-                  <span className="font-bold text-slate-900">{setting?.companyName || "PT BAROKAH SULTHAN HARAMAIN"}</span>
+                <div className="flex items-start gap-3">
+                  <Award className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-slate-500 text-[10px] block">Pelaksana Badal di Makkah:</span>
+                    <span className="font-bold text-slate-900">{badal.executorName || "Muthawwif Sulthan Haramain"}</span>
+                    {badal.scheduledDate && (
+                      <span className="text-slate-500 text-[11px] block">
+                        Tanggal Pelaksanaan: {formatDate(badal.scheduledDate, "dd MMMM yyyy")}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-slate-500 text-[10px] block">Direktur Utama:</span>
-                  <span className="font-black text-slate-900">{cert.directorName || "ATIYATUL AMRA"}</span>
+
+                <div className="flex items-start gap-3">
+                  <Building2 className="w-4 h-4 text-emerald-700 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-slate-500 text-[10px] block">Pemesan / Ahli Waris:</span>
+                    <span className="font-semibold text-slate-800">
+                      {badal.ordererName} ({badal.ordererRelation.toLowerCase()} dari yang dibadalkan)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-amber-200 text-[11px] flex items-center justify-between">
+                  <div>
+                    <span className="text-slate-500 text-[10px] block">Diterbitkan Oleh:</span>
+                    <span className="font-bold text-slate-900">{setting?.companyName || "PT BAROKAH SULTHAN HARAMAIN"}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-slate-500 text-[10px] block">Direktur Utama:</span>
+                    <span className="font-black text-slate-900">{setting?.directorName || "ATIYATUL AMRA"}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          ) : null}
 
           {/* Doa Arabic */}
           <div className="text-center p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
             <p className="font-serif text-emerald-950 font-bold text-base">
-              جَعَلَهُ اللّٰهُ عُمْرَةً مَبْرُوْرَةً وَذَنْبًا مَغْفُوْرًا وَسَعْيًا مَشْكُوْرًا
+              {badal
+                ? "اللّٰهُمَّ تَقَبَّلْ هٰذِهِ الْعُمْرَةَ وَاجْعَلْهَا رَحْمَةً وَنُوْرًا وَمَغْفِرَةً"
+                : "جَعَلَهُ اللّٰهُ عُمْرَةً مَبْرُوْرَةً وَذَنْبًا مَغْفُوْرًا وَسَعْيًا مَشْكُوْرًا"}
             </p>
             <p className="text-[10px] text-slate-500 italic">
-              "Semoga Allah SWT menerima ibadah umrohnya, mengampuni segala khilafnya, dan menjadikannya umroh yang mabrur."
+              {badal
+                ? '"Ya Allah, terimalah ibadah umroh ini, jadikanlah sebagai rahmat, cahaya, dan ampunan bagi beliau."'
+                : '"Semoga Allah SWT menerima ibadah umrohnya, mengampuni segala khilafnya, dan menjadikannya umroh yang mabrur."'}
             </p>
           </div>
 

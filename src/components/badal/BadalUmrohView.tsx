@@ -19,6 +19,11 @@ import {
   Calendar,
   MapPin,
   Package,
+  Award,
+  Sparkles,
+  Send,
+  ShieldCheck,
+  Building2,
 } from "lucide-react";
 import Pagination from "@/components/common/Pagination";
 
@@ -182,6 +187,39 @@ export default function BadalUmrohView() {
   };
 
   const handlePrintCertificate = () => window.print();
+
+  const handleSendWA = (order: any) => {
+    const phone = order.ordererPhone ? order.ordererPhone.replace(/[^0-9]/g, "") : "";
+    const validPhone = phone.startsWith("0") ? "62" + phone.slice(1) : phone;
+    const verifUrl = typeof window !== "undefined"
+      ? `${window.location.origin}/verifikasi-sertifikat/${encodeURIComponent(order.orderNumber)}`
+      : `https://portalumroh.barokahgroupindonesia.tech/verifikasi-sertifikat/${encodeURIComponent(order.orderNumber)}`;
+
+    const message = `Assalamu'alaikum Wr. Wb.
+
+Yth. *${order.ordererName}* (${order.ordererRelation} dari ${order.recipientName}),
+
+Alhamdulillahirabbil'alamin, segenap pimpinan & manajemen *${travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}* mengabarkan bahwa amanah pelaksanaan *Ibadah Badal Umroh* untuk:
+
+🕌 *${order.recipientName}* (${order.recipientGender === "MALE" ? "Bin" : "Binti"} - ${order.recipientStatus === "DECEASED" ? "Almarhum/ah" : "Uzur Sakit"})
+
+Telah selesai ditunaikan secara sempurna di Masjidil Haram, Makkah Al-Mukarramah oleh Muthawwif kami: *${order.executorName || "Muthawwif Sulthan Haramain"}* pada tanggal *${formatDate(order.scheduledDate || order.completedAt || new Date(), "dd MMMM yyyy")}*.
+
+📜 *E-Sertifikat / Piagam Resmi Badal Umroh:*
+• No. Sertifikat: *${order.orderNumber}*
+• Paket: *${PACKAGE_INFO[order.packageType]?.label || order.packageType}*
+• Status: *SAH & TERVERIFIKASI SISTEM PPIU KEMENAG RI*
+
+Link Piagam & Verifikasi Digital:
+${verifUrl}
+
+Semoga Allah Subhanahu wa Ta'ala menerima seluruh amal ibadah ini sebagai amal jariyah yang tulus ikhlas, mengampuni segala dosa, melapangkan kubur, dan melimpahkan rahmat serta surga-Nya bagi beliau. Aamiin Yaa Rabbal 'Aalamiin.
+
+Wassalamu'alaikum Wr. Wb.
+*${travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}*`;
+
+    window.open(`https://wa.me/${validPhone}?text=${encodeURIComponent(message)}`, "_blank");
+  };
 
   // ─── RENDER ─────────────────────────────────────────────────────────────────
 
@@ -631,121 +669,214 @@ export default function BadalUmrohView() {
         </div>
       )}
 
-      {/* ── Modal 3: Sertifikat Badal Umroh ── */}
+      {/* ── Modal 3: LEMBAR PIAGAM MEWAH A4 LANDSCAPE (PRINTABLE BADAL CERTIFICATE) ── */}
       {selectedForCert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 no-print">
-              <span className="text-xs font-bold text-teal-600 uppercase tracking-wider">Sertifikat Resmi Badal Umroh</span>
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-5xl w-full shadow-2xl border border-amber-400 overflow-hidden my-auto">
+            {/* Action Bar (Not Printed) */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 print:hidden">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-amber-400" />
+                <span className="font-bold text-xs sm:text-sm">
+                  Pratinjau Sertifikat Resmi Badal Umroh: {selectedForCert.orderNumber}
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={handlePrintCertificate}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white hover:bg-teal-700"
+                  onClick={() => handleSendWA(selectedForCert)}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs"
                 >
-                  <Printer className="w-4 h-4" /> Cetak Sertifikat
+                  <Send className="w-3.5 h-3.5" /> Kirim WA ke Ahli Waris
                 </button>
-                <button onClick={() => setSelectedForCert(null)} className="p-1.5 text-slate-400 hover:text-slate-600">
-                  <X className="w-5 h-5" />
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs flex items-center gap-1.5 transition-all shadow-md"
+                >
+                  <Printer className="w-4 h-4" /> Cetak A4 Landscape
+                </button>
+                <button
+                  onClick={() => setSelectedForCert(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 text-base"
+                >
+                  ✕
                 </button>
               </div>
             </div>
 
-            {/* Printable Certificate */}
-            <div className="border-4 border-double border-amber-400 p-8 rounded-2xl bg-white text-slate-900 space-y-5 relative">
-              {/* Background Ornament */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none select-none">
-                <Heart className="w-64 h-64 text-rose-400" />
-              </div>
+            {/* CERTIFICATE CANVAS (A4 Landscape Print Target) */}
+            <div
+              id="printable-badal-certificate"
+              className="bg-[#fcfaf5] p-6 sm:p-10 text-slate-900 relative print:p-8 select-none"
+              style={{ minHeight: "600px" }}
+            >
+              {/* Outer Gold Ornamental Border */}
+              <div className="border-[6px] border-double border-[#c59b27] p-6 sm:p-8 rounded-2xl relative bg-[#fffdfa] shadow-inner">
+                {/* Corner Decorative Ornaments */}
+                <div className="absolute top-2 left-2 text-[#c59b27] text-xl font-serif">❖</div>
+                <div className="absolute top-2 right-2 text-[#c59b27] text-xl font-serif">❖</div>
+                <div className="absolute bottom-2 left-2 text-[#c59b27] text-xl font-serif">❖</div>
+                <div className="absolute bottom-2 right-2 text-[#c59b27] text-xl font-serif">❖</div>
 
-              {/* Header */}
-              <div className="text-center space-y-2 relative z-10">
-                <div className="flex justify-center">
-                  <img
-                    src="/sulthan-haramain-logo.jpg"
-                    alt="Sulthan Haramain"
-                    style={{ maxHeight: "60px", objectFit: "contain" }}
-                  />
-                </div>
-                <p className="text-[10px] font-semibold text-slate-500 tracking-widest uppercase">
-                  {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"} — PPIU Resmi Kemenag RI
-                </p>
-                <div className="relative w-full h-5 flex items-center overflow-hidden my-1">
-                  <div className="h-1.5 flex-1 bg-gradient-to-r from-amber-400 to-amber-500 rounded-l" />
-                  <Heart className="w-5 h-5 text-rose-500 mx-2" />
-                  <div className="h-1.5 flex-1 bg-gradient-to-l from-amber-400 to-amber-500 rounded-r" />
-                </div>
-                <h1 className="text-2xl font-black uppercase tracking-wider text-slate-900">
-                  Sertifikat Badal Umroh
-                </h1>
-                <p className="text-xs text-slate-500 font-semibold">No: {selectedForCert.orderNumber}</p>
-              </div>
-
-              {/* Body */}
-              <div className="text-center space-y-3 relative z-10">
-                <p className="text-sm text-slate-600">Dengan Rahmat Allah Subhanahu wa Ta'ala,</p>
-                <p className="text-sm text-slate-700">Kami menerangkan bahwa ibadah <strong>Umroh</strong> telah dilaksanakan oleh:</p>
-
-                <div className="bg-slate-50 rounded-xl p-3.5 text-left space-y-1.5 text-xs border border-slate-200">
-                  <div className="flex gap-2">
-                    <User className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span><span className="text-slate-500">Pelaksana Badal:</span> <strong>{selectedForCert.executorName || "Muthawwif Sulthan Haramain"}</strong></span>
-                  </div>
-                  {selectedForCert.scheduledDate && (
-                    <div className="flex gap-2">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                      <span><span className="text-slate-500">Tanggal Pelaksanaan:</span> <strong>{formatDate(selectedForCert.scheduledDate, "dd MMMM yyyy")}</strong></span>
+                {/* Inner Thin Border */}
+                <div className="border border-[#e2caa0] p-6 rounded-xl space-y-4 sm:space-y-5 text-center relative">
+                  {/* 1. PALING ATAS: LOGO PERUSAHAAN SAJA (CENTERED & ELEGAN) */}
+                  <div className="flex justify-center pt-1">
+                    <div className="h-16 w-16 sm:h-20 sm:w-20 p-1.5 bg-white rounded-2xl border-2 border-[#c59b27]/50 shadow-xs flex items-center justify-center">
+                      <img
+                        src="/sulthan-haramain-logo.jpg"
+                        alt="Logo Sulthan Haramain"
+                        className="h-full w-full object-contain"
+                      />
                     </div>
-                  )}
-                  <div className="flex gap-2">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span><span className="text-slate-500">Lokasi:</span> <strong>Masjidil Haram, Makkah Al-Mukarramah, Arab Saudi</strong></span>
                   </div>
-                  <div className="flex gap-2">
-                    <Package className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span><span className="text-slate-500">Jenis Badal:</span> <strong>Tawaf, Sa'i di Shafa-Marwa, Tahallul</strong></span>
+
+                  {/* 2. ARABIC CALLIGRAPHY TITLE KHUSUS BADAL */}
+                  <div className="pt-1">
+                    <p className="font-serif text-2xl sm:text-3xl font-bold text-[#8c6d1f] tracking-widest">
+                      شَهَادَةُ إِتْمَامِ بَدَلِ الْعُمْرَةِ عَنِ الْمَرْحُوْمِ / الْمَعْذُوْرِ
+                    </p>
+                    <div className="w-36 h-0.5 bg-gradient-to-r from-transparent via-[#c59b27] to-transparent mx-auto mt-1" />
                   </div>
-                </div>
 
-                <p className="text-sm text-slate-700">Atas nama / diniatkan untuk:</p>
-                <div className="bg-amber-50 rounded-2xl py-4 px-6 border-2 border-amber-400 space-y-1">
-                  <p className="text-2xl font-black text-slate-900 uppercase tracking-wide">{selectedForCert.recipientName}</p>
-                  <p className="text-xs text-slate-600">
-                    {selectedForCert.recipientGender === "MALE" ? "Bin" : "Binti"} —
-                    {selectedForCert.recipientStatus === "DECEASED" ? " Almarhum/ah, Semoga Allah merahmati beliau" : " Dalam keadaan uzur / sakit permanen"}
-                    {selectedForCert.recipientBirthPlace ? `, lahir di ${selectedForCert.recipientBirthPlace}` : ""}
-                  </p>
-                </div>
-
-                <p className="text-xs text-slate-600 italic">
-                  Dipesan oleh: <strong>{selectedForCert.ordererName}</strong> ({selectedForCert.ordererRelation.toLowerCase()} dari yang bersangkutan)
-                </p>
-
-                <p className="text-xs text-slate-500 mt-2">
-                  Semoga Allah ﷻ menerima amal ibadah ini sebagai hadiah yang tulus ikhlas,
-                  mengampuni segala dosa, melapangkan kubur, dan memasukkan ke dalam Surga-Nya.
-                  <span className="font-bold text-slate-700"> Aamiin Yaa Rabbal 'Aalamiin.</span>
-                </p>
-              </div>
-
-              {/* Footer */}
-              <div className="pt-4 border-t border-amber-200 flex justify-between items-end relative z-10">
-                <div className="text-[11px] text-slate-500 space-y-0.5">
-                  <p className="font-bold text-emerald-800">Status: SAH & RESMI</p>
-                  <p>Diterbitkan: {formatDate(selectedForCert.certificateIssuedAt || new Date(), "dd MMMM yyyy")}</p>
-                  <p className="text-[9px]">No. Izin PPIU: {travelSettings.licenseNumber || "25052200384080005"}</p>
-                </div>
-                <div className="text-center w-44">
-                  <p className="text-xs text-slate-600">
-                    Tebing Tinggi, {formatDate(selectedForCert.completedAt || new Date(), "dd MMMM yyyy")}
-                  </p>
-                  <p className="text-xs font-bold text-slate-700 mt-0.5">Pimpinan / Direktur,</p>
-                  <div className="h-12 flex items-center justify-center">
-                    <span className="font-serif italic text-xs text-teal-700 font-bold border-b border-teal-400 pb-0.5">
-                      [Tanda Tangan & Stempel Resmi]
-                    </span>
+                  {/* 3. MAIN TITLE & REGISTRATION NUMBER */}
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-serif font-black tracking-widest text-[#59400f] uppercase">
+                      PIAGAM SERTIFIKAT RESMI BADAL UMROH
+                    </h2>
+                    <p className="font-mono text-[11px] font-bold text-slate-600 mt-0.5">
+                      Nomor Registrasi: {selectedForCert.orderNumber}
+                    </p>
                   </div>
-                  <p className="text-xs font-bold text-slate-900">{travelSettings.directorName || "ATIYATUL AMRA"}</p>
-                  <p className="text-[10px] text-slate-400">{travelSettings.directorTitle || "Direktur Utama"}</p>
+
+                  {/* 4. CERTIFICATE BODY */}
+                  <div className="space-y-2 max-w-3xl mx-auto text-xs sm:text-sm text-slate-700 leading-relaxed">
+                    <p className="italic text-slate-600">
+                      Dengan memohon ridho Allah Subhanahu wa Ta'ala, menerangkan bahwa ibadah <strong>Umroh Badal</strong> telah selesai ditunaikan secara sempurna di Tanah Suci Makkah Al-Mukarramah, diniatkan & dihadiahkan pahala ibadahnya kepada:
+                    </p>
+                    
+                    <div className="py-2">
+                      <h1 className="text-2xl sm:text-3xl font-serif font-black text-[#6d4e11] tracking-wide uppercase underline decoration-[#c59b27] decoration-2 underline-offset-8">
+                        {selectedForCert.recipientName}
+                      </h1>
+                      <p className="text-xs font-semibold text-slate-600 mt-2">
+                        {selectedForCert.recipientGender === "MALE" ? "Bin" : "Binti"} —{" "}
+                        <span className="font-bold text-amber-950">
+                          {selectedForCert.recipientStatus === "DECEASED"
+                            ? "Almarhum/Almarhumah (Semoga Allah Merahmati Beliau)"
+                            : "Dalam Keadaan Uzur Syar'i / Sakit Permanen"}
+                        </span>
+                        {selectedForCert.recipientBirthPlace ? ` • Asal / Tempat Lahir: ${selectedForCert.recipientBirthPlace}` : ""}
+                      </p>
+                    </div>
+
+                    <div className="bg-[#fcfbf7] p-3 rounded-xl border border-[#ebd8b7] text-left text-xs grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-2xl mx-auto my-2">
+                      <div>
+                        <span className="text-slate-500 text-[10px] block">Amanah Dipesan Oleh (Ahli Waris):</span>
+                        <span className="font-bold text-slate-900">
+                          {selectedForCert.ordererName} ({selectedForCert.ordererRelation.toLowerCase()} dari yang dibadalkan)
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px] block">Pelaksana Badal di Makkah:</span>
+                        <span className="font-bold text-slate-900">
+                          {selectedForCert.executorName || "Muthawwif Sulthan Haramain di Saudi"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px] block">Tanggal Pelaksanaan:</span>
+                        <span className="font-bold text-slate-900">
+                          {formatDate(selectedForCert.scheduledDate || selectedForCert.completedAt || new Date(), "dd MMMM yyyy")}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px] block">Tempat & Rukun Ibadah:</span>
+                        <span className="font-bold text-slate-900">
+                          Masjidil Haram (Thawaf, Sa'i, Tahallul)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 5. ARABIC PRAYER / DOA BADAL UMROH */}
+                  <div className="p-3 bg-[#fdfcf7] rounded-xl border border-[#ebd8b7] max-w-2xl mx-auto space-y-1">
+                    <p className="font-serif text-base sm:text-lg font-bold text-[#6d4e11]">
+                      اللّٰهُمَّ تَقَبَّلْ هٰذِهِ الْعُمْرَةَ وَاجْعَلْهَا لَهُ/لَهَا رَحْمَةً وَنُوْرًا وَمَغْفِرَةً فِيْ قَبْرِهِ/قَبْرِهَا
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] text-slate-600 italic">
+                      "Ya Allah, terimalah ibadah umroh ini atas nama beliau, jadikanlah sebagai cahaya, rahmat, dan ampunan di alam kuburnya, serta karuniakanlah Surga Firdaus-Mu. Aamiin Yaa Rabbal 'Aalamiin."
+                    </p>
+                  </div>
+
+                  {/* 6. SIGNATURE & SCANNABLE QR CODE (QR CODE & DIREKTUR UTAMA) */}
+                  {(() => {
+                    const verificationUrl = typeof window !== "undefined"
+                      ? `${window.location.origin}/verifikasi-sertifikat/${encodeURIComponent(selectedForCert.orderNumber)}`
+                      : `https://portalumroh.barokahgroupindonesia.tech/verifikasi-sertifikat/${encodeURIComponent(selectedForCert.orderNumber)}`;
+
+                    return (
+                      <div className="pt-4 flex items-end justify-between max-w-2xl mx-auto text-xs px-4 sm:px-8">
+                        {/* QR Code Verifikasi Sah */}
+                        <div className="text-center flex flex-col items-center justify-center space-y-1.5">
+                          <a
+                            href={verificationUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 bg-white rounded-xl border-2 border-[#c59b27] shadow-sm hover:scale-105 transition-all block group"
+                            title="Klik untuk membuka verifikasi keabsahan sertifikat badal"
+                          >
+                            <img
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(verificationUrl)}`}
+                              alt="QR Code Verifikasi Sah"
+                              className="w-20 h-20 sm:w-24 sm:h-24 object-contain"
+                            />
+                          </a>
+                          <div className="text-center">
+                            <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wider block">
+                              ✓ Scan Verifikasi Sah
+                            </span>
+                            <span className="text-[8px] text-slate-400 font-mono mt-0.5 block">
+                              {selectedForCert.orderNumber}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Direktur Utama Signature */}
+                        <div className="text-center space-y-1 w-64">
+                          <p className="text-[11px] text-slate-600 font-medium">
+                            {travelSettings.city || "Tebing Tinggi"}, {formatDate(selectedForCert.completedAt || selectedForCert.createdAt || new Date(), "dd MMMM yyyy")}
+                            <br />
+                            <strong>{travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}</strong>
+                          </p>
+                          <div className="h-16 flex items-center justify-center">
+                            <span className="font-serif italic text-xs text-slate-400">[Tanda Tangan & Stempel]</span>
+                          </div>
+                          <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">
+                            {travelSettings.directorName || "ATIYATUL AMRA"}
+                          </p>
+                          <p className="text-[10px] text-slate-500 font-medium">
+                            {travelSettings.directorTitle || "Direktur Utama"}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 7. FOOTER RESMI DENGAN TULISAN KECIL RAPI DI BAGIAN PALING BAWAH */}
+                  <div className="pt-4 border-t border-[#ebd8b7] text-center space-y-0.5 text-[9px] sm:text-[9.5px] text-slate-500 leading-tight">
+                    <p className="font-bold text-slate-700 uppercase tracking-wider">
+                      {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"} • BAROKAH GROUP INDONESIA
+                    </p>
+                    <p>
+                      {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum RI NOMOR AHU-0007388.AH.01.01.TAHUN 2026"} • NO. IZIN PPIU KEMENAG RI: {(travelSettings.licenseNumber || "25052200384080005")
+                        .replace(/•?\s*NIB[\s\S]*/i, "")
+                        .replace(/•?\s*KBLI[\s\S]*/i, "")
+                        .replace(/NO\.\s*IZIN\s*PPIU\s*:\s*/i, "")
+                        .trim()}
+                    </p>
+                    <p className="text-[8.5px] text-slate-400">
+                      Kantor: {travelSettings.address || "Jl. Pahlawan No.10 J, Ps. Gambir, Kec. Tebing Tinggi Kota, Kota Tebing Tinggi, Sumatera Utara 20631"} • Telp/WA: {travelSettings.phone || "0821-6733-9464"} • Email: {travelSettings.email || "barokahsulthanharamain@gmail.com"}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
