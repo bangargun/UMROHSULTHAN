@@ -52,7 +52,25 @@ export async function POST(request: Request) {
       agentName,
       agentPaymentScheme,
       agentCommissionAmount,
+      // Proof of payment
+      proofUrl,
+      proofUrls,
     } = body;
+
+    const processProofUrl = (single?: string | null, multi?: string[] | null): string | null => {
+      if (Array.isArray(multi) && multi.length > 0) {
+        const valid = multi.filter((u) => typeof u === "string" && u.trim().length > 0);
+        if (valid.length === 0) return null;
+        if (valid.length === 1) return valid[0];
+        return JSON.stringify(valid);
+      }
+      if (typeof single === "string" && single.trim().length > 0) {
+        return single.trim();
+      }
+      return null;
+    };
+
+    const effectiveProofUrl = processProofUrl(proofUrl, proofUrls);
 
     const invoiceStatus = isPaid ? "PAID" : "PENDING";
     const actualPaymentDate = isPaid ? (paymentDate ? new Date(paymentDate) : new Date()) : null;
@@ -118,6 +136,7 @@ export async function POST(request: Request) {
             agentId: effectiveAgentId,
             agentName: effectiveAgentName,
             notes: notes || null,
+            proofUrl: effectiveProofUrl,
           },
           include: {
             pilgrim: { include: { package: true } },
@@ -241,6 +260,7 @@ export async function POST(request: Request) {
           agentId: effectiveAgentId,
           agentName: effectiveAgentName,
           notes: notes || null,
+          proofUrl: effectiveProofUrl,
         },
         include: {
           pilgrim: { include: { package: true } },

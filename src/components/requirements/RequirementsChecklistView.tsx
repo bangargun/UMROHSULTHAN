@@ -104,7 +104,7 @@ export default function RequirementsChecklistView({
   const handleExportCSV = () => {
     const kopSurat = [
       `"PT SULTHAN HARAMAIN TOUR & TRAVEL (PT BAROKAH SULTHAN HARAMAIN)"`,
-      `"Penyelenggara Perjalanan Ibadah Umroh (PPIU) Resmi Kemenag RI"`,
+      `"Izin PPIU Induk Usaha PT. Grand Restu Haraman No. 25052200384080005"`,
       `"DOKUMEN RESMI: CHECKLIST KESIAPAN DOKUMEN KEBERANGKATAN & HANDLING BANDARA"`,
       `"Waktu Ekspor:","${new Date().toLocaleString("id-ID")}","Total Jamaah:","${filteredPilgrims.length} Calon Jamaah"`,
       `""`,

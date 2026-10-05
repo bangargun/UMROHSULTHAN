@@ -39,6 +39,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       discountAmount,
       discountReason,
       notes,
+      proofUrl,
+      proofUrls,
     } = body;
 
     const existing = await prisma.invoice.findUnique({
@@ -65,6 +67,17 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     if (payerPhone !== undefined) updateData.payerPhone = payerPhone;
     if (discountAmount !== undefined) updateData.discountAmount = parseFloat(discountAmount) || 0;
     if (discountReason !== undefined) updateData.discountReason = discountReason;
+
+    if (proofUrls !== undefined || proofUrl !== undefined) {
+      if (Array.isArray(proofUrls)) {
+        const valid = proofUrls.filter((u) => typeof u === "string" && u.trim().length > 0);
+        updateData.proofUrl = valid.length === 0 ? null : valid.length === 1 ? valid[0] : JSON.stringify(valid);
+      } else if (typeof proofUrl === "string" && proofUrl.trim().length > 0) {
+        updateData.proofUrl = proofUrl.trim();
+      } else {
+        updateData.proofUrl = null;
+      }
+    }
 
     if (isPaid) {
       updateData.paymentMethod = paymentMethod || existing.paymentMethod || "BANK_TRANSFER";

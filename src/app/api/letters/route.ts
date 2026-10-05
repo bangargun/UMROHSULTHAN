@@ -72,6 +72,7 @@ export async function POST(request: Request) {
       else if (type === "SURAT_REKOMENDASI_PASPOR") prefix = "PASPOR";
       else if (type === "SURAT_PERPANJANG_PASPOR") prefix = "PERPANJANG";
       else if (type === "SURAT_IZIN_CUTI") prefix = "CUTI";
+      else if (type === "SURAT_IZIN_CUTI_TNI_POLRI") prefix = "TNI-POLRI";
       else if (type === "SURAT_PENGANTAR_KEMENAG") prefix = "KEMENAG";
       else if (type === "SURAT_KETERANGAN_JAMAAH") prefix = "JAMAAH";
       else if (type === "SURAT_MAHRAM") prefix = "MAHRAM";

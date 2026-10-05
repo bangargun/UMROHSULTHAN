@@ -786,7 +786,7 @@ export default function PublicRegistrationPage() {
             Formulir Pendaftaran Online
           </h1>
           <p className="text-xs sm:text-sm text-emerald-200/90 max-w-xl mx-auto">
-            PT BAROKAH SULTHAN HARAMAIN • Izin PPIU No. 25052200384080005<br />
+            PT BAROKAH SULTHAN HARAMAIN • Izin PPIU Induk Usaha PT. Grand Restu Haraman No. 25052200384080005<br />
             Silakan pilih jenis layanan di bawah ini sesuai kebutuhan ibadah Anda.
           </p>
 

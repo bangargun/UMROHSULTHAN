@@ -1161,7 +1161,7 @@ export default function PilgrimsView({
 
     const kopSurat = [
       `"PT SULTHAN HARAMAIN TOUR & TRAVEL (PT BAROKAH SULTHAN HARAMAIN)"`,
-      `"Penyelenggara Perjalanan Ibadah Umroh (PPIU) Resmi Kemenag RI • Sistem Manajemen Operasional Terpadu"`,
+      `"Izin PPIU Induk Usaha PT. Grand Restu Haraman No. 25052200384080005 • Sistem Manajemen Operasional Terpadu"`,
       `"DOKUMEN RESMI: MANIFEST DATA CALON JAMAAH UMROH & STATUS VAKSINASI (ICV / SATUSEHAT)"`,
       `"Program Paket:","${pkgNameFull}","Kode Paket:","${pkgCode}","Tgl Berangkat:","${depDateStr}","Tgl Pulang:","${retDateStr}"`,
       `"Fasilitas Paket:","Maskapai: ${airlineStr} | Hotel: ${hotelsStr}","Total Terdaftar:","${filteredPilgrims.length} Calon Jamaah","Waktu Ekspor:","${exportTimestamp}"`,

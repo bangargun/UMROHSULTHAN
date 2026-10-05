@@ -28,9 +28,234 @@ import {
   Trash2,
   Tag,
   Percent,
+  Camera,
+  UploadCloud,
+  Eye,
+  ZoomIn,
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
 } from "lucide-react";
 import { formatCurrency, formatDate, getStatusBadge, generateWhatsAppReminderUrl, formatRupiahWithWords } from "@/lib/utils";
 import Pagination from "@/components/common/Pagination";
+
+export const parseProofUrls = (raw: string | null | undefined): string[] => {
+  if (!raw) return [];
+  const trimmed = String(raw).trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((u) => typeof u === "string" && u.trim().length > 0);
+      }
+    } catch (e) {
+      // fallback
+    }
+  }
+  return [trimmed];
+};
+
+export const compressImageFile = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxDim = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.78);
+        resolve(compressedDataUrl);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
+interface ProofUploadManagerProps {
+  urls: string[];
+  onChange: (urls: string[]) => void;
+  onPreview: (urls: string[], index: number) => void;
+  label?: string;
+  description?: string;
+}
+
+function ProofUploadManager({
+  urls,
+  onChange,
+  onPreview,
+  label = "Lampiran Bukti Pembayaran / Transfer (Foto/Struk)",
+  description = "Bisa unggah lebih dari 1 foto (struk transfer ATM/m-banking, setoran tunai, resi kasir, dll)",
+}: ProofUploadManagerProps) {
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [compressing, setCompressing] = React.useState(false);
+
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setCompressing(true);
+    try {
+      const newUrls: string[] = [];
+      for (const file of files) {
+        if (!file.type.startsWith("image/")) continue;
+        const compressed = await compressImageFile(file);
+        newUrls.push(compressed);
+      }
+      if (newUrls.length > 0) {
+        onChange([...urls, ...newUrls]);
+      }
+    } catch (err) {
+      console.error("Gagal memproses foto bukti:", err);
+      alert("Gagal memproses file foto. Silakan coba kembali.");
+    } finally {
+      setCompressing(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleRemove = (idxToRemove: number) => {
+    const updated = urls.filter((_, idx) => idx !== idxToRemove);
+    onChange(updated);
+  };
+
+  return (
+    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <Camera className="w-4 h-4 text-emerald-600" />
+            {label}
+            {urls.length > 0 && (
+              <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
+                {urls.length} Foto Terlampir
+              </span>
+            )}
+          </label>
+          <p className="text-[10.5px] text-slate-500 mt-0.5">{description}</p>
+        </div>
+
+        {/* Hidden file input */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          multiple
+          onChange={handleFiles}
+          className="hidden"
+        />
+
+        {/* Action Button: Add more if items exist */}
+        {urls.length > 0 && (
+          <button
+            type="button"
+            disabled={compressing}
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            + Tambah Bukti Pembayaran
+          </button>
+        )}
+      </div>
+
+      {compressing && (
+        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          <span>Sedang mengompres & memproses foto bukti pembayaran...</span>
+        </div>
+      )}
+
+      {/* Main Dropzone / Button when empty */}
+      {urls.length === 0 && !compressing && (
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-white hover:bg-emerald-50/40 rounded-xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2"
+        >
+          <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-2xs">
+            <UploadCloud className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-100/60 px-3 py-1 rounded-lg border border-emerald-200">
+              <Plus className="w-3.5 h-3.5" /> Tambah Bukti Pembayaran (Foto/Struk)
+            </span>
+            <p className="text-[10.5px] text-slate-500 mt-1">
+              Bisa pilih lebih dari 1 foto sekaligus atau klik tombol ini lagi untuk menambah (JPG, PNG, WEBP)
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Gallery of Uploaded Photos */}
+      {urls.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+          {urls.map((photoUrl, idx) => (
+            <div
+              key={idx}
+              className="group relative rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs hover:shadow-md transition-all"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photoUrl}
+                alt={`Bukti #${idx + 1}`}
+                className="w-full h-24 object-cover"
+              />
+              <span className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded backdrop-blur-xs">
+                Foto #{idx + 1}
+              </span>
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onPreview(urls, idx)}
+                  className="p-1.5 bg-white/90 hover:bg-white text-slate-800 rounded-lg shadow-sm cursor-pointer"
+                  title="Lihat Ukuran Penuh"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRemove(idx)}
+                  className="p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-sm cursor-pointer"
+                  title="Hapus Foto Ini"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Secondary Add Button Tile */}
+          <button
+            type="button"
+            disabled={compressing}
+            onClick={() => fileInputRef.current?.click()}
+            className="h-24 border-2 border-dashed border-emerald-300 hover:border-emerald-500 rounded-xl flex flex-col items-center justify-center text-emerald-700 bg-emerald-50/20 hover:bg-emerald-50/60 transition-all cursor-pointer"
+          >
+            <Plus className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] font-bold">+ Tambah Bukti</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface FinanceViewProps {
   invoices: any[];
@@ -51,6 +276,13 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
   const [receiptViewMode, setReceiptViewMode] = useState<"GROUP" | "INDIVIDUAL">("GROUP");
   const [selectedIndividualIndex, setSelectedIndividualIndex] = useState<number>(0);
   const [printAllIndividual, setPrintAllIndividual] = useState<boolean>(false);
+  const [showProofInReceipt, setShowProofInReceipt] = useState<boolean>(true);
+  const [previewProofModal, setPreviewProofModal] = useState<{ isOpen: boolean; urls: string[]; activeIndex: number; title: string }>({
+    isOpen: false,
+    urls: [],
+    activeIndex: 0,
+    title: "",
+  });
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<any | null>(null);
   const [selectedInvoiceForEdit, setSelectedInvoiceForEdit] = useState<any | null>(null);
   const [editFormData, setEditFormData] = useState({
@@ -68,6 +300,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
     discountAmount: "",
     discountReason: "",
     hasDiscount: false,
+    proofUrls: [] as string[],
   });
   const [travelSettings, setTravelSettings] = useState<any>({
     companyName: "PT TRAVEL UMROH BERKAH NUSANTARA",
@@ -125,6 +358,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
     agentName: "",
     agentPaymentScheme: "NET_COMMISSION_DEDUCTION" as "NET_COMMISSION_DEDUCTION" | "GROSS",
     agentCommissionAmount: "",
+    proofUrls: [] as string[],
   });
 
   const [paymentData, setPaymentData] = useState({
@@ -139,6 +373,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
     agentName: "",
     agentPaymentScheme: "NET_COMMISSION_DEDUCTION" as "NET_COMMISSION_DEDUCTION" | "GROSS",
     agentCommissionAmount: "",
+    proofUrls: [] as string[],
   });
 
   const [loading, setLoading] = useState(false);
@@ -407,6 +642,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
           agentName: "",
           agentPaymentScheme: "NET_COMMISSION_DEDUCTION",
           agentCommissionAmount: "",
+          proofUrls: [],
         });
         onRefresh();
       } else {
@@ -433,6 +669,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
       hasDiscount: (firstP?.discountAmount || 0) > 0,
       discountAmount: (firstP?.discountAmount || 0) > 0 ? String(firstP.discountAmount) : "",
       discountReason: firstP?.discountReason || "",
+      proofUrls: [],
     }));
     setIsAddModalOpen(true);
   };
@@ -451,6 +688,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
       agentName: inv.agentName || invAgent?.name || "",
       agentPaymentScheme: "NET_COMMISSION_DEDUCTION",
       agentCommissionAmount: "",
+      proofUrls: parseProofUrls(inv.proofUrl),
     });
   };
 
@@ -735,6 +973,21 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${badge.bg} ${badge.text} border ${badge.border}`}>
                           {badge.label}
                         </span>
+                        {(() => {
+                          const proofs = parseProofUrls(inv.proofUrl);
+                          if (proofs.length === 0) return null;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewProofModal({ isOpen: true, urls: proofs, activeIndex: 0, title: `Bukti Pembayaran - ${inv.invoiceNumber}` })}
+                              className="mt-1 flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-bold cursor-pointer transition-colors"
+                              title="Lihat Bukti Foto Pembayaran"
+                            >
+                              <Camera className="w-3 h-3 text-indigo-600" />
+                              <span>{proofs.length} Bukti Foto</span>
+                            </button>
+                          );
+                        })()}
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
@@ -807,6 +1060,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                                 hasDiscount: invDisc > 0,
                                 discountAmount: invDisc > 0 ? String(invDisc) : "",
                                 discountReason: invReason,
+                                proofUrls: parseProofUrls(inv.proofUrl),
                               });
                             }}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition-colors cursor-pointer"
@@ -2006,6 +2260,22 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 />
               </div>
 
+              {/* Lampiran Bukti Pembayaran / Transfer Multi-Foto */}
+              <ProofUploadManager
+                urls={formData.proofUrls}
+                onChange={(newUrls) => setFormData({ ...formData, proofUrls: newUrls })}
+                onPreview={(urls, idx) =>
+                  setPreviewProofModal({
+                    isOpen: true,
+                    urls,
+                    activeIndex: idx,
+                    title: "Bukti Pembayaran / Tagihan Baru",
+                  })
+                }
+                label="Bukti Pembayaran / Struk Transfer (Foto)"
+                description="Bisa lampirkan lebih dari 1 foto (struk transfer bank, bukti kas masuk kantor, dll)"
+              />
+
               <div className="pt-3 flex justify-end gap-2">
                 <button
                   type="button"
@@ -2363,6 +2633,22 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 />
               </div>
 
+              {/* Lampiran Bukti Pembayaran Multi-Foto */}
+              <ProofUploadManager
+                urls={paymentData.proofUrls}
+                onChange={(newUrls) => setPaymentData({ ...paymentData, proofUrls: newUrls })}
+                onPreview={(urls, idx) =>
+                  setPreviewProofModal({
+                    isOpen: true,
+                    urls,
+                    activeIndex: idx,
+                    title: `Bukti Pembayaran - ${selectedInvoiceForPayment.invoiceNumber}`,
+                  })
+                }
+                label="Foto Bukti Pembayaran / Struk Transfer"
+                description="Bisa lampirkan lebih dari 1 foto untuk diarsipkan dan dicantumkan pada Kwitansi"
+              />
+
               <div className="pt-3 flex justify-end gap-2">
                 <button
                   type="button"
@@ -2422,7 +2708,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                       {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026"}
                     </p>
                     <p className="text-[7.5px] sm:text-[8px] font-semibold text-slate-500 tracking-wide mt-0.5 uppercase">
-                      NO. IZIN PPIU : {(travelSettings.licenseNumber || "25052200384080005")
+                      NO. IZIN PPIU INDUK USAHA PT. GRAND RESTU HARAMAN : {(travelSettings.licenseNumber || "25052200384080005")
                         .replace(/•?\s*NIB[\s\S]*/i, "")
                         .replace(/•?\s*KBLI[\s\S]*/i, "")
                         .replace(/NO\.\s*IZIN\s*PPIU\s*:\s*/i, "")
@@ -2586,6 +2872,54 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                     )}
                   </span>
                 </div>
+
+                {/* Lampiran Foto Bukti Pembayaran Resmi di dalam Lembar Kwitansi/Invoice */}
+                {(() => {
+                  const proofPhotos = parseProofUrls(inv.proofUrl);
+                  if (!showProofInReceipt || proofPhotos.length === 0) return null;
+                  return (
+                    <div className="mt-3 pt-3 border-t border-slate-200/90 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-800">
+                        <span className="flex items-center gap-1.5 text-slate-900 font-bold">
+                          <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                          Lampiran Dokumen Bukti Pembayaran Sah ({proofPhotos.length} Foto)
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono print:hidden">
+                          Klik foto untuk memperbesar
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2.5 items-center">
+                        {proofPhotos.map((url: string, idx: number) => (
+                          <div
+                            key={idx}
+                            onClick={() =>
+                              setPreviewProofModal({
+                                isOpen: true,
+                                urls: proofPhotos,
+                                activeIndex: idx,
+                                title: `Bukti Pembayaran #${idx + 1} - ${inv.invoiceNumber}`,
+                              })
+                            }
+                            className="group relative rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs hover:shadow-md transition-all cursor-pointer"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt={`Bukti Bayar #${idx + 1}`}
+                              className="h-20 sm:h-24 max-w-[140px] sm:max-w-[160px] object-cover group-hover:scale-105 transition-transform print:max-h-20 print:object-contain"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white print:hidden">
+                              <ZoomIn className="w-4 h-4" />
+                            </div>
+                            <span className="absolute bottom-1 right-1 bg-black/70 text-[9px] font-mono text-white px-1.5 py-0.5 rounded font-bold">
+                              #{idx + 1}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Signature Footer */}
@@ -2664,7 +2998,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                       {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026"}
                     </p>
                     <p className="text-[7.5px] sm:text-[8px] font-semibold text-slate-500 tracking-wide mt-0.5 uppercase">
-                      NO. IZIN PPIU : {(travelSettings.licenseNumber || "25052200384080005")
+                      NO. IZIN PPIU INDUK USAHA PT. GRAND RESTU HARAMAN : {(travelSettings.licenseNumber || "25052200384080005")
                         .replace(/•?\s*NIB[\s\S]*/i, "")
                         .replace(/•?\s*KBLI[\s\S]*/i, "")
                         .replace(/NO\.\s*IZIN\s*PPIU\s*:\s*/i, "")
@@ -2837,6 +3171,55 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                     )}
                   </span>
                 </div>
+
+                {/* Lampiran Bukti Pembayaran Kolektif Rombongan Multi-Foto */}
+                {(() => {
+                  const allProofs = groupInvoices.flatMap((inv) => parseProofUrls(inv.proofUrl));
+                  const uniqueProofs = Array.from(new Set(allProofs));
+                  if (!showProofInReceipt || uniqueProofs.length === 0) return null;
+                  return (
+                    <div className="mt-3 pt-3 border-t border-slate-200/90 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-800">
+                        <span className="flex items-center gap-1.5 text-slate-900 font-bold">
+                          <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                          Lampiran Dokumen Bukti Pembayaran Rombongan ({uniqueProofs.length} Foto)
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono print:hidden">
+                          Klik foto untuk memperbesar
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2.5 items-center">
+                        {uniqueProofs.map((url: string, idx: number) => (
+                          <div
+                            key={idx}
+                            onClick={() =>
+                              setPreviewProofModal({
+                                isOpen: true,
+                                urls: uniqueProofs,
+                                activeIndex: idx,
+                                title: `Bukti Pembayaran Rombongan #${idx + 1}`,
+                              })
+                            }
+                            className="group relative rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs hover:shadow-md transition-all cursor-pointer"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt={`Bukti Rombongan #${idx + 1}`}
+                              className="h-20 sm:h-24 max-w-[140px] sm:max-w-[160px] object-cover group-hover:scale-105 transition-transform print:max-h-20 print:object-contain"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white print:hidden">
+                              <ZoomIn className="w-4 h-4" />
+                            </div>
+                            <span className="absolute bottom-1 right-1 bg-black/70 text-[9px] font-mono text-white px-1.5 py-0.5 rounded font-bold">
+                              #{idx + 1}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Signature Footer */}
@@ -2911,7 +3294,18 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                   )}
 
                   {/* Print Buttons & Close */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer select-none transition-colors" title="Centang untuk menyertakan foto bukti transfer di dalam cetakan kwitansi/invoice">
+                      <input
+                        type="checkbox"
+                        checked={showProofInReceipt}
+                        onChange={(e) => setShowProofInReceipt(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Sertakan Bukti Foto</span>
+                    </label>
+
                     {receiptViewMode === "GROUP" && multiReceiptInvoices && multiReceiptInvoices.length > 1 ? (
                       <button
                         onClick={() => {
@@ -3361,6 +3755,22 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 />
               </div>
 
+              {/* Koreksi & Lampiran Bukti Pembayaran Multi-Foto */}
+              <ProofUploadManager
+                urls={editFormData.proofUrls}
+                onChange={(newUrls) => setEditFormData({ ...editFormData, proofUrls: newUrls })}
+                onPreview={(urls, idx) =>
+                  setPreviewProofModal({
+                    isOpen: true,
+                    urls,
+                    activeIndex: idx,
+                    title: `Bukti Invoice - ${selectedInvoiceForEdit.invoiceNumber}`,
+                  })
+                }
+                label="Koreksi / Lampiran Foto Bukti Pembayaran"
+                description="Tambah atau perbarui foto bukti transfer yang tersimpan pada invoice ini"
+              />
+
               <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
@@ -3379,6 +3789,105 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox Modal Fullscreen untuk Preview Foto Bukti Pembayaran */}
+      {previewProofModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-xs no-print">
+          <div className="relative max-w-4xl w-full bg-slate-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] border border-slate-800">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 bg-slate-800/90 border-b border-slate-700 text-white">
+              <div className="flex items-center gap-2">
+                <Camera className="w-4 h-4 text-emerald-400" />
+                <h4 className="text-xs font-bold text-white">
+                  {previewProofModal.title || "Bukti Pembayaran"} (Foto {previewProofModal.activeIndex + 1} dari {previewProofModal.urls.length})
+                </h4>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewProofModal.urls[previewProofModal.activeIndex]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={`bukti-pembayaran-${previewProofModal.activeIndex + 1}.jpg`}
+                  className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 px-3 py-1.5 rounded-xl bg-slate-700/80 hover:bg-slate-600 transition-colors cursor-pointer"
+                >
+                  Unduh Foto
+                </a>
+                <button
+                  type="button"
+                  aria-label="Tutup Preview Foto"
+                  onClick={() => setPreviewProofModal({ isOpen: false, urls: [], activeIndex: 0, title: "" })}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Main Image View */}
+            <div className="relative flex-1 flex items-center justify-center p-4 bg-black overflow-hidden min-h-[350px]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewProofModal.urls[previewProofModal.activeIndex]}
+                alt={`Preview Bukti ${previewProofModal.activeIndex + 1}`}
+                className="max-h-[68vh] max-w-full object-contain rounded-xl shadow-lg"
+              />
+
+              {/* Previous Button */}
+              {previewProofModal.urls.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPreviewProofModal((prev) => ({
+                      ...prev,
+                      activeIndex: prev.activeIndex > 0 ? prev.activeIndex - 1 : prev.urls.length - 1,
+                    }))
+                  }
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-slate-800/80 hover:bg-slate-700 text-white cursor-pointer shadow-lg transition-transform hover:scale-110"
+                  title="Foto Sebelumnya"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+              )}
+
+              {/* Next Button */}
+              {previewProofModal.urls.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPreviewProofModal((prev) => ({
+                      ...prev,
+                      activeIndex: prev.activeIndex < prev.urls.length - 1 ? prev.activeIndex + 1 : 0,
+                    }))
+                  }
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-slate-800/80 hover:bg-slate-700 text-white cursor-pointer shadow-lg transition-transform hover:scale-110"
+                  title="Foto Berikutnya"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              )}
+            </div>
+
+            {/* Thumbnails strip below if > 1 photo */}
+            {previewProofModal.urls.length > 1 && (
+              <div className="p-3 bg-slate-800/90 border-t border-slate-700 flex items-center gap-2 overflow-x-auto justify-center">
+                {previewProofModal.urls.map((u, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setPreviewProofModal((prev) => ({ ...prev, activeIndex: i }))}
+                    className={`relative rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                      previewProofModal.activeIndex === i ? "border-emerald-400 scale-105 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={u} alt={`Thumb ${i + 1}`} className="w-14 h-14 object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

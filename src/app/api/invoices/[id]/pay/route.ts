@@ -9,6 +9,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       paymentDate,
       notes,
       proofUrl,
+      proofUrls,
       payerName,
       payerPhone,
       isAgentPayment,
@@ -17,6 +18,21 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       agentPaymentScheme,
       agentCommissionAmount,
     } = body;
+
+    const processProofUrl = (single?: string | null, multi?: string[] | null): string | null => {
+      if (Array.isArray(multi)) {
+        const valid = multi.filter((u) => typeof u === "string" && u.trim().length > 0);
+        if (valid.length === 0) return null;
+        if (valid.length === 1) return valid[0];
+        return JSON.stringify(valid);
+      }
+      if (typeof single === "string" && single.trim().length > 0) {
+        return single.trim();
+      }
+      return null;
+    };
+
+    const hasProofInput = proofUrls !== undefined || proofUrl !== undefined;
 
     const invoice = await prisma.invoice.findUnique({
       where: { id: params.id },
@@ -37,6 +53,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     const effectiveAgentId = targetAgent?.id || effAgentId || null;
     const effectiveAgentName = targetAgent?.name || agentName || invoice.agentName || (isAgentPayment && payerName ? payerName : null);
+    const effectiveProofUrl = hasProofInput ? processProofUrl(proofUrl, proofUrls) : invoice.proofUrl;
 
     const updatedInvoice = await prisma.invoice.update({
       where: { id: params.id },
@@ -49,7 +66,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         agentId: effectiveAgentId,
         agentName: effectiveAgentName,
         notes: notes || invoice.notes,
-        proofUrl: proofUrl || invoice.proofUrl,
+        proofUrl: effectiveProofUrl,
       },
     });
 

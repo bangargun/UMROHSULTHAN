@@ -97,7 +97,7 @@ export default async function CertificateVerificationPage({ params }: PageProps)
                 {setting?.kemenhanLicense || "Keputusan Menteri Hukum RI NOMOR AHU-0007388.AH.01.01.TAHUN 2026"}
               </p>
               <p className="text-[11px] text-amber-800 font-bold mt-0.5">
-                NO. IZIN PPIU KEMENAG RI: {setting?.licenseNumber || "25052200384080005"}
+                NO. IZIN PPIU INDUK USAHA PT. GRAND RESTU HARAMAN: {setting?.licenseNumber || "25052200384080005"}
               </p>
             </div>
           </div>

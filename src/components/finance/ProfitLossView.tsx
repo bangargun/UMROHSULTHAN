@@ -648,7 +648,7 @@ export default function ProfitLossView({ packages, onRefreshAll }: ProfitLossVie
               {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum Republik Indonesia NOMOR AHU-0007388.AH.01.01.TAHUN 2026"}
             </p>
             <p className="text-[8px] sm:text-[8.5px] font-semibold text-slate-500 tracking-wide uppercase">
-              NO. IZIN PPIU : {(travelSettings.licenseNumber || "25052200384080005")
+              NO. IZIN PPIU INDUK USAHA PT. GRAND RESTU HARAMAN : {(travelSettings.licenseNumber || "25052200384080005")
                 .replace(/•?\s*NIB[\s\S]*/i, "")
                 .replace(/•?\s*KBLI[\s\S]*/i, "")
                 .replace(/NO\.\s*IZIN\s*PPIU\s*:\s*/i, "")

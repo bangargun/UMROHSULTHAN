@@ -135,7 +135,7 @@ export default function TabunganUmrohPage() {
           </h1>
 
           <p className="text-xs sm:text-sm text-emerald-200/90 max-w-2xl mx-auto">
-            PT BAROKAH SULTHAN HARAMAIN • Izin PPIU No. 25052200384080005<br />
+            PT BAROKAH SULTHAN HARAMAIN • Izin PPIU Induk Usaha PT. Grand Restu Haraman No. 25052200384080005<br />
             Menabung fleksibel tanpa batasan waktu. Setiap setoran menerima kuitansi resmi bertanda tangan digital dengan laporan sisa tagihan transparan realtime.
           </p>
 

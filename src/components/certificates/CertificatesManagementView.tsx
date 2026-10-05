@@ -783,7 +783,7 @@ Wassalamu'alaikum Wr. Wb.`;
                       {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"} • BAROKAH GROUP INDONESIA
                     </p>
                     <p>
-                      {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum RI NOMOR AHU-0007388.AH.01.01.TAHUN 2026"} • NO. IZIN PPIU KEMENAG RI: {(travelSettings.licenseNumber || "25052200384080005")
+                      {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum RI NOMOR AHU-0007388.AH.01.01.TAHUN 2026"} • NO. IZIN PPIU INDUK USAHA PT. GRAND RESTU HARAMAN: {(travelSettings.licenseNumber || "25052200384080005")
                         .replace(/•?\s*NIB[\s\S]*/i, "")
                         .replace(/•?\s*KBLI[\s\S]*/i, "")
                         .replace(/NO\.\s*IZIN\s*PPIU\s*:\s*/i, "")

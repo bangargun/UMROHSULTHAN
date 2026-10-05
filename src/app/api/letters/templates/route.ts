@@ -44,6 +44,16 @@ const defaultLetterTemplates = [
     orderIndex: 3,
   },
   {
+    code: "TNI-POLRI",
+    typeKey: "SURAT_IZIN_CUTI_TNI_POLRI",
+    title: "Surat Izin Cuti / Pemberitahuan Umroh TNI & Polri",
+    subject: "Pemberitahuan Umroh",
+    defaultDest: "Komandan Subdenpom / Dandim / Kapolres / Pimpinan Kesatuan",
+    defaultNotes: "Surat pemberitahuan dan permohonan izin cuti resmi keberangkatan ibadah umroh bagi personil TNI / Polri beserta keluarga.",
+    bodyTemplate: "Bersama surat ini kami beritahukan bahwa personil/anggota TNI/Polri terdaftar sebagai calon jemaah umroh dan akan melaksanakan ibadah umroh ke Tanah Suci.",
+    orderIndex: 4,
+  },
+  {
     code: "KEMENAG",
     typeKey: "SURAT_PENGANTAR_KEMENAG",
     title: "Surat Pengantar Rekomendasi Kemenag",

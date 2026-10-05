@@ -239,7 +239,7 @@ function TabunganStatusContent() {
                     {/* Header Travel */}
                     <div className="text-center border-b-2 border-slate-900 pb-3 space-y-0.5">
                       <h4 className="font-black text-sm uppercase tracking-tight">PT BAROKAH SULTHAN HARAMAIN</h4>
-                      <p className="text-[10px] text-slate-600 font-bold">IZIN PPIU KEMENAG RI NO. 25052200384080005</p>
+                      <p className="text-[10px] text-slate-600 font-bold uppercase">IZIN PPIU INDUK USAHA PT. GRAND RESTU HARAMAN NO. 25052200384080005</p>
                       <p className="text-[9px] text-slate-500">Jl. Syekh Beringin Griya Palm Asri, Tebing Tinggi • WA: 0821-6733-9464</p>
                       <div className="pt-2">
                         <span className="inline-block px-3 py-0.5 bg-slate-900 text-white font-black text-[10px] rounded tracking-wider uppercase">
