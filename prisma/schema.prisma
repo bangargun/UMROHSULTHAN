@@ -127,7 +127,7 @@ model Pilgrim {
   name                  String    // Nama Sesuai Kartu Vaksin & Paspor
   fatherName            String?   // Nama Ayah Kandung (untuk endorsement 3 kata & paspor)
   identityType          String?   @default("KTP") // KTP, PASPOR, KITAS, SIM
-  nik                   String    @unique // No Identitas / NIK
+  nik                   String    // No Identitas / NIK
 
   // Data Paspor RI
   passportName          String?   // Nama Lengkap pada Paspor
@@ -221,15 +221,24 @@ model Pilgrim {
   portalPassword        String?               @default("123456")
   user                  User?
   
+  // Alumni & Repeat Order Tracking
+  isAlumni              Boolean               @default(false)
+  tripCount             Int                   @default(1)
+  previousPilgrimId     String?
+  alumniDiscount        Float?                @default(0)
+
   // Relations
   invoices              Invoice[]
   handovers             LogisticsHandover[]
   requirements          PilgrimRequirement[]
   letters               OfficialLetter[]
   certificates          Certificate[]
+  documentHandovers     DocumentHandover[]
   
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
+
+  @@unique([nik, packageId])
 }
 
 model Invoice {
@@ -258,16 +267,27 @@ model Invoice {
 
 model Expense {
   id              String    @id @default(uuid())
+  voucherNumber   String?   @unique // Nomor BKK/Invoice e.g. "BKK/BSH/202610/001"
+  documentType    String    @default("BKK") // BKK (Bukti Kas Keluar) atau VENDOR_INVOICE (Tagihan Vendor)
   packageId       String?
   package         Package?  @relation(fields: [packageId], references: [id], onDelete: SetNull)
   category        String    @default("OPERASIONAL_KANTOR") // TIKET_PESAWAT, HOTEL_SAUDI, VISA_ASURANSI, LOGISTIK_VENDOR, MUTHAWWIF_HANDLING, MARKETING_IKLAN, OPERASIONAL_KANTOR
   title           String
-  amount          Float
+  amount          Float     // Total IDR Rupiah
+  currency        String    @default("IDR") // IDR, SAR
+  amountForeign   Float?    // Nominal jika mata uang asing (SAR)
+  exchangeRate    Float?    // Nilai kurs (misal: 1 SAR = 4300 IDR)
   expenseDate     DateTime  @default(now())
+  dueDate         DateTime? // Jatuh tempo jika invoice vendor belum lunas
+  status          String    @default("PAID") // PAID (Lunas / Keluar), PENDING (Hutang / Menunggu Bayar)
   paymentMethod   String    @default("BANK_TRANSFER") // BANK_TRANSFER, CASH, CREDIT_CARD
-  recipientVendor String?
+  recipientVendor String?   // Penerima Uang / Vendor
+  recipientPhone  String?   // Kontak Penerima
+  approvedBy      String?   // Pimpinan yang menyetujui
+  paidBy          String?   // Kasir / Staf Keuangan yang membayar
   notes           String?
-  proofUrl        String?
+  items           String?   // JSON array rincian multi-item: [{ description, category, quantity, unit, unitPrice, amount, amountForeign }]
+  proofUrl        String?   // Foto struk / nota (bisa multi JSON string)
   createdBy       String    @default("Admin Keuangan")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -326,6 +346,50 @@ model HandoverItem {
   quantity    Int               @default(1)
   isGiven     Boolean           @default(false)
   notes       String?
+}
+
+model DocumentHandover {
+  id                    String    @id @default(uuid())
+  receiptNumber         String    @unique // e.g. "STT-DOC/2026/10/0001"
+  pilgrimId             String
+  pilgrim               Pilgrim   @relation(fields: [pilgrimId], references: [id], onDelete: Cascade)
+  handoverType          String    @default("RECEIVE_FROM_PILGRIM") // RECEIVE_FROM_PILGRIM, RETURN_TO_PILGRIM
+  handoverDate          DateTime  @default(now())
+  officerName           String    // Petugas penerima/penyerah travel
+  submitterName         String    // Nama penyerah dokumen (jamaah / perwakilan)
+  submitterPhone        String?   // No WA penyerah
+  submitterRelation     String?   @default("YANG_BERSANGKUTAN") // YANG_BERSANGKUTAN, SUAMI_ISTRI, ORANG_TUA, ANAK, SAUDARA, KUASA_KELUARGA
+  
+  // Rincian Berkas Fisik
+  hasOriginalPassport   Boolean   @default(true)
+  passportNumber        String?
+  passportExpiry        DateTime?
+  passportPhysicalState String?   @default("BAIK_LENGKAP") // BAIK_LENGKAP, ADA_CATATAN
+  
+  hasYellowVaccineBook  Boolean   @default(false) // Buku Kuning / ICV Vaksin Meningitis
+  vaccineNotes          String?
+  
+  hasPassportPhotos     Boolean   @default(false) // Pasfoto 4x6 Latar Putih
+  photoCount            Int?      @default(0)
+  
+  hasFamilyCardCopy     Boolean   @default(false) // FC Kartu Keluarga
+  hasIdCardCopy         Boolean   @default(false) // FC KTP
+  hasMarriageBook       Boolean   @default(false) // Buku Nikah Asli / Legalisir
+  hasBirthCertificate   Boolean   @default(false) // Akta Kelahiran Asli
+  
+  additionalDocuments   String?   // Berkas tambahan lainnya
+  notes                 String?   // Catatan berita acara
+  
+  submitterSignatureUrl String?   // Ttd Penyerah (Jamaah)
+  officerSignatureUrl   String?   // Ttd Petugas Travel
+  
+  status                String    @default("STORED_SAFELY") // STORED_SAFELY, IN_VISA_PROCESS, RETURNED_TO_PILGRIM
+  returnDate            DateTime? // Tgl pengembalian paspor ke jamaah
+  returnOfficerName     String?   // Petugas yang mengembalikan
+  returnNotes           String?
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }
 
 model PilgrimRequirement {
@@ -869,6 +933,7 @@ model Certificate {
   muthawwifName     String?   @default("Ustadz Pembimbing Ibadah")
   directorName      String    @default("Attiyatul Amra")
   directorTitle     String    @default("Direktur Utama")
+  photoUrl          String?   // Foto jamaah / kenangan umroh pada piagam
   notes             String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

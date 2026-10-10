@@ -40,7 +40,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { batch, packageId, pilgrimId, muthawwifName, directorName, directorTitle, issueDate, notes } = body;
+    const { batch, packageId, pilgrimId, muthawwifName, directorName, directorTitle, issueDate, notes, photoUrl } = body;
 
     // Get company settings for default director name
     const setting = await prisma.travelSetting.findFirst();
@@ -141,6 +141,7 @@ export async function POST(request: Request) {
         muthawwifName: muthawwifName || "Ustadz Pembimbing Ibadah",
         directorName: activeDirectorName,
         directorTitle: activeDirectorTitle,
+        photoUrl: photoUrl || null,
         notes: notes || `Piagam Penghargaan Ibadah Umroh - ${pilgrim.name}`,
       },
       include: {
@@ -149,8 +150,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(cert, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating certificate:", error);
-    return NextResponse.json({ error: "Failed to create certificate" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Failed to create certificate" }, { status: 500 });
   }
 }

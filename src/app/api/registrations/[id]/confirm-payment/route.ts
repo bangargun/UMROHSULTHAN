@@ -20,8 +20,8 @@ export async function POST(
     }
 
     // 1. Cek / Buat data Jamaah Resmi di tabel Pilgrim
-    let pilgrim = await prisma.pilgrim.findUnique({
-      where: { nik: reg.nik },
+    let pilgrim = await prisma.pilgrim.findFirst({
+      where: { nik: reg.nik, packageId: reg.packageId },
     });
 
     if (!pilgrim) {

@@ -55,8 +55,8 @@ export async function POST(
     const isFullyPaid = account.totalBalance >= packagePrice;
 
     // 1. Cek atau Buat Jamaah di tabel Pilgrim
-    let pilgrim = await prisma.pilgrim.findUnique({
-      where: { nik: account.nik },
+    let pilgrim = await prisma.pilgrim.findFirst({
+      where: { nik: account.nik, packageId: finalPackageId },
     });
 
     if (!pilgrim) {

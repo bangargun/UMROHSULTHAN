@@ -35,9 +35,11 @@ import {
   MessageSquare,
   Syringe,
   FileSpreadsheet,
+  Award,
 } from "lucide-react";
 import { formatCurrency, formatDate, getStatusBadge } from "@/lib/utils";
 import RegistrationsAdminModal from "@/components/registrations/RegistrationsAdminModal";
+import ReEnrollAlumniModal from "@/components/pilgrims/ReEnrollAlumniModal";
 import Pagination from "@/components/common/Pagination";
 
 interface PilgrimsViewProps {
@@ -62,6 +64,7 @@ export default function PilgrimsView({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRegistrationsModalOpen, setIsRegistrationsModalOpen] = useState(false);
+  const [isAlumniReEnrollModalOpen, setIsAlumniReEnrollModalOpen] = useState(false);
   const [isManifestVisaModalOpen, setIsManifestVisaModalOpen] = useState(false);
   const [manifestVisaCopied, setManifestVisaCopied] = useState(false);
   const [editingPilgrimId, setEditingPilgrimId] = useState<string | null>(null);
@@ -1246,6 +1249,13 @@ export default function PilgrimsView({
             Export CSV Lengkap
           </button>
           <button
+            onClick={() => setIsAlumniReEnrollModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all cursor-pointer"
+          >
+            <Award className="h-4 w-4" />
+            + Daftarkan Alumni ke Paket Baru
+          </button>
+          <button
             onClick={() => setIsAddModalOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-all cursor-pointer"
           >
@@ -1542,7 +1552,15 @@ export default function PilgrimsView({
                       {/* Name & NIK */}
                       {columns.name && (
                         <td className="py-3.5 px-4">
-                          <p className="font-bold text-slate-900">{p.name}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-bold text-slate-900">{p.name}</p>
+                            {(p.isAlumni || (p.tripCount && p.tripCount > 1)) && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                                <Award className="w-2.5 h-2.5 text-amber-700" />
+                                Alumni (Trip {p.tripCount ? `#${p.tripCount}` : "Repeat"})
+                              </span>
+                            )}
+                          </div>
                           <p className="font-mono text-[11px] text-slate-400">NIK: {p.nik}</p>
                         </td>
                       )}
@@ -5860,6 +5878,16 @@ export default function PilgrimsView({
           </div>
         </div>
       )}
+
+      {/* Modal Pendaftaran Ulang Alumni ke Paket Baru */}
+      <ReEnrollAlumniModal
+        isOpen={isAlumniReEnrollModalOpen}
+        onClose={() => setIsAlumniReEnrollModalOpen(false)}
+        onSuccess={() => {
+          onRefresh();
+        }}
+        packages={packages}
+      />
     </div>
   );
 }

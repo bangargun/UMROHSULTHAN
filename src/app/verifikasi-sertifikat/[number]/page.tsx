@@ -115,6 +115,19 @@ export default async function CertificateVerificationPage({ params }: PageProps)
               </div>
 
               <div className="space-y-3">
+                {cert.photoUrl && (
+                  <div className="flex justify-center pb-2">
+                    <div className="w-24 h-32 rounded-2xl border-2 border-amber-400 overflow-hidden shadow-md bg-white p-1">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={cert.photoUrl}
+                        alt={cert.pilgrim?.name}
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-start gap-3">
                   <User className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
                   <div>

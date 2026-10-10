@@ -92,29 +92,21 @@ export default function Home() {
   }, []);
 
   const fetchAllData = async () => {
-    try {
-      const [
-        dashRes,
-        leadsRes,
-        pilgrimsRes,
-        packagesRes,
-        invoicesRes,
-        equipmentRes,
-        handoversRes,
-        lettersRes,
-        agentsRes,
-      ] = await Promise.all([
-        fetch("/api/dashboard"),
-        fetch("/api/leads"),
-        fetch("/api/pilgrims"),
-        fetch("/api/packages"),
-        fetch("/api/invoices"),
-        fetch("/api/equipment"),
-        fetch("/api/handovers"),
-        fetch("/api/letters"),
-        fetch("/api/agents"),
-      ]);
+    const safeFetch = async (url: string, fallback: any = []) => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (!res.ok) return fallback;
+        return await res.json();
+      } catch (err) {
+        console.warn(`safeFetch error on ${url}:`, err);
+        return fallback;
+      }
+    };
 
+    try {
       const [
         dashData,
         leadsData,
@@ -126,18 +118,18 @@ export default function Home() {
         lettersData,
         agentsData,
       ] = await Promise.all([
-        dashRes.json(),
-        leadsRes.json(),
-        pilgrimsRes.json(),
-        packagesRes.json(),
-        invoicesRes.json(),
-        equipmentRes.json(),
-        handoversRes.json(),
-        lettersRes.json(),
-        agentsRes.json(),
+        safeFetch("/api/dashboard", {}),
+        safeFetch("/api/leads", []),
+        safeFetch("/api/pilgrims", []),
+        safeFetch("/api/packages", []),
+        safeFetch("/api/invoices", []),
+        safeFetch("/api/equipment", []),
+        safeFetch("/api/handovers", []),
+        safeFetch("/api/letters", []),
+        safeFetch("/api/agents", []),
       ]);
 
-      setDashboardData(dashData);
+      setDashboardData(dashData || {});
       setLeads(Array.isArray(leadsData) ? leadsData : []);
       setPilgrims(Array.isArray(pilgrimsData) ? pilgrimsData : []);
       setPackages(Array.isArray(packagesData) ? packagesData : []);
@@ -191,10 +183,25 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-50 text-slate-900">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50 text-slate-900 p-4">
+        <div className="flex flex-col items-center gap-3 text-center max-w-sm">
+          <Loader2 className="h-9 w-9 animate-spin text-emerald-600" />
           <p className="text-sm font-bold tracking-wider">Menghubungkan Database Travel Umroh...</p>
+          <p className="text-xs text-slate-500">Sinkronisasi data manifest, paket, dan tagihan</p>
+          <div className="pt-2 flex gap-2">
+            <button
+              onClick={() => fetchAllData()}
+              className="text-xs px-3 py-1.5 rounded-lg bg-emerald-700 text-white font-medium hover:bg-emerald-800 transition-colors shadow-sm"
+            >
+              Segarkan Data
+            </button>
+            <button
+              onClick={() => setLoading(false)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-100 transition-colors"
+            >
+              Buka Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -347,6 +354,7 @@ export default function Home() {
             <FinanceView
               invoices={invoices}
               pilgrims={pilgrims}
+              packages={packages}
               onRefresh={fetchAllData}
               initialSearchTerm={activeSearchFilter}
             />

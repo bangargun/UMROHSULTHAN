@@ -2945,10 +2945,7 @@ Demikian surat keterangan ini kami sampaikan dengan sebenarnya untuk dapat diper
                     </div>
 
                     {/* 3. RECIPIENT */}
-                    {selectedLetterForPrint.type === "SURAT_IZIN_CUTI_TNI_POLRI" &&
-                    (!selectedLetterForPrint.destinationInstitution ||
-                      selectedLetterForPrint.destinationInstitution.trim() === "" ||
-                      /pimpinan kesatuan/i.test(selectedLetterForPrint.destinationInstitution)) ? null : (
+                    {selectedLetterForPrint.type === "SURAT_IZIN_CUTI_TNI_POLRI" ? null : (
                       <div className="pt-1.5 font-serif text-black space-y-0 text-[11.5px] leading-tight">
                         <p>Kepada Yth :</p>
                         <p className="font-bold text-[1.03em] uppercase">

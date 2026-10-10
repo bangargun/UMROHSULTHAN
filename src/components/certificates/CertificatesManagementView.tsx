@@ -22,9 +22,13 @@ import {
   Send,
   Loader2,
   Check,
+  Camera,
+  UploadCloud,
+  Image as ImageIcon,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Pagination from "@/components/common/Pagination";
+import { compressImageFile } from "@/components/finance/FinanceView";
 
 interface CertificatesManagementViewProps {
   pilgrims: any[];
@@ -54,6 +58,8 @@ export default function CertificatesManagementView({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [selectedCertForPrint, setSelectedCertForPrint] = useState<any | null>(null);
+  const [includePhotoOnCert, setIncludePhotoOnCert] = useState<boolean>(true);
+  const certPhotoInputRef = React.useRef<HTMLInputElement | null>(null);
   const [batchPackageId, setBatchPackageId] = useState(packages[0]?.id || "");
   const [modalPackageId, setModalPackageId] = useState(packages[0]?.id || "ALL");
   const [generating, setGenerating] = useState(false);
@@ -66,7 +72,46 @@ export default function CertificatesManagementView({
     directorTitle: "Direktur Utama",
     issueDate: new Date().toISOString().split("T")[0],
     notes: "",
+    photoUrl: "",
   });
+
+  const handleUploadPhotoForSelectedCert = async (file: File) => {
+    if (!selectedCertForPrint) return;
+    try {
+      const compressed = await compressImageFile(file);
+      const res = await fetch(`/api/certificates/${selectedCertForPrint.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoUrl: compressed }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setSelectedCertForPrint(updated);
+        fetchCertificates();
+      }
+    } catch (err) {
+      console.error("Gagal mengunggah foto sertifikat:", err);
+    }
+  };
+
+  const handleRemovePhotoForSelectedCert = async () => {
+    if (!selectedCertForPrint) return;
+    if (!window.confirm("Hapus foto dari piagam ini?")) return;
+    try {
+      const res = await fetch(`/api/certificates/${selectedCertForPrint.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoUrl: "" }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setSelectedCertForPrint(updated);
+        fetchCertificates();
+      }
+    } catch (err) {
+      console.error("Gagal menghapus foto sertifikat:", err);
+    }
+  };
 
   const fetchCertificates = async () => {
     try {
@@ -327,10 +372,23 @@ Wassalamu'alaikum Wr. Wb.`;
                       {cert.certificateNumber}
                     </td>
                     <td className="py-3.5 px-4">
-                      <p className="font-black text-slate-900">{cert.pilgrim?.name}</p>
-                      <p className="text-[10px] text-slate-400">
-                        Paspor: {cert.pilgrim?.passportNumber || "-"} • HP: {cert.pilgrim?.phone}
-                      </p>
+                      <div className="flex items-center gap-2.5">
+                        {cert.photoUrl ? (
+                          <div className="w-9 h-11 rounded-lg border-2 border-amber-400 overflow-hidden flex-shrink-0 shadow-2xs">
+                            <img src={cert.photoUrl} alt={cert.pilgrim?.name} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="w-9 h-11 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center flex-shrink-0 text-slate-300">
+                            <User className="w-5 h-5" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-black text-slate-900">{cert.pilgrim?.name}</p>
+                          <p className="text-[10px] text-slate-400">
+                            Paspor: {cert.pilgrim?.passportNumber || "-"} • HP: {cert.pilgrim?.phone}
+                          </p>
+                        </div>
+                      </div>
                     </td>
                     <td className="py-3.5 px-4">
                       <p className="font-bold text-slate-800">{cert.packageName}</p>
@@ -522,6 +580,55 @@ Wassalamu'alaikum Wr. Wb.`;
                 />
               </div>
 
+              {/* Upload Foto Jamaah / Kenangan Umroh */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Foto Jamaah / Kenangan di Tanah Suci (Opsional)
+                </label>
+                <div className="flex items-center gap-3 p-3 bg-amber-50/50 border border-amber-200 rounded-2xl">
+                  {formData.photoUrl ? (
+                    <div className="relative w-16 h-20 rounded-xl overflow-hidden border-2 border-amber-400 flex-shrink-0 shadow-xs bg-white">
+                      <img src={formData.photoUrl} alt="Foto Piagam" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, photoUrl: "" })}
+                        className="absolute top-1 right-1 p-1 bg-rose-600 text-white rounded-md hover:bg-rose-700 cursor-pointer"
+                        title="Hapus Foto"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-16 h-20 rounded-xl border-2 border-dashed border-amber-300 flex flex-col items-center justify-center text-amber-700/60 bg-white flex-shrink-0">
+                      <Camera className="w-6 h-6 mb-1 text-amber-500" />
+                      <span className="text-[9px] font-bold">Foto</span>
+                    </div>
+                  )}
+
+                  <div className="flex-1 space-y-1.5">
+                    <p className="text-[11px] text-slate-600 leading-tight">
+                      Foto akan disematkan di dalam lembar Piagam Resmi (Syahadah Al-Umrah) berbingkai emas elegan.
+                    </p>
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:border-amber-500 rounded-xl text-xs font-bold text-slate-700 cursor-pointer shadow-2xs transition-colors">
+                      <UploadCloud className="w-3.5 h-3.5 text-amber-600" />
+                      <span>{formData.photoUrl ? "Ganti Foto" : "Pilih / Unggah Foto"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const compressed = await compressImageFile(file);
+                            setFormData({ ...formData, photoUrl: compressed });
+                          }
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-3 flex justify-end gap-2">
                 <button
                   type="button"
@@ -617,22 +724,68 @@ Wassalamu'alaikum Wr. Wb.`;
                   Pratinjau Piagam Resmi: {selectedCertForPrint.certificateNumber}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  type="file"
+                  ref={certPhotoInputRef}
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      await handleUploadPhotoForSelectedCert(file);
+                    }
+                  }}
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => certPhotoInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-400/40 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                  title="Unggah atau ganti foto jamaah untuk piagam ini"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>{selectedCertForPrint.photoUrl ? "Ganti Foto" : "+ Unggah Foto"}</span>
+                </button>
+
+                {selectedCertForPrint.photoUrl && (
+                  <>
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={includePhotoOnCert}
+                        onChange={(e) => setIncludePhotoOnCert(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded text-amber-500 focus:ring-amber-400 cursor-pointer"
+                      />
+                      <span>Tampilkan Foto</span>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={handleRemovePhotoForSelectedCert}
+                      className="p-1.5 rounded-xl bg-slate-800 hover:bg-rose-900 text-slate-400 hover:text-rose-200 border border-slate-700 cursor-pointer"
+                      title="Hapus foto dari piagam ini"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+
                 <button
                   onClick={() => handleSendWA(selectedCertForPrint)}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs"
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" /> Kirim WA
                 </button>
                 <button
                   onClick={() => window.print()}
-                  className="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs flex items-center gap-1.5 transition-all shadow-md"
+                  className="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
                 >
                   <Printer className="w-4 h-4" /> Cetak A4 Landscape
                 </button>
                 <button
                   onClick={() => setSelectedCertForPrint(null)}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 text-base"
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 text-base cursor-pointer"
                 >
                   ✕
                 </button>
@@ -688,16 +841,52 @@ Wassalamu'alaikum Wr. Wb.`;
                   <div className="space-y-2 max-w-3xl mx-auto text-xs sm:text-sm text-slate-700 leading-relaxed">
                     <p className="italic text-slate-600">Diberikan dengan penuh rasa syukur dan hormat kepada:</p>
                     
-                    <div className="py-2">
-                      <h1 className="text-2xl sm:text-3xl font-serif font-black text-[#6d4e11] tracking-wide uppercase underline decoration-[#c59b27] decoration-2 underline-offset-8">
-                        {selectedCertForPrint.pilgrim?.name}
-                      </h1>
-                      {selectedCertForPrint.pilgrim?.passportNumber && (
-                        <p className="text-xs font-mono font-bold text-slate-600 mt-2">
-                          No. Paspor: {selectedCertForPrint.pilgrim.passportNumber}
-                        </p>
-                      )}
-                    </div>
+                    {includePhotoOnCert && selectedCertForPrint.photoUrl ? (
+                      <div className="flex items-center justify-center gap-6 py-2">
+                        {/* Bingkai Foto Emas Ornamen Mewah (Syahadah Frame) */}
+                        <div className="flex-shrink-0 relative">
+                          <div
+                            className="rounded-2xl border-4 border-double border-[#c59b27] p-1 bg-white shadow-md relative overflow-hidden flex items-center justify-center"
+                            style={{ width: "105px", height: "135px" }}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={selectedCertForPrint.photoUrl}
+                              alt={selectedCertForPrint.pilgrim?.name}
+                              className="w-full h-full object-cover rounded-xl"
+                            />
+                          </div>
+                          <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-[#c59b27] to-[#8c6d1f] text-white p-1 rounded-full shadow-xs border border-white">
+                            <Award className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+
+                        <div className="text-left space-y-1">
+                          <h1 className="text-2xl sm:text-3xl font-serif font-black text-[#6d4e11] tracking-wide uppercase underline decoration-[#c59b27] decoration-2 underline-offset-8">
+                            {selectedCertForPrint.pilgrim?.name}
+                          </h1>
+                          {selectedCertForPrint.pilgrim?.passportNumber && (
+                            <p className="text-xs font-mono font-bold text-slate-600 pt-1">
+                              No. Paspor: {selectedCertForPrint.pilgrim.passportNumber}
+                            </p>
+                          )}
+                          <p className="text-[11px] text-[#8c6d1f] font-serif font-semibold italic">
+                            Alumni Jamaah Umroh Barokah Sulthan Haramain
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-2">
+                        <h1 className="text-2xl sm:text-3xl font-serif font-black text-[#6d4e11] tracking-wide uppercase underline decoration-[#c59b27] decoration-2 underline-offset-8">
+                          {selectedCertForPrint.pilgrim?.name}
+                        </h1>
+                        {selectedCertForPrint.pilgrim?.passportNumber && (
+                          <p className="text-xs font-mono font-bold text-slate-600 mt-2">
+                            No. Paspor: {selectedCertForPrint.pilgrim.passportNumber}
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                     <p className="px-4 text-xs sm:text-sm text-slate-800">
                       Atas terselesaikannya seluruh rangkaian manasik dan pelaksanaan <strong>Ibadah Umroh</strong> di Tanah Suci Makkah Al-Mukarramah serta Ziarah di Madinah Al-Munawwarah pada program:

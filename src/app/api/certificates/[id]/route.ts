@@ -31,7 +31,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
-    const { muthawwifName, directorName, directorTitle, issueDate, notes } = body;
+    const { muthawwifName, directorName, directorTitle, issueDate, notes, photoUrl } = body;
 
     const updated = await prisma.certificate.update({
       where: { id: params.id },
@@ -41,6 +41,7 @@ export async function PUT(
         directorTitle: directorTitle || undefined,
         issueDate: issueDate ? new Date(issueDate) : undefined,
         notes: notes !== undefined ? notes : undefined,
+        ...(photoUrl !== undefined && { photoUrl: photoUrl || null }),
       },
       include: {
         pilgrim: {

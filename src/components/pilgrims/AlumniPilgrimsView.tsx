@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Pagination from "@/components/common/Pagination";
+import ReEnrollAlumniModal from "@/components/pilgrims/ReEnrollAlumniModal";
 
 interface AlumniPilgrimsViewProps {
   pilgrims: any[];
@@ -58,6 +59,13 @@ export default function AlumniPilgrimsView({
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isAddAlumniOpen, setIsAddAlumniOpen] = useState(false);
+  const [isReEnrollOpen, setIsReEnrollOpen] = useState(false);
+  const [reEnrollPilgrim, setReEnrollPilgrim] = useState<any | null>(null);
+
+  const handleOpenReEnroll = (pilgrim?: any) => {
+    setReEnrollPilgrim(pilgrim || null);
+    setIsReEnrollOpen(true);
+  };
 
   // Form state for manual alumni entry
   const [alumniForm, setAlumniForm] = useState({
@@ -262,6 +270,12 @@ export default function AlumniPilgrimsView({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 z-10">
+          <button
+            onClick={() => handleOpenReEnroll()}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-xs font-black shadow-md transition-all cursor-pointer"
+          >
+            <RefreshCw className="w-4 h-4" /> + Daftarkan ke Paket Baru
+          </button>
           <button
             onClick={() => setIsAddAlumniOpen(true)}
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black shadow-md transition-all"
@@ -607,6 +621,15 @@ export default function AlumniPilgrimsView({
                       {/* 6. AKSI KHUSUS ALUMNI */}
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
+                          {/* Daftarkan Ulang ke Paket Baru */}
+                          <button
+                            onClick={() => handleOpenReEnroll(p)}
+                            className="p-2 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 transition-all shadow-xs"
+                            title="Daftarkan Ulang ke Paket Baru (Repeat Order)"
+                          >
+                            <RefreshCw className="w-4 h-4 text-emerald-700" />
+                          </button>
+
                           {/* Cetak Sertifikat */}
                           <button
                             onClick={() => setSelectedPilgrimForCert(p)}
@@ -619,10 +642,10 @@ export default function AlumniPilgrimsView({
                           {/* Kirim Pesan WA */}
                           <button
                             onClick={() => setSelectedPilgrimForWA(p)}
-                            className="p-2 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 transition-all shadow-xs"
+                            className="p-2 rounded-xl bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-300 transition-all shadow-xs"
                             title="Kirim Pesan Silaturahmi / Testimoni WhatsApp"
                           >
-                            <Send className="w-4 h-4 text-emerald-700" />
+                            <Send className="w-4 h-4 text-blue-700" />
                           </button>
                         </div>
                       </td>
@@ -961,6 +984,20 @@ export default function AlumniPilgrimsView({
           </div>
         </div>
       )}
+
+      {/* Modal Re-Enroll / Repeat Order Alumni */}
+      <ReEnrollAlumniModal
+        isOpen={isReEnrollOpen}
+        onClose={() => {
+          setIsReEnrollOpen(false);
+          setReEnrollPilgrim(null);
+        }}
+        onSuccess={() => {
+          onRefresh();
+        }}
+        packages={packages}
+        preSelectedPilgrim={reEnrollPilgrim}
+      />
     </div>
   );
 }

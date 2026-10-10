@@ -39,6 +39,8 @@ import {
 import { formatCurrency, formatDate, getStatusBadge, generateWhatsAppReminderUrl, formatRupiahWithWords } from "@/lib/utils";
 import Pagination from "@/components/common/Pagination";
 
+import ExpenseManagementView from "./ExpenseManagementView";
+
 export const parseProofUrls = (raw: string | null | undefined): string[] => {
   if (!raw) return [];
   const trimmed = String(raw).trim();
@@ -98,7 +100,7 @@ interface ProofUploadManagerProps {
   description?: string;
 }
 
-function ProofUploadManager({
+export function ProofUploadManager({
   urls,
   onChange,
   onPreview,
@@ -260,11 +262,13 @@ function ProofUploadManager({
 interface FinanceViewProps {
   invoices: any[];
   pilgrims: any[];
+  packages?: any[];
   onRefresh: () => void;
   initialSearchTerm?: string;
 }
 
-export default function FinanceView({ invoices, pilgrims, onRefresh, initialSearchTerm = "" }: FinanceViewProps) {
+export default function FinanceView({ invoices, pilgrims, packages = [], onRefresh, initialSearchTerm = "" }: FinanceViewProps) {
+  const [financeTab, setFinanceTab] = useState<"INVOICES" | "EXPENSES">("INVOICES");
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [selectedType, setSelectedType] = useState<string>("ALL");
@@ -277,6 +281,7 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
   const [selectedIndividualIndex, setSelectedIndividualIndex] = useState<number>(0);
   const [printAllIndividual, setPrintAllIndividual] = useState<boolean>(false);
   const [showProofInReceipt, setShowProofInReceipt] = useState<boolean>(true);
+  const [includeMeteraiInReceipt, setIncludeMeteraiInReceipt] = useState<boolean>(false);
   const [previewProofModal, setPreviewProofModal] = useState<{ isOpen: boolean; urls: string[]; activeIndex: number; title: string }>({
     isOpen: false,
     urls: [],
@@ -801,7 +806,45 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
 
   return (
     <div className="space-y-6">
-      {/* Financial KPI Summary */}
+      {/* Sub-tab Navigation: Pemasukan vs Pengeluaran */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 no-print">
+        <button
+          type="button"
+          onClick={() => setFinanceTab("INVOICES")}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+            financeTab === "INVOICES"
+              ? "bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600/20"
+              : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          <span>Pemasukan & Tagihan Jamaah (Invoice & Kwitansi)</span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10px] ${
+              financeTab === "INVOICES" ? "bg-emerald-700/60 text-white" : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            {invoices.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFinanceTab("EXPENSES")}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+            financeTab === "EXPENSES"
+              ? "bg-rose-600 text-white shadow-sm ring-2 ring-rose-600/20"
+              : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          <Receipt className="w-4 h-4" />
+          <span>Pengeluaran Operasional & Kas Keluar (BKK & Vendor)</span>
+        </button>
+      </div>
+
+      {financeTab === "INVOICES" ? (
+        <>
+          {/* Financial KPI Summary */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 no-print">
         <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-5 text-white shadow-md">
           <p className="text-xs font-semibold text-emerald-100 uppercase tracking-wider">Total Kas Diterima</p>
@@ -1101,6 +1144,10 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
           itemLabel="invoice"
         />
       </div>
+        </>
+      ) : (
+        <ExpenseManagementView packages={packages} travelSettings={travelSettings} />
+      )}
 
       {/* Modal 1: Form Buat Invoice Baru */}
       {isAddModalOpen && (
@@ -2929,16 +2976,36 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                     {inv.status === "PAID" ? "STATUS: LUNAS / SAH" : "STATUS: MENUNGGU PEMBAYARAN"}
                   </p>
                   <p>Dicetak otomatis via Sistem ERP Umroh</p>
+                  {includeMeteraiInReceipt && (
+                    <p className="text-[9.5px] text-amber-800 font-semibold mt-1">
+                      ✓ Dokumen sah bermeterai tempel Rp 10.000
+                    </p>
+                  )}
                 </div>
 
-                <div className="text-center w-48">
+                <div className="text-center w-52 sm:w-56">
                   <p className="text-xs text-slate-600">Tebing Tinggi, {formatDate(inv.paymentDate || inv.createdAt || new Date(), "dd MMMM yyyy")}</p>
                   <p className="text-xs font-bold text-slate-700 mt-0.5">Bagian Keuangan / Pimpinan,</p>
-                  <div className="h-12 flex items-center justify-center">
-                    <span className="font-serif italic text-xs text-emerald-700 font-bold border-b border-emerald-400 pb-0.5">
-                      [Tanda Tangan & Stempel Resmi]
-                    </span>
-                  </div>
+                  
+                  {includeMeteraiInReceipt ? (
+                    <div className="py-1.5 flex items-center justify-center">
+                      <div
+                        className="border border-dashed border-slate-400 rounded-md p-1 text-center flex flex-col items-center justify-center bg-slate-50 leading-tight select-none shadow-2xs"
+                        style={{ width: "94px", height: "62px" }}
+                      >
+                        <span className="font-bold uppercase tracking-wider text-[7px] text-slate-600">METERAI TEMPEL</span>
+                        <span className="font-black text-[10px] text-slate-900 my-0.5">Rp 10.000</span>
+                        <span className="text-[6.5px] text-slate-500">Ttd & Cap Menimpa</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-12 flex items-center justify-center">
+                      <span className="font-serif italic text-xs text-emerald-700 font-bold border-b border-emerald-400 pb-0.5">
+                        [Tanda Tangan & Stempel Resmi]
+                      </span>
+                    </div>
+                  )}
+
                   <p className="text-xs font-bold text-slate-900">{travelSettings.directorName || "ATIYATUL AMRA"}</p>
                   <p className="text-[10px] text-slate-400">{travelSettings.directorTitle || "Direktur Utama"}</p>
                 </div>
@@ -3229,16 +3296,36 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                     {isAllPaid ? "STATUS: LUNAS / SAH" : "STATUS: MENUNGGU PEMBAYARAN"}
                   </p>
                   <p>Dicetak otomatis via Sistem ERP Umroh</p>
+                  {includeMeteraiInReceipt && (
+                    <p className="text-[9.5px] text-amber-800 font-semibold mt-1">
+                      ✓ Dokumen sah bermeterai tempel Rp 10.000
+                    </p>
+                  )}
                 </div>
 
-                <div className="text-center w-48">
+                <div className="text-center w-52 sm:w-56">
                   <p className="text-xs text-slate-600">Tebing Tinggi, {formatDate(groupPaymentDate, "dd MMMM yyyy")}</p>
                   <p className="text-xs font-bold text-slate-700 mt-0.5">Bagian Keuangan / Pimpinan,</p>
-                  <div className="h-12 flex items-center justify-center">
-                    <span className="font-serif italic text-xs text-emerald-700 font-bold border-b border-emerald-400 pb-0.5">
-                      [Tanda Tangan & Stempel Resmi]
-                    </span>
-                  </div>
+                  
+                  {includeMeteraiInReceipt ? (
+                    <div className="py-1.5 flex items-center justify-center">
+                      <div
+                        className="border border-dashed border-slate-400 rounded-md p-1 text-center flex flex-col items-center justify-center bg-slate-50 leading-tight select-none shadow-2xs"
+                        style={{ width: "94px", height: "62px" }}
+                      >
+                        <span className="font-bold uppercase tracking-wider text-[7px] text-slate-600">METERAI TEMPEL</span>
+                        <span className="font-black text-[10px] text-slate-900 my-0.5">Rp 10.000</span>
+                        <span className="text-[6.5px] text-slate-500">Ttd & Cap Menimpa</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-12 flex items-center justify-center">
+                      <span className="font-serif italic text-xs text-emerald-700 font-bold border-b border-emerald-400 pb-0.5">
+                        [Tanda Tangan & Stempel Resmi]
+                      </span>
+                    </div>
+                  )}
+
                   <p className="text-xs font-bold text-slate-900">{travelSettings.directorName || "ATIYATUL AMRA"}</p>
                   <p className="text-[10px] text-slate-400">{travelSettings.directorTitle || "Direktur Utama"}</p>
                 </div>
@@ -3304,6 +3391,24 @@ export default function FinanceView({ invoices, pilgrims, onRefresh, initialSear
                       />
                       <Camera className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Sertakan Bukti Foto</span>
+                    </label>
+
+                    <label
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer select-none transition-all ${
+                        includeMeteraiInReceipt
+                          ? "bg-amber-50 border-amber-300 text-amber-900 shadow-2xs"
+                          : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700"
+                      }`}
+                      title="Centang untuk menyematkan kolom materai tempel Rp 10.000 pada area tanda tangan"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={includeMeteraiInReceipt}
+                        onChange={(e) => setIncludeMeteraiInReceipt(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <FileCheck className="w-3.5 h-3.5 text-amber-700" />
+                      <span>Gunakan Materai (Rp 10.000)</span>
                     </label>
 
                     {receiptViewMode === "GROUP" && multiReceiptInvoices && multiReceiptInvoices.length > 1 ? (
