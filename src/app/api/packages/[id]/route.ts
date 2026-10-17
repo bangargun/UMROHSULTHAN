@@ -40,6 +40,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       commissionAgent,
       commissionReferral,
       status,
+      muthawwifName,
     } = body;
 
     let calculatedReturnDate: Date | undefined = returnDate ? new Date(returnDate) : undefined;
@@ -71,6 +72,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         commissionAgent: commissionAgent !== undefined ? parseFloat(commissionAgent) : undefined,
         commissionReferral: commissionReferral !== undefined ? parseFloat(commissionReferral) : undefined,
         status,
+        ...(muthawwifName !== undefined && { muthawwifName: muthawwifName && muthawwifName.trim() !== "" ? muthawwifName.trim() : null }),
       },
     });
 

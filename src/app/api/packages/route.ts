@@ -39,6 +39,7 @@ export async function POST(request: Request) {
       quota,
       commissionAgent,
       commissionReferral,
+      muthawwifName,
     } = body;
 
     const daysCount = parseInt(durationDays) || 9;
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
         quota: parseInt(quota) || 45,
         commissionAgent: commissionAgent !== undefined ? parseFloat(commissionAgent) : 1500000,
         commissionReferral: commissionReferral !== undefined ? parseFloat(commissionReferral) : 500000,
+        muthawwifName: muthawwifName && muthawwifName.trim() !== "" ? muthawwifName.trim() : null,
       },
     });
 

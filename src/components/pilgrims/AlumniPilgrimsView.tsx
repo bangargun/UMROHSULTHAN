@@ -528,8 +528,13 @@ export default function AlumniPilgrimsView({
                             {p.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900 text-xs">{p.name}</p>
-                            <p className="font-mono text-[11px] text-slate-500">NIK: {p.nik}</p>
+                            {p.nik?.startsWith("TEMP-") ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded mt-0.5" title="NIK Sementara: Calon jamaah belum menyetorkan e-KTP">
+                                ⚠️ NIK Sementara ({p.nik})
+                              </span>
+                            ) : (
+                              <p className="font-mono text-[11px] text-slate-500">NIK: {p.nik}</p>
+                            )}
                             <p className="text-[10px] text-slate-400">
                               {p.gender === "MALE" ? "Laki-laki" : "Perempuan"} • {p.phone}
                             </p>
@@ -702,15 +707,33 @@ export default function AlumniPilgrimsView({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700">NIK (KTP) *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">NIK (KTP) *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, "");
+                        const rand = Math.floor(1000 + Math.random() * 9000);
+                        setAlumniForm({ ...alumniForm, nik: `TEMP-${dateStr}-${rand}` });
+                      }}
+                      className="text-[9px] font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5 transition-all"
+                      title="Generate NIK Sementara jika data KTP belum lengkap"
+                    >
+                      ⚡ NIK Sementara
+                    </button>
+                  </div>
                   <input
                     type="text"
                     required
-                    maxLength={16}
-                    placeholder="16 digit NIK"
+                    maxLength={20}
+                    placeholder="16 digit NIK atau klik NIK Sementara"
                     value={alumniForm.nik}
-                    onChange={(e) => setAlumniForm({ ...alumniForm, nik: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-mono"
+                    onChange={(e) => setAlumniForm({ ...alumniForm, nik: e.target.value.toUpperCase() })}
+                    className={`mt-1 w-full rounded-xl border p-2.5 font-mono text-xs ${
+                      alumniForm.nik?.startsWith("TEMP-")
+                        ? "border-amber-400 bg-amber-50/70 text-amber-950 font-bold"
+                        : "border-slate-200 bg-white"
+                    }`}
                   />
                 </div>
                 <div>

@@ -865,7 +865,8 @@ export default function PilgrimsView({
   const filteredPilgrims = pilgrims.filter((p) => {
     const matchSearch =
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.nik.includes(searchTerm) ||
+      (p.nik && p.nik.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (searchTerm.toLowerCase().includes("sementara") && p.nik?.startsWith("TEMP-")) ||
       (p.passportNumber && p.passportNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (p.meningitisVaccineNumber && p.meningitisVaccineNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (p.polioVaccineNumber && p.polioVaccineNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -1561,7 +1562,14 @@ export default function PilgrimsView({
                               </span>
                             )}
                           </div>
-                          <p className="font-mono text-[11px] text-slate-400">NIK: {p.nik}</p>
+                          {p.nik?.startsWith("TEMP-") ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded-md mt-0.5" title="NIK Sementara: Calon jamaah belum menyetorkan foto e-KTP">
+                              <span className="font-mono">{p.nik}</span>
+                              <span className="text-[9px] bg-amber-600 text-white font-black px-1 rounded-xs">BELUM KTP</span>
+                            </span>
+                          ) : (
+                            <p className="font-mono text-[11px] text-slate-400">NIK: {p.nik}</p>
+                          )}
                         </td>
                       )}
 
@@ -1575,8 +1583,19 @@ export default function PilgrimsView({
                       {/* Identity */}
                       {columns.identity && (
                         <td className="py-3.5 px-3">
-                          <span className="font-bold text-slate-700">{p.identityType || "KTP"}:</span>
-                          <p className="font-mono text-[11px] text-slate-600">{p.nik}</p>
+                          {p.nik?.startsWith("TEMP-") ? (
+                            <div>
+                              <span className="inline-flex items-center gap-1 text-[9px] font-black text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded">
+                                ⚠️ NIK SEMENTARA
+                              </span>
+                              <p className="font-mono text-[10px] text-slate-500 mt-0.5">{p.nik}</p>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="font-bold text-slate-700">{p.identityType || "KTP"}:</span>
+                              <p className="font-mono text-[11px] text-slate-600">{p.nik}</p>
+                            </>
+                          )}
                         </td>
                       )}
 
@@ -2856,16 +2875,58 @@ export default function PilgrimsView({
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="font-bold text-slate-700">Nomor Identitas (NIK) *</label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={16}
-                      placeholder="16 Digit NIK e-KTP"
-                      value={formData.nik}
-                      onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-mono font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
-                    />
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-bold text-slate-700 flex items-center gap-1.5">
+                        Nomor Identitas (NIK) *
+                        {formData.nik.startsWith("TEMP-") && (
+                          <span className="text-[10px] font-black px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                            ⚠️ NIK SEMENTARA
+                          </span>
+                        )}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, "");
+                          const rand = Math.floor(1000 + Math.random() * 9000);
+                          setFormData({ ...formData, nik: `TEMP-${dateStr}-${rand}` });
+                        }}
+                        className="text-[10px] font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg px-2 py-0.5 transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+                        title="Klik jika calon jamaah belum menyetorkan e-KTP. Sistem akan mengisi NIK sementara yang jelas ditandai."
+                      >
+                        ⚡ Buat NIK Sementara
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        maxLength={20}
+                        placeholder="16 Digit NIK e-KTP atau klik Buat NIK Sementara"
+                        value={formData.nik}
+                        onChange={(e) => setFormData({ ...formData, nik: e.target.value.toUpperCase() })}
+                        className={`w-full rounded-xl border p-2.5 font-mono font-bold focus:ring-2 focus:ring-emerald-500/20 ${
+                          formData.nik.startsWith("TEMP-")
+                            ? "border-amber-400 bg-amber-50/70 text-amber-950"
+                            : "border-slate-200 bg-white text-slate-900"
+                        }`}
+                      />
+                      {formData.nik.startsWith("TEMP-") && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, nik: "" })}
+                          className="absolute right-2.5 top-2.5 text-[10px] font-bold text-rose-600 hover:text-rose-800 bg-white border border-rose-200 rounded px-1.5 py-0.5 shadow-2xs"
+                          title="Hapus NIK sementara untuk input NIK asli"
+                        >
+                          ✕ Reset
+                        </button>
+                      )}
+                    </div>
+                    {formData.nik.startsWith("TEMP-") && (
+                      <p className="mt-1 text-[10px] text-amber-800 font-semibold flex items-center gap-1">
+                        ⚠️ NIK Sementara aktif: Jamaah belum setor e-KTP. NIK ini jelas ditandai di sistem agar Anda ingat meminta foto KTP asli nanti.
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -4321,16 +4382,58 @@ export default function PilgrimsView({
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="font-bold text-slate-700">Nomor Identitas (NIK) *</label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={16}
-                      placeholder="16 Digit NIK e-KTP"
-                      value={editFormData.nik}
-                      onChange={(e) => setEditFormData({ ...editFormData, nik: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 bg-white font-mono font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
-                    />
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-bold text-slate-700 flex items-center gap-1.5">
+                        Nomor Identitas (NIK) *
+                        {editFormData.nik?.startsWith("TEMP-") && (
+                          <span className="text-[10px] font-black px-1.5 py-0.2 rounded bg-rose-100 text-rose-900 border border-rose-300 animate-pulse">
+                            ⚠️ Masih NIK Sementara
+                          </span>
+                        )}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, "");
+                          const rand = Math.floor(1000 + Math.random() * 9000);
+                          setEditFormData({ ...editFormData, nik: `TEMP-${dateStr}-${rand}` });
+                        }}
+                        className="text-[10px] font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg px-2 py-0.5 transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+                        title="Klik untuk generate NIK sementara baru jika belum ada KTP"
+                      >
+                        ⚡ Buat NIK Sementara
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        maxLength={20}
+                        placeholder="16 Digit NIK e-KTP"
+                        value={editFormData.nik}
+                        onChange={(e) => setEditFormData({ ...editFormData, nik: e.target.value.toUpperCase() })}
+                        className={`w-full rounded-xl border p-2.5 font-mono font-bold focus:ring-2 focus:ring-emerald-500/20 ${
+                          editFormData.nik?.startsWith("TEMP-")
+                            ? "border-amber-400 bg-amber-50/70 text-amber-950"
+                            : "border-slate-200 bg-white text-slate-900"
+                        }`}
+                      />
+                      {editFormData.nik?.startsWith("TEMP-") && (
+                        <button
+                          type="button"
+                          onClick={() => setEditFormData({ ...editFormData, nik: "" })}
+                          className="absolute right-2.5 top-2.5 text-[10px] font-bold text-rose-600 hover:text-rose-800 bg-white border border-rose-200 rounded px-1.5 py-0.5 shadow-2xs"
+                          title="Hapus untuk mengetikkan NIK asli dari foto KTP"
+                        >
+                          ✕ Hapus & Ketik NIK Asli
+                        </button>
+                      )}
+                    </div>
+                    {editFormData.nik?.startsWith("TEMP-") && (
+                      <p className="mt-1 text-[10px] text-amber-800 font-semibold">
+                        💡 Jika jamaah sudah menyerahkan foto e-KTP, klik tombol &quot;✕ Hapus &amp; Ketik NIK Asli&quot; di atas lalu ketik 16 digit NIK aslinya.
+                      </p>
+                    )}
                   </div>
                 </div>
 

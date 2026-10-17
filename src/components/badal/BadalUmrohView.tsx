@@ -848,7 +848,7 @@ Wassalamu'alaikum Wr. Wb.
                             <strong>{travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}</strong>
                           </p>
                           <div className="h-16 flex items-center justify-center">
-                            <span className="font-serif italic text-xs text-slate-400">[Tanda Tangan & Stempel]</span>
+                            {/* Ruang bersih untuk tanda tangan dan stempel basah */}
                           </div>
                           <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">
                             {travelSettings.directorName || "ATIYATUL AMRA"}
@@ -864,7 +864,7 @@ Wassalamu'alaikum Wr. Wb.
                   {/* 7. FOOTER RESMI DENGAN TULISAN KECIL RAPI DI BAGIAN PALING BAWAH */}
                   <div className="pt-4 border-t border-[#ebd8b7] text-center space-y-0.5 text-[9px] sm:text-[9.5px] text-slate-500 leading-tight">
                     <p className="font-bold text-slate-700 uppercase tracking-wider">
-                      {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"} • BAROKAH GROUP INDONESIA
+                      {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
                     </p>
                     <p>
                       {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum RI NOMOR AHU-0007388.AH.01.01.TAHUN 2026"} • NO. IZIN PPIU INDUK USAHA PT. GRAND RESTU HARAMAN: {(travelSettings.licenseNumber || "25052200384080005")

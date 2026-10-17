@@ -61,13 +61,14 @@ export default function CertificatesManagementView({
   const [includePhotoOnCert, setIncludePhotoOnCert] = useState<boolean>(true);
   const certPhotoInputRef = React.useRef<HTMLInputElement | null>(null);
   const [batchPackageId, setBatchPackageId] = useState(packages[0]?.id || "");
+  const [batchMuthawwifName, setBatchMuthawwifName] = useState(packages[0]?.muthawwifName || "");
   const [modalPackageId, setModalPackageId] = useState(packages[0]?.id || "ALL");
   const [generating, setGenerating] = useState(false);
 
-  // Single Form State
+  // Single Form State (Zero-Mock Data Policy: Nilai awal kosong/opsional)
   const [formData, setFormData] = useState({
     pilgrimId: pilgrims[0]?.id || "",
-    muthawwifName: "Ustadz Pembimbing Ibadah",
+    muthawwifName: "",
     directorName: "Attiyatul Amra",
     directorTitle: "Direktur Utama",
     issueDate: new Date().toISOString().split("T")[0],
@@ -207,6 +208,7 @@ export default function CertificatesManagementView({
         body: JSON.stringify({
           batch: true,
           packageId: batchPackageId,
+          muthawwifName: batchMuthawwifName,
           directorName: travelSettings.directorName || "Attiyatul Amra",
           directorTitle: travelSettings.directorTitle || "Direktur Utama",
           issueDate: new Date().toISOString().split("T")[0],
@@ -481,9 +483,11 @@ Wassalamu'alaikum Wr. Wb.`;
                     const newPkgId = e.target.value;
                     setModalPackageId(newPkgId);
                     const pFiltered = newPkgId === "ALL" ? pilgrims : pilgrims.filter((p) => p.packageId === newPkgId);
+                    const foundPkg = packages.find((p) => p.id === newPkgId);
                     setFormData((prev) => ({
                       ...prev,
                       pilgrimId: pFiltered[0]?.id || "",
+                      muthawwifName: foundPkg?.muthawwifName || prev.muthawwifName || "",
                     }));
                   }}
                   className="w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-amber-500/20"
@@ -516,7 +520,16 @@ Wassalamu'alaikum Wr. Wb.`;
                     <select
                       required
                       value={formData.pilgrimId}
-                      onChange={(e) => setFormData({ ...formData, pilgrimId: e.target.value })}
+                      onChange={(e) => {
+                        const pId = e.target.value;
+                        const pObj = pilgrims.find((item) => item.id === pId);
+                        const pPkg = packages.find((item) => item.id === pObj?.packageId);
+                        setFormData((prev) => ({
+                          ...prev,
+                          pilgrimId: pId,
+                          muthawwifName: prev.muthawwifName || pPkg?.muthawwifName || "",
+                        }));
+                      }}
                       className="w-full rounded-xl border border-amber-300 p-2.5 bg-white font-bold text-slate-900 focus:ring-2 focus:ring-amber-500/20 shadow-2xs"
                     >
                       <option value="">-- Pilih Jamaah Terdaftar --</option>
@@ -534,6 +547,23 @@ Wassalamu'alaikum Wr. Wb.`;
                   </div>
                 );
               })()}
+
+              {/* Input Nama Muthawwif / Pembimbing Ibadah (Opsional) */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Nama Muthawwif / Pembimbing Ibadah (Opsional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Kosongkan jika tidak ingin dicantumkan"
+                  value={formData.muthawwifName}
+                  onChange={(e) => setFormData({ ...formData, muthawwifName: e.target.value })}
+                  className="w-full rounded-xl border border-slate-200 p-2.5 bg-white font-medium placeholder:text-slate-400"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Opsional. Jika dikosongkan, keterangan muthawwif tidak akan tampil di lembar piagam.
+                </p>
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -674,7 +704,12 @@ Wassalamu'alaikum Wr. Wb.`;
                 <select
                   required
                   value={batchPackageId}
-                  onChange={(e) => setBatchPackageId(e.target.value)}
+                  onChange={(e) => {
+                    const pkgId = e.target.value;
+                    setBatchPackageId(pkgId);
+                    const found = packages.find((p) => p.id === pkgId);
+                    setBatchMuthawwifName(found?.muthawwifName || "");
+                  }}
                   className="w-full rounded-xl border border-slate-200 p-2.5 bg-white font-bold text-slate-900"
                 >
                   <option value="">-- Pilih Paket --</option>
@@ -684,6 +719,22 @@ Wassalamu'alaikum Wr. Wb.`;
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Nama Muthawwif / Pembimbing Ibadah (Opsional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Kosongkan jika tidak ingin dicantumkan"
+                  value={batchMuthawwifName}
+                  onChange={(e) => setBatchMuthawwifName(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 p-2.5 bg-white font-medium placeholder:text-slate-400"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Opsional. Jika dikosongkan, keterangan muthawwif tidak akan tampil di piagam seluruh jamaah kloter ini.
+                </p>
               </div>
 
               <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px] leading-relaxed">
@@ -770,6 +821,34 @@ Wassalamu'alaikum Wr. Wb.`;
                     </button>
                   </>
                 )}
+
+                <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-xs text-slate-200">
+                  <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap">Muthawwif:</span>
+                  <input
+                    type="text"
+                    placeholder="Kosongkan jika tidak ada"
+                    value={selectedCertForPrint.muthawwifName || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedCertForPrint({ ...selectedCertForPrint, muthawwifName: val });
+                    }}
+                    onBlur={async (e) => {
+                      const val = e.target.value;
+                      try {
+                        await fetch(`/api/certificates/${selectedCertForPrint.id}`, {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ muthawwifName: val }),
+                        });
+                        fetchCertificates();
+                      } catch (err) {
+                        console.error("Gagal update muthawwif:", err);
+                      }
+                    }}
+                    className="bg-slate-900 text-amber-200 font-bold px-2 py-1 rounded-lg border border-slate-700 text-xs w-44 placeholder:text-slate-500 placeholder:font-normal focus:w-60 focus:border-amber-400 transition-all outline-hidden"
+                    title="Ubah nama muthawwif atau kosongkan untuk menghilangkannya dari piagam"
+                  />
+                </div>
 
                 <button
                   onClick={() => handleSendWA(selectedCertForPrint)}
@@ -900,6 +979,11 @@ Wassalamu'alaikum Wr. Wb.`;
                         {selectedCertForPrint.returnDate ? formatDate(selectedCertForPrint.returnDate, "dd MMMM yyyy") : ""}
                       </p>
                     )}
+                    {selectedCertForPrint.muthawwifName && selectedCertForPrint.muthawwifName.trim() !== "" && (
+                      <p className="text-xs sm:text-[13px] text-slate-700 font-medium">
+                        Pembimbing Ibadah (Muthawwif): <strong className="text-slate-900">{selectedCertForPrint.muthawwifName}</strong>
+                      </p>
+                    )}
                   </div>
 
                   {/* 5. ARABIC PRAYER / DOA MABRUR */}
@@ -953,7 +1037,7 @@ Wassalamu'alaikum Wr. Wb.`;
                             <strong>{travelSettings.companyName || "PT Sulthan Haramain"}</strong>
                           </p>
                           <div className="h-16 flex items-center justify-center">
-                            <span className="font-serif italic text-xs text-slate-400">[Tanda Tangan & Stempel]</span>
+                            {/* Ruang bersih untuk tanda tangan dan stempel basah */}
                           </div>
                           <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">
                             {selectedCertForPrint.directorName || "ATIYATUL AMRA"}
@@ -969,7 +1053,7 @@ Wassalamu'alaikum Wr. Wb.`;
                   {/* 7. FOOTER RESMI DENGAN TULISAN KECIL RAPI DI BAGIAN PALING BAWAH */}
                   <div className="pt-4 border-t border-[#ebd8b7] text-center space-y-0.5 text-[9px] sm:text-[9.5px] text-slate-500 leading-tight">
                     <p className="font-bold text-slate-700 uppercase tracking-wider">
-                      {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"} • BAROKAH GROUP INDONESIA
+                      {travelSettings.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
                     </p>
                     <p>
                       {travelSettings.kemenhanLicense || "Keputusan Menteri Hukum RI NOMOR AHU-0007388.AH.01.01.TAHUN 2026"} • NO. IZIN PPIU INDUK USAHA PT. GRAND RESTU HARAMAN: {(travelSettings.licenseNumber || "25052200384080005")

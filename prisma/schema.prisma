@@ -72,6 +72,7 @@ model Package {
   commissionAgent    Float          @default(1500000) // Komisi Mitra / Agen per Pax
   commissionReferral Float          @default(500000)  // Komisi Referral Alumni per Pax
   status             String         @default("ACTIVE") // ACTIVE, FULL, COMPLETED, DRAFT
+  muthawwifName      String?        // Pembimbing Ibadah / Muthawwif (Opsional)
   pilgrims           Pilgrim[]
   leads              Lead[]
   expenses           Expense[]
@@ -930,7 +931,7 @@ model Certificate {
   departureDate     DateTime?
   returnDate        DateTime?
   issueDate         DateTime  @default(now())
-  muthawwifName     String?   @default("Ustadz Pembimbing Ibadah")
+  muthawwifName     String?   // Nama Muthawwif / Pembimbing (Opsional)
   directorName      String    @default("Attiyatul Amra")
   directorTitle     String    @default("Direktur Utama")
   photoUrl          String?   // Foto jamaah / kenangan umroh pada piagam

@@ -36,7 +36,7 @@ export async function PUT(
     const updated = await prisma.certificate.update({
       where: { id: params.id },
       data: {
-        muthawwifName: muthawwifName || undefined,
+        ...(muthawwifName !== undefined && { muthawwifName: (muthawwifName && muthawwifName.trim() !== "") ? muthawwifName.trim() : null }),
         directorName: directorName || undefined,
         directorTitle: directorTitle || undefined,
         issueDate: issueDate ? new Date(issueDate) : undefined,

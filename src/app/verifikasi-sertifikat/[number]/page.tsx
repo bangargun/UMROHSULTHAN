@@ -85,14 +85,9 @@ export default async function CertificateVerificationPage({ params }: PageProps)
             </div>
 
             <div>
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                <h1 className="text-lg sm:text-xl font-black text-slate-900 uppercase tracking-tight">
-                  {setting?.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
-                </h1>
-                <span className="text-[9px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-300">
-                  Barokah Group Indonesia
-                </span>
-              </div>
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 uppercase tracking-tight text-center">
+                {setting?.companyName || "PT BAROKAH SULTHAN HARAMAIN"}
+              </h1>
               <p className="text-[10px] text-slate-500 mt-1">
                 {setting?.kemenhanLicense || "Keputusan Menteri Hukum RI NOMOR AHU-0007388.AH.01.01.TAHUN 2026"}
               </p>

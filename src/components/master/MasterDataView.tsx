@@ -148,6 +148,7 @@ export default function MasterDataView({ packages, equipment, onRefreshAll, onNa
     commissionAgent: "",
     commissionReferral: "",
     status: "ACTIVE",
+    muthawwifName: "",
   });
 
   // Equipment Form
@@ -695,6 +696,7 @@ export default function MasterDataView({ packages, equipment, onRefreshAll, onNa
                   commissionAgent: "",
                   commissionReferral: "",
                   status: "ACTIVE",
+                  muthawwifName: "",
                 });
                 setIsAddPackageOpen(true);
               }}
@@ -760,6 +762,14 @@ export default function MasterDataView({ packages, equipment, onRefreshAll, onNa
                   <span className="font-bold text-emerald-700">Kuota: {p.bookedCount || 0}/{p.quota} Seat</span>
                 </div>
 
+                {/* Muthawwif Info if present */}
+                {p.muthawwifName && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/80 rounded-lg border border-amber-200/80 text-xs text-amber-900 font-medium">
+                    <span>👳‍♂️ Muthawwif / Pembimbing:</span>
+                    <strong className="text-slate-900 font-bold">{p.muthawwifName}</strong>
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 flex-wrap">
                   <button
                     onClick={() => {
@@ -796,6 +806,7 @@ export default function MasterDataView({ packages, equipment, onRefreshAll, onNa
                         commissionAgent: String(p.commissionAgent || 1500000),
                         commissionReferral: String(p.commissionReferral || 500000),
                         status: p.status,
+                        muthawwifName: p.muthawwifName || "",
                       });
                       setIsAddPackageOpen(true);
                     }}
@@ -1995,6 +2006,23 @@ export default function MasterDataView({ packages, equipment, onRefreshAll, onNa
                     className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs font-bold"
                   />
                 </div>
+              </div>
+
+              {/* Nama Muthawwif / Pembimbing Ibadah (Opsional) */}
+              <div>
+                <label className="font-bold text-slate-700 text-xs">
+                  Nama Muthawwif / Pembimbing Ibadah (Opsional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Ustadz Pembimbing / Kosongkan jika belum ditentukan"
+                  value={packageForm.muthawwifName}
+                  onChange={(e) => setPackageForm({ ...packageForm, muthawwifName: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs placeholder:text-slate-400"
+                />
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Opsional. Bisa dikosongkan. Jika diisi, otomatis menjadi rujukan saat menerbitkan piagam sertifikat jamaah kloter ini.
+                </p>
               </div>
 
               <div className="grid grid-cols-3 gap-3">

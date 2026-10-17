@@ -243,13 +243,17 @@ export async function POST(request: Request) {
     }
 
     for (const t of templates) {
+      const isKtpDoc = t.name.toLowerCase().includes("ktp");
+      const isTempNik = Boolean(nik && typeof nik === "string" && nik.startsWith("TEMP-"));
       await prisma.pilgrimRequirement.create({
         data: {
           pilgrimId: pilgrim.id,
           name: t.name,
           isSubmitted: false,
           isVerified: false,
-          notes: t.isMandatory ? "Dokumen wajib" : "Dokumen kondisional",
+          notes: (isKtpDoc && isTempNik)
+            ? "⚠️ NIK Sementara: Menunggu penyerahan e-KTP / NIK asli dari jamaah"
+            : (t.isMandatory ? "Dokumen wajib" : "Dokumen kondisional"),
         },
       });
     }
