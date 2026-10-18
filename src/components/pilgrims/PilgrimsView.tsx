@@ -36,6 +36,7 @@ import {
   Syringe,
   FileSpreadsheet,
   Award,
+  Printer,
 } from "lucide-react";
 import { formatCurrency, formatDate, getStatusBadge } from "@/lib/utils";
 import RegistrationsAdminModal from "@/components/registrations/RegistrationsAdminModal";
@@ -1032,7 +1033,7 @@ export default function PilgrimsView({
     return "MANIFEST VISA SEMUA KEBERANGKATAN";
   };
 
-  const getManifestVisaFileName = (ext: "xls" | "csv") => {
+  const getManifestVisaFileName = (ext: "xls" | "csv" | "pdf") => {
     const selectedPkg = packages.find((p) => p.id === selectedPackageId);
     const dateOrName = selectedPkg?.departureDate
       ? formatDateIndoUpper(selectedPkg.departureDate)
@@ -1041,6 +1042,48 @@ export default function PilgrimsView({
       : "SEMUA_KEBERANGKATAN";
     const paxCount = filteredPilgrims.length;
     return `(MANIFEST VISA ${dateOrName})(${paxCount} PAX).${ext}`;
+  };
+
+  const handleExportManifestVisaPDF = () => {
+    if (filteredPilgrims.length === 0) {
+      alert("Tidak ada data jamaah untuk diekspor ke Manifest Visa.");
+      return;
+    }
+
+    const title = getManifestVisaTitle();
+    const fileName = getManifestVisaFileName("pdf");
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+
+    const totalPax = filteredPilgrims.length;
+    const maleCount = filteredPilgrims.filter((p) => p.gender === "MALE" || p.gender === "M").length;
+    const femaleCount = filteredPilgrims.filter((p) => p.gender === "FEMALE" || p.gender === "F").length;
+
+    const tableRows = filteredPilgrims
+      .map((p, idx) => {
+        const sex = p.gender === "FEMALE" || p.gender === "F" ? "F" : "M";
+        const fullName = (p.name || p.passportName || "-").toUpperCase();
+        const pob = (p.placeOfBirth || "-").toUpperCase();
+        const dob = formatDateIndoUpper(p.dateOfBirth);
+        const passNo = (p.passportNumber || "-").toUpperCase();
+        const doi = formatDateIndoUpper(p.passportIssuedDate);
+        const doe = formatDateIndoUpper(p.passportExpiry);
+        const office = (p.passportIssuedCity || "-").toUpperCase();
+
+        return `<tr><td style="text-align: center; font-weight: bold;">${idx + 1}</td><td style="text-align: center; font-weight: bold; color: ${sex === "M" ? "#1d4ed8" : "#be185d"};">${sex}</td><td style="text-align: left; font-weight: bold;">${fullName}</td><td style="text-align: left;">${pob}</td><td style="text-align: center;">${dob}</td><td style="text-align: center; font-family: monospace; font-weight: bold;">${passNo}</td><td style="text-align: center; font-family: monospace;">${doi}</td><td style="text-align: center; font-family: monospace;">${doe}</td><td style="text-align: center;">${office}</td></tr>`;
+      })
+      .join("\n");
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Gagal membuka jendela cetak. Pastikan izin pop-up browser Anda aktif.");
+      return;
+    }
+
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8" /><title>${fileName}</title><style>@page { size: A4 landscape; margin: 8mm 10mm; } * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body { font-family: Calibri, Arial, Helvetica, sans-serif; margin: 0; padding: 12px; color: #000; font-size: 10pt; } .no-print-bar { background: #0f172a; color: #ffffff; padding: 10px 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; font-family: system-ui, -apple-system, sans-serif; box-shadow: 0 4px 10px rgba(0,0,0,0.15); } .btn-print { background: #e11d48; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; } .btn-print:hover { background: #be123c; } .btn-close { background: #334155; color: #ffffff; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; } .btn-close:hover { background: #475569; } .banner { background-color: #FFFF00 !important; color: #000000; font-weight: 900; text-align: center; padding: 8px 12px; font-size: 14pt; letter-spacing: 0.5px; border: 2px solid #000000; text-transform: uppercase; } .sub-banner { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-left: 2px solid #000000; border-right: 2px solid #000000; border-bottom: 1.5px solid #000000; padding: 5px 8px; font-size: 9.5pt; font-weight: bold; } table { width: 100%; border-collapse: collapse; margin-top: 0; font-size: 9pt; } th { background-color: #FFFF00 !important; color: #000000; font-weight: 900; text-align: center; border: 1.5px solid #000000; padding: 5px 4px; font-size: 8.5pt; } td { border: 1px solid #000000; padding: 4.5px 5px; font-size: 8.5pt; } tr:nth-child(even) td { background-color: #fbfbfb !important; } .footer-note { margin-top: 8px; display: flex; justify-content: space-between; font-size: 8pt; color: #64748b; } @media print { .no-print-bar { display: none !important; } body { padding: 0; } @page { size: A4 landscape; margin: 8mm 10mm; } }</style></head><body><div class="no-print-bar"><div><strong style="font-size: 13px;">📄 Download / Cetak PDF Manifest Visa</strong><span style="font-size: 11px; opacity: 0.85; margin-left: 8px;">(Pilih Destination: <b>Save as PDF</b> / <b>Simpan sebagai PDF</b>)</span></div><div style="display: flex; gap: 8px;"><button class="btn-print" onclick="window.print()">🖨️ Cetak / Simpan PDF</button><button class="btn-close" onclick="window.close()">✕ Tutup</button></div></div><div class="banner">${title}</div><div class="sub-banner"><span>Program: ${selectedPkg?.name || "Semua Paket Keberangkatan"}</span><span>Total: ${totalPax} Pax (Laki-laki: ${maleCount}, Perempuan: ${femaleCount})</span></div><table><thead><tr><th style="width: 32px;">NO</th><th style="width: 42px;">SEX</th><th style="width: 220px; text-align: left;">FULL NAME</th><th style="width: 135px; text-align: left;">PLACE OF BIRTH</th><th style="width: 125px;">DATE OF BIRTH</th><th style="width: 120px;">NOMOR PASSPORT</th><th style="width: 120px;">DATE OF ISSUE</th><th style="width: 120px;">DATE OF EXPIRY</th><th style="width: 135px;">ISSUING OFFICE</th></tr></thead><tbody>${tableRows}</tbody></table><div class="footer-note"><span>Dicetak melalui Sistem Manajemen Travel Umroh • Format Standar Provider Visa</span><span>${fileName}</span></div><script>window.onload = function() { setTimeout(function() { window.print(); }, 350); };</script></body></html>`;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   const handleExportManifestVisaExcel = () => {
@@ -5855,6 +5898,15 @@ export default function PilgrimsView({
                   Download CSV
                 </button>
                 <button
+                  onClick={handleExportManifestVisaPDF}
+                  disabled={filteredPilgrims.length === 0}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 text-xs font-bold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                  title="Cetak atau simpan Manifest Visa dalam format PDF resmi (A4 Landscape)"
+                >
+                  <FileText className="h-4 w-4" />
+                  Download PDF
+                </button>
+                <button
                   onClick={handleExportManifestVisaExcel}
                   disabled={filteredPilgrims.length === 0}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-yellow-950 px-4 py-2 text-xs font-black shadow-sm transition-all disabled:opacity-50 cursor-pointer border border-yellow-500/40"
@@ -5967,6 +6019,16 @@ export default function PilgrimsView({
                   className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
                 >
                   Tutup
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportManifestVisaPDF}
+                  disabled={filteredPilgrims.length === 0}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  title="Cetak atau simpan dokumen Manifest Visa sebagai file PDF"
+                >
+                  <FileText className="h-4 w-4" />
+                  Download Format PDF
                 </button>
                 <button
                   type="button"
