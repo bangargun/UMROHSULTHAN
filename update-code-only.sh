@@ -72,15 +72,21 @@ ssh -o ControlPath="${SSH_SOCKET}" "${VPS_USER}@${VPS_HOST}" "
   chmod -R 777 prisma 2>/dev/null || true
 "
 
-# 3. Rebuild Next.js & Restart PM2 di VPS (Tanpa db push / tanpa modifikasi data)
+# 3. Rebuild Next.js & Restart PM2 di VPS
 echo "[3/3] Rebuild Next.js dan restart server di VPS..."
 ssh -o ControlPath="${SSH_SOCKET}" "${VPS_USER}@${VPS_HOST}" "
   set -e
   cd ${VPS_DIR}
   npm install --include=dev
   npx prisma generate
+  npx prisma db push --skip-generate
   npm run build
   pm2 restart all --update-env
+  
+  # Otomatis aktifkan Webhook Telegram Bot
+  echo '🤖 Mengaktifkan Webhook Telegram Bot @sulthanharamainbot...'
+  curl -s 'https://api.telegram.org/bot8857243171:AAHmGmUDwLmxThPHEwfoJMvowSGjTmSeVng/setWebhook?url=https://portalumroh.barokahgroupindonesia.tech/api/telegram/webhook' || true
+  echo ''
 "
 
 echo "=========================================================="

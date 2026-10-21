@@ -483,13 +483,15 @@ export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilg
                       {/* Name & Source */}
                       <td className="py-3 px-4">
                         <div className="font-bold text-slate-900">{lead.name}</div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                               lead.source === "AGENT"
                                 ? "bg-amber-100 text-amber-900 border border-amber-300"
                                 : lead.source === "REFERRAL"
                                 ? "bg-blue-100 text-blue-900 border border-blue-300"
+                                : lead.source === "TELEGRAM_BOT"
+                                ? "bg-sky-100 text-sky-900 border border-sky-300 font-extrabold"
                                 : "bg-slate-100 text-slate-700"
                             }`}
                           >
@@ -497,6 +499,8 @@ export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilg
                               ? "Mitra / Agen"
                               : lead.source === "REFERRAL"
                               ? "Referral Alumni"
+                              : lead.source === "TELEGRAM_BOT"
+                              ? `🤖 Bot Telegram ${lead.telegramUsername || ""}`
                               : lead.source}
                           </span>
                           {lead.budget && (
@@ -505,6 +509,56 @@ export default function LeadsView({ leads, packages, onRefresh, onNavigateToPilg
                             </span>
                           )}
                         </div>
+
+                        {/* Dokumen yang diupload via Telegram */}
+                        {(lead.ktpFileUrl || lead.familyCardFileUrl || lead.marriageBookFileUrl || lead.passportFileUrl) && (
+                          <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                            {lead.ktpFileUrl && (
+                              <a
+                                href={lead.ktpFileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                                title="Lihat Foto KTP"
+                              >
+                                🪪 KTP
+                              </a>
+                            )}
+                            {lead.familyCardFileUrl && (
+                              <a
+                                href={lead.familyCardFileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 transition-colors"
+                                title="Lihat Foto KK"
+                              >
+                                👨‍👩‍👧 KK
+                              </a>
+                            )}
+                            {lead.marriageBookFileUrl && (
+                              <a
+                                href={lead.marriageBookFileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-50 text-pink-800 border border-pink-200 hover:bg-pink-100 transition-colors"
+                                title="Lihat Foto Buku Nikah"
+                              >
+                                💍 Buku Nikah
+                              </a>
+                            )}
+                            {lead.passportFileUrl && (
+                              <a
+                                href={lead.passportFileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition-colors"
+                                title="Lihat Foto Paspor"
+                              >
+                                📕 Paspor
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </td>
 
                       {/* Phone */}

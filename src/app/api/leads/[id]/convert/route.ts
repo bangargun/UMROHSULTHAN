@@ -44,6 +44,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
         roomType: roomType || "QUAD",
         uniformSize: uniformSize || "L",
         status: "REGISTERED",
+        // Otomatis transfer berkas yang diupload lewat Telegram ke Jamaah
+        ktpFileUrl: lead.ktpFileUrl || null,
+        familyCardFileUrl: lead.familyCardFileUrl || null,
+        marriageBookFileUrl: lead.marriageBookFileUrl || null,
+        passportFileUrl: lead.passportFileUrl || null,
       },
     });
 

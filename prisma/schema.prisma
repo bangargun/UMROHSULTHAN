@@ -100,6 +100,15 @@ model Lead {
   budget              Float?
   estimatedPax        Int               @default(1)
   assignedAgent       String?
+
+  // Integrasi Bot Telegram & Berkas Masuk dari Prospek
+  telegramChatId      String?           // Chat ID Telegram Calon Jamaah
+  telegramUsername    String?           // Username Telegram (@username)
+  ktpFileUrl          String?           // Berkas KTP dari Telegram
+  familyCardFileUrl   String?           // Berkas KK dari Telegram
+  marriageBookFileUrl String?           // Berkas Buku Nikah dari Telegram
+  passportFileUrl     String?           // Berkas Paspor dari Telegram
+
   interactions        LeadInteraction[]
   pilgrim             Pilgrim?
   createdAt           DateTime          @default(now())
@@ -114,6 +123,17 @@ model LeadInteraction {
   summary           String
   nextFollowUpDate  DateTime?
   createdAt         DateTime  @default(now())
+}
+
+model TelegramSession {
+  chatId        String   @id
+  username      String?
+  firstName     String?
+  step          String   @default("IDLE") // IDLE, ASKING_PACKAGE, ASKING_NAME, ASKING_PHONE, ASKING_CITY, ASKING_PAX, WAITING_KTP, WAITING_KK, WAITING_MARRIAGE, WAITING_PASSPORT
+  data          String?  // JSON string format
+  leadId        String?
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
 }
 
 model Pilgrim {
