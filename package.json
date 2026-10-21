@@ -11,7 +11,8 @@
     "db:seed": "node prisma/seed.js",
     "build:apk": "bash scripts/build-apk.sh",
     "cap:sync": "cap sync android",
-    "update:vps": "bash update-to-vps.sh"
+    "update:vps": "bash update-to-vps.sh",
+    "update:code": "bash update-code-only.sh"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

@@ -5,10 +5,6 @@ VPS_USER="root"
 VPS_HOST="187.77.122.142"
 VPS_DIR="/var/www/portalumroh"
 
-# Pastikan script berjalan dari direktori proyek
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
-
 # Setup SSH Socket Multiplexing agar HANYA MINTA PASSWORD 1 KALI di awal sesi
 SSH_SOCKET_DIR="${HOME}/.ssh"
 mkdir -p "${SSH_SOCKET_DIR}"
@@ -23,66 +19,72 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo "=========================================================="
-echo "  🚀 UPDATE KODE PROGRAM SAJA KE VPS (DATABASE AMAN 100%)"
+echo "  🚀 UPDATE KODE APLIKASI KE VPS (KODE SAJA - TANPA DATABASE)"
 echo "  Server: ${VPS_USER}@${VPS_HOST}"
 echo "=========================================================="
 
-# 1. Simpan & Kirim Kode Program Terbaru ke GitHub (Tanpa Mengubah DB Live)
-echo "[1/4] Menyimpan dan mengirim kode terbaru ke GitHub..."
-git add src/ public/ scripts/ package.json *.ts *.js *.mjs *.sh prisma/schema.prisma 2>/dev/null || git add .
-git commit -m "Update fitur & kode program: $(date +'%Y-%m-%d %H:%M')" || true
-git push origin main || true
+cd "$(dirname "$0")"
 
-# 2. Buka koneksi master SSH
+# 1. Commit & Push Hanya Perubahan Kode (Database Lokal Dikecualikan)
+echo "[1/3] Menyimpan & mengirim kode terbaru ke GitHub (tanpa database)..."
+git add .
+git reset prisma/dev.db 2>/dev/null || true
+
+if ! git diff --cached --quiet; then
+  git commit -m "Update kode aplikasi (tanpa DB): $(date +'%Y-%m-%d %H:%M')"
+  git push origin main
+else
+  echo "ℹ️ Tidak ada perubahan kode baru yang belum di-commit, push branch main..."
+  git push origin main || true
+fi
+
+# Buka koneksi master SSH
 echo "🔑 Menghubungkan ke VPS (masukkan password 1x jika diminta)..."
 ssh ${SSH_OPTS} -fN "${VPS_USER}@${VPS_HOST}"
 
-# 3. Amankan Database VPS & Tarik Kode Terbaru
-echo "[2/4] Mengamankan database live VPS & memperbarui kode (git pull)..."
+# 2. Amankan Database VPS & Tarik Kode Terbaru
+echo "[2/3] Mengambil kode terbaru di VPS sambil mengamankan database VPS..."
 ssh -o ControlPath="${SSH_SOCKET}" "${VPS_USER}@${VPS_HOST}" "
-  # Pastikan folder backup ada
-  mkdir -p ${VPS_DIR}/backups
+  set -e
+  cd ${VPS_DIR}
   
-  # Cadangkan database live VPS sebelum update kode
-  if [ -f \"${VPS_DIR}/prisma/dev.db\" ]; then
-    cp -f \"${VPS_DIR}/prisma/dev.db\" \"/tmp/vps_live_database_backup.db\"
-    cp -f \"${VPS_DIR}/prisma/dev.db\" \"${VPS_DIR}/backups/live_db_before_code_update_\$(date +'%Y%m%d_%H%M%S').db\"
-    echo '🔒 Database live VPS berhasil diamankan.'
+  # Amankan database VPS yang sedang aktif
+  mkdir -p /tmp/vps_db_backup
+  if [ -f prisma/dev.db ]; then
+    cp -f prisma/dev.db /tmp/vps_db_backup/dev.db
+  fi
+  if [ -f dev.db ]; then
+    cp -f dev.db /tmp/vps_db_backup/dev_root.db
   fi
 
   # Tarik kode terbaru dari GitHub
-  cd ${VPS_DIR}
   git fetch origin main
   git reset --hard origin/main
 
-  # Kembalikan database live VPS ke posisi aktif (agar data tidak tertimpa oleh git)
-  if [ -f \"/tmp/vps_live_database_backup.db\" ]; then
-    cp -f \"/tmp/vps_live_database_backup.db\" \"${VPS_DIR}/prisma/dev.db\"
-    cp -f \"/tmp/vps_live_database_backup.db\" \"${VPS_DIR}/dev.db\" 2>/dev/null || true
-    chmod 666 \"${VPS_DIR}/prisma/dev.db\" \"${VPS_DIR}/dev.db\" 2>/dev/null || true
-    rm -f \"/tmp/vps_live_database_backup.db\"
-    echo '✅ Database live VPS 100% utuh dan tidak tersentuh.'
+  # Kembalikan database VPS asli 100% utuh tanpa tersentuh
+  if [ -f /tmp/vps_db_backup/dev.db ]; then
+    cp -f /tmp/vps_db_backup/dev.db prisma/dev.db
   fi
+  if [ -f /tmp/vps_db_backup/dev_root.db ]; then
+    cp -f /tmp/vps_db_backup/dev_root.db dev.db
+  fi
+  chmod 666 prisma/dev.db dev.db 2>/dev/null || true
+  chmod -R 777 prisma 2>/dev/null || true
 "
 
-# 4. Generate Client, Rebuild Next.js & Restart PM2
-echo "[3/4] Menginstal dependensi & sinkronisasi Prisma di VPS..."
+# 3. Rebuild Next.js & Restart PM2 di VPS (Tanpa db push / tanpa modifikasi data)
+echo "[3/3] Rebuild Next.js dan restart server di VPS..."
 ssh -o ControlPath="${SSH_SOCKET}" "${VPS_USER}@${VPS_HOST}" "
+  set -e
   cd ${VPS_DIR}
   npm install --include=dev
   npx prisma generate
-  npx prisma db push
-"
-
-echo "[4/4] Membangun ulang (build) Next.js & me-restart server VPS..."
-ssh -o ControlPath="${SSH_SOCKET}" "${VPS_USER}@${VPS_HOST}" "
-  cd ${VPS_DIR}
   npm run build
   pm2 restart all --update-env
 "
 
 echo "=========================================================="
-echo "  ✅ ALHAMDULILLAH! KODE TERBARU BERHASIL DIUPDATE KE VPS!"
-echo "  🔒 Database VPS: Utuh 100% tanpa perubahan data"
+echo "  ✅ ALHAMDULILLAH! UPDATE KODE KE VPS BERHASIL!"
+echo "  🔒 Database VPS 100% AMAN & TIDAK TERSENTUH / TIDAK BERUBAH"
 echo "  🌐 Website: https://portalumroh.barokahgroupindonesia.tech"
 echo "=========================================================="

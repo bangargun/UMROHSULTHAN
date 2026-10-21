@@ -25,6 +25,7 @@ import {
   CheckCheck,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import * as XLSX from "xlsx";
 
 interface ComplianceViewProps {
   packages: any[];
@@ -94,91 +95,167 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
     return matchPkg && matchSearch;
   });
 
-  // Export to CSV formatted for SISKOPATUH
+  // 32 Kolom Baku SISKOPATUH Resmi Kementerian Agama RI
+  const SISKOPATUH_32_HEADERS = [
+    "Title",
+    "Nama (Sesuai Dengan nama Pada Kartu Vaksin)",
+    "Nama Ayah",
+    "Jenis Identitas",
+    "No Identitas",
+    "Nama Paspor",
+    "No Paspor",
+    "Tanggal Dikeluarkan Paspor(yyyy-mm-dd)",
+    "Kota Paspor",
+    "Tempat Lahir",
+    "Tanggal Lahir(yyyy-mm-dd)",
+    "Alamat",
+    "Provinsi",
+    "Kabupaten",
+    "Kecamatan",
+    "Kelurahan",
+    "No. Telepon",
+    "No Hp",
+    "KewargaNegaraan",
+    "Status Pernikahan",
+    "Pendidikan",
+    "Pekerjaan",
+    "Provider Visa",
+    "No Visa",
+    "Tanggal Berlaku Visa (yyyy-mm-dd)",
+    "Tanggal Akhir  Visa (yyyy-mm-dd)", // 2 spasi persis sesuai template resmi Kemenag
+    "Asuransi",
+    "No Polis",
+    "Tanggal Input Polis (yyyy-mm-dd)",
+    "Tanggal Awal Polis (yyyy-mm-dd)",
+    "Tanggal Akhir Polis (yyyy-mm-dd)",
+    "No BPJS",
+  ];
+
+  const mapRowTo32Columns = (d: any) => [
+    d.title || "TUAN",
+    d.nama || d.namaLengkap || "",
+    d.namaAyah || "",
+    d.jenisIdentitas || (d.noPaspor ? "PASPOR" : "NIK"),
+    d.noIdentitas || d.noPaspor || d.nik || "",
+    d.namaPaspor || d.namaLengkap || "",
+    d.noPaspor || "",
+    d.tglDikeluarkanPaspor || "",
+    d.kotaPaspor || "",
+    d.tempatLahir || "",
+    d.tglLahir || "",
+    d.alamat || "",
+    d.provinsi || "",
+    d.kabupaten || "",
+    d.kecamatan || "",
+    d.kelurahan || "",
+    d.noTelepon || "",
+    d.noHp || "",
+    d.kewarganegaraan || "WNI",
+    d.statusPernikahan || "MENIKAH",
+    d.pendidikan || "SMA/MA",
+    d.pekerjaan || "LAINNYA",
+    d.providerVisa || "",
+    d.noVisa || "",
+    d.tglBerlakuVisa || "",
+    d.tglAkhirVisa || "",
+    d.asuransi || "",
+    d.noPolis || "",
+    d.tglInputPolis || "",
+    d.tglAwalPolis || "",
+    d.tglAkhirPolis || "",
+    d.noBpjs || "",
+  ];
+
+  const getSiskopatuhFileName = (ext: "xlsx" | "csv") => {
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    const pkgCode = selectedPkg ? selectedPkg.code : "SEMUA";
+    const paxCount = filteredData.length;
+    return `(SISKOPATUH_${pkgCode})(${paxCount} PAX).${ext}`;
+  };
+
+  // Ekspor Excel (.xlsx) 32 Kolom Standar Kemenag
+  const handleExportSiskopatuhExcel = () => {
+    if (filteredData.length === 0) {
+      alert("Tidak ada data jamaah untuk program paket yang dipilih.");
+      return;
+    }
+
+    const fileName = getSiskopatuhFileName("xlsx");
+    const dataRows = filteredData.map(mapRowTo32Columns);
+
+    const ws = XLSX.utils.aoa_to_sheet([SISKOPATUH_32_HEADERS, ...dataRows]);
+
+    // Format lebar kolom agar rapi saat dibuka di Microsoft Excel
+    ws["!cols"] = [
+      { wch: 10 }, // Title
+      { wch: 32 }, // Nama
+      { wch: 24 }, // Nama Ayah
+      { wch: 15 }, // Jenis Identitas
+      { wch: 20 }, // No Identitas
+      { wch: 32 }, // Nama Paspor
+      { wch: 16 }, // No Paspor
+      { wch: 20 }, // Tgl Dikeluarkan Paspor
+      { wch: 20 }, // Kota Paspor
+      { wch: 20 }, // Tempat Lahir
+      { wch: 16 }, // Tanggal Lahir
+      { wch: 35 }, // Alamat
+      { wch: 20 }, // Provinsi
+      { wch: 24 }, // Kabupaten
+      { wch: 20 }, // Kecamatan
+      { wch: 20 }, // Kelurahan
+      { wch: 15 }, // No Telepon
+      { wch: 16 }, // No Hp
+      { wch: 16 }, // Kewarganegaraan
+      { wch: 18 }, // Status Pernikahan
+      { wch: 15 }, // Pendidikan
+      { wch: 18 }, // Pekerjaan
+      { wch: 28 }, // Provider Visa
+      { wch: 18 }, // No Visa
+      { wch: 18 }, // Tgl Berlaku Visa
+      { wch: 18 }, // Tgl Akhir Visa
+      { wch: 30 }, // Asuransi
+      { wch: 18 }, // No Polis
+      { wch: 18 }, // Tgl Input Polis
+      { wch: 18 }, // Tgl Awal Polis
+      { wch: 18 }, // Tgl Akhir Polis
+      { wch: 18 }, // No BPJS
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, fileName);
+  };
+
+  // Ekspor CSV UTF-8 (32 Kolom Baku Kemenag)
   const handleExportCsv = () => {
     if (filteredData.length === 0) {
       alert("Tidak ada data jamaah untuk program paket yang dipilih.");
       return;
     }
 
-    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
-    const pkgCode = selectedPkg ? selectedPkg.code : "SEMUA_PAKET";
-    const pkgNameClean = selectedPkg
-      ? selectedPkg.name.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase()
-      : "SEMUA_PROGRAM";
+    const fileName = getSiskopatuhFileName("csv");
+    const dataRows = filteredData.map(mapRowTo32Columns);
 
-    const headers = [
-      "NO_URUT",
-      "KD_PPIU",
-      "NAMA_PPIU",
-      "NIK",
-      "NO_PASPOR",
-      "NAMA_LENGKAP",
-      "NAMA_AYAH_KANDUNG",
-      "TEMPAT_LAHIR",
-      "TGL_LAHIR",
-      "JENIS_KELAMIN",
-      "NO_HP",
-      "ALAMAT",
-      "KOTA",
-      "PROVINSI",
-      "STATUS_PERKAWINAN",
-      "NAMA_MAHRAM",
-      "HUBUNGAN_MAHRAM",
-      "STATUS_VAKSIN_MENINGITIS",
-      "STATUS_PASPOR",
-      "TIPE_KAMAR",
-      "UKURAN_SERAGAM",
-      "KODE_PAKET",
-      "NAMA_PAKET",
-      "TGL_KEBERANGKATAN",
-      "TGL_KEPULANGAN",
-      "MASKAPAI",
-      "HOTEL_MAKKAH",
-      "HOTEL_MADINAH",
-      "STATUS_JAMAAH",
+    const escapeCsv = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const csvLines = [
+      SISKOPATUH_32_HEADERS.map(escapeCsv).join(","),
+      ...dataRows.map((row) => row.map(escapeCsv).join(",")),
     ];
 
-    const rows = filteredData.map((d) => [
-      d.noUrut,
-      `"${d.kdPpiu}"`,
-      `"${d.namaPpiu}"`,
-      `'${d.nik}'`,
-      `"${d.noPaspor}"`,
-      `"${d.namaLengkap}"`,
-      `"${d.namaAyahKandung}"`,
-      `"${d.tempatLahir}"`,
-      `"${d.tanggalLahir}"`,
-      `"${d.jenisKelamin}"`,
-      `'${d.nomorHp}'`,
-      `"${d.alamat}"`,
-      `"${d.kota}"`,
-      `"${d.provinsi}"`,
-      `"${d.statusPerkawinan}"`,
-      `"${d.namaMahram}"`,
-      `"${d.hubunganMahram}"`,
-      `"${d.statusVaksinMeningitis}"`,
-      `"${d.statusPaspor}"`,
-      `"${d.tipeKamar}"`,
-      `"${d.ukuranSeragam}"`,
-      `"${d.kodePaket}"`,
-      `"${d.namaPaket}"`,
-      `"${d.tanggalKeberangkatan}"`,
-      `"${d.tanggalKepulangan}"`,
-      `"${d.maskapai}"`,
-      `"${d.hotelMakkah}"`,
-      `"${d.hotelMadinah}"`,
-      `"${d.statusJamaah}"`,
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob(["\uFEFF" + csvLines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `SISKOPATUH_MANIFEST_${pkgCode}_${pkgNameClean}_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const INDO_MONTHS_UPPER = [
@@ -369,13 +446,24 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
             </div>
 
             {activeSubTab === "SISKOPATUH" && (
-              <button
-                onClick={handleExportCsv}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 px-4 py-2.5 text-xs font-black text-slate-950 shadow-sm transition-all cursor-pointer"
-              >
-                <Download className="h-4 w-4" />
-                Ekspor SISKOPATUH {currentSelectedPkg ? `(${currentSelectedPkg.code})` : "Semua"} (.CSV)
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportCsv}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-white/90 hover:bg-white px-3.5 py-2.5 text-xs font-bold text-slate-900 shadow-sm transition-all cursor-pointer"
+                  title="Download CSV 32 Kolom Standar Kemenag RI"
+                >
+                  <Download className="h-4 w-4 text-slate-600" />
+                  CSV (32 Kolom)
+                </button>
+                <button
+                  onClick={handleExportSiskopatuhExcel}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 px-4 py-2.5 text-xs font-black text-slate-950 shadow-sm transition-all cursor-pointer"
+                  title="Download File Excel Resmi Kemenag (.xlsx) 32 Kolom Baku"
+                >
+                  <Download className="h-4 w-4" />
+                  Download Excel SISKOPATUH (.xlsx)
+                </button>
+              </div>
             )}
 
             {activeSubTab === "MANIFEST_VISA" && (
@@ -515,17 +603,17 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
             ) : (
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-100/70 text-slate-600 border-b border-slate-200 font-bold">
+                  <tr className="bg-slate-100/70 text-slate-600 border-b border-slate-200 font-bold whitespace-nowrap">
                     <th className="py-3 px-3">No</th>
-                    <th className="py-3 px-3">Nama Jamaah (Sesuai Paspor)</th>
-                    <th className="py-3 px-3">NIK</th>
-                    <th className="py-3 px-3">No. Paspor</th>
-                    <th className="py-3 px-3">Ayah Kandung</th>
-                    <th className="py-3 px-3">L/P</th>
+                    <th className="py-3 px-3">Title & Nama Jamaah</th>
+                    <th className="py-3 px-3">Nama Ayah</th>
+                    <th className="py-3 px-3">Jenis & No. Identitas</th>
+                    <th className="py-3 px-3">No. Paspor & Kantor</th>
+                    <th className="py-3 px-3">Tempat / Tgl Lahir</th>
+                    <th className="py-3 px-3">Domisili</th>
+                    <th className="py-3 px-3">Status / Pekerjaan</th>
                     <th className="py-3 px-3">Vaksin Meningitis</th>
-                    <th className="py-3 px-3">Paket & Jadwal</th>
-                    <th className="py-3 px-3">Kamar</th>
-                    <th className="py-3 px-3">Status</th>
+                    <th className="py-3 px-3">Paket Keberangkatan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -533,15 +621,51 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
                     <tr key={row.noUrut} className="hover:bg-slate-50 transition-colors">
                       <td className="py-3 px-3 font-mono font-bold text-slate-400">{row.noUrut}</td>
                       <td className="py-3 px-3 font-bold text-slate-950">
-                        {row.namaLengkap}
-                        <div className="text-[10px] text-slate-400 font-normal">
-                          Lahir: {row.tempatLahir}, {row.tanggalLahir}
+                        <div className="flex items-center gap-1.5">
+                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-800">
+                            {row.title}
+                          </span>
+                          <span>{row.nama || row.namaLengkap}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-normal mt-0.5">
+                          {row.kewarganegaraan || "WNI"} • Telp/Hp: {row.noHp || row.noTelepon || "-"}
                         </div>
                       </td>
-                      <td className="py-3 px-3 font-mono text-[11px]">{row.nik}</td>
-                      <td className="py-3 px-3 font-mono font-bold text-emerald-700">{row.noPaspor}</td>
-                      <td className="py-3 px-3 text-slate-600">{row.namaAyahKandung}</td>
-                      <td className="py-3 px-3 font-bold">{row.jenisKelamin}</td>
+                      <td className="py-3 px-3 text-slate-700 font-medium">
+                        {row.namaAyah || "-"}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="inline-block text-[10px] font-bold text-slate-500 uppercase">
+                          {row.jenisIdentitas || "PASPOR"}:
+                        </span>
+                        <div className="font-mono text-[11px] font-bold text-slate-900">
+                          {row.noIdentitas || row.nik || "-"}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="font-mono font-bold text-emerald-700">
+                          {row.noPaspor || "-"}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {row.kotaPaspor ? `Kantor: ${row.kotaPaspor}` : "-"}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="font-semibold text-slate-900">{row.tempatLahir || "-"}</div>
+                        <div className="text-[10px] text-slate-500">{row.tglLahir || "-"}</div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="text-slate-800 font-medium truncate max-w-[180px]" title={row.alamat}>
+                          {row.kabupaten || row.alamat || "-"}
+                        </div>
+                        <div className="text-[10px] text-slate-500">{row.provinsi || "-"}</div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="font-bold text-slate-700">{row.statusPernikahan}</div>
+                        <div className="text-[10px] text-slate-500">
+                          {row.pendidikan} • {row.pekerjaan}
+                        </div>
+                      </td>
                       <td className="py-3 px-3">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -555,13 +679,9 @@ export default function ComplianceView({ packages, pilgrims }: ComplianceViewPro
                       </td>
                       <td className="py-3 px-3">
                         <div className="font-semibold text-slate-900">{row.namaPaket}</div>
-                        <div className="text-[10px] text-slate-500">Berangkat: {row.tanggalKeberangkatan}</div>
-                      </td>
-                      <td className="py-3 px-3 font-bold text-slate-700">{row.tipeKamar}</td>
-                      <td className="py-3 px-3">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                          {row.statusJamaah}
-                        </span>
+                        <div className="text-[10px] text-slate-500">
+                          {row.tanggalKeberangkatan ? `Berangkat: ${row.tanggalKeberangkatan}` : "-"}
+                        </div>
                       </td>
                     </tr>
                   ))}
