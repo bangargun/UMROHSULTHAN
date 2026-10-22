@@ -12,7 +12,8 @@
     "build:apk": "bash scripts/build-apk.sh",
     "cap:sync": "cap sync android",
     "update:vps": "bash update-to-vps.sh",
-    "update:code": "bash update-code-only.sh"
+    "update:code": "bash update-code-only.sh",
+    "bot:dev": "node scripts/telegram-polling.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
