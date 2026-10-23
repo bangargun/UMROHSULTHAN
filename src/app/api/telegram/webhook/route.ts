@@ -88,7 +88,9 @@ export async function POST(request: Request) {
       // Action: Lihat Paket Umroh Aktif
       if (data === "menu_packages") {
         const packages = await prisma.package.findMany({
-          where: { status: "ACTIVE" },
+          where: {
+            status: { in: ["ACTIVE", "FULL"] },
+          },
           orderBy: { departureDate: "asc" },
         });
 
@@ -101,21 +103,26 @@ export async function POST(request: Request) {
           return NextResponse.json({ ok: true });
         }
 
-        let msg = "🕋 <b>DAFTAR PAKET UMROH AKTIF:</b>\n\n";
+        let msg = "🕋 <b>DAFTAR PAKET UMROH:</b>\n\n";
         const buttons: any[] = [];
 
         packages.forEach((pkg, idx) => {
+          const isFull = pkg.status === "FULL" || pkg.bookedCount >= pkg.quota;
           const sisaKursi = Math.max(0, pkg.quota - pkg.bookedCount);
           msg += `<b>${idx + 1}. ${pkg.name}</b>\n`;
           msg += `📅 Berangkat: <b>${formatDateIndo(pkg.departureDate)}</b> (${pkg.durationDays} Hari)\n`;
           msg += `✈️ Maskapai: ${pkg.airline}\n`;
           msg += `🏨 Hotel: ${pkg.hotelMakkah} (Makkah) & ${pkg.hotelMadinah} (Madinah)\n`;
           msg += `💰 Harga Mulai: <b>${formatRupiah(pkg.priceQuad)}</b> (Quad)\n`;
-          msg += `🪑 Sisa Kuota: <b>${sisaKursi} Kursi</b>\n\n`;
+          msg += isFull
+            ? `⚠️ Status: <b>Kuota Utama Penuh (Tersedia Waiting List)</b>\n\n`
+            : `🪑 Sisa Kuota: <b>${sisaKursi} Kursi</b>\n\n`;
 
           buttons.push([
             {
-              text: `📝 Booking: ${pkg.name.slice(0, 24)}...`,
+              text: isFull
+                ? `📝 Daftar Waiting List: ${pkg.name.slice(0, 20)}`
+                : `📝 Booking: ${pkg.name.slice(0, 24)}...`,
               callback_data: `select_pkg_${pkg.id}`,
             },
           ]);
@@ -130,7 +137,9 @@ export async function POST(request: Request) {
       // Action: Mulai Pendaftaran / Booking
       if (data === "menu_register") {
         const packages = await prisma.package.findMany({
-          where: { status: "ACTIVE" },
+          where: {
+            status: { in: ["ACTIVE", "FULL"] },
+          },
           orderBy: { departureDate: "asc" },
         });
 
@@ -143,17 +152,20 @@ export async function POST(request: Request) {
           return NextResponse.json({ ok: true });
         }
 
-        const buttons = packages.map((pkg) => [
-          {
-            text: `🛫 ${pkg.name} (${formatDateIndo(pkg.departureDate)})`,
-            callback_data: `select_pkg_${pkg.id}`,
-          },
-        ]);
+        const buttons = packages.map((pkg) => {
+          const isFull = pkg.status === "FULL" || pkg.bookedCount >= pkg.quota;
+          return [
+            {
+              text: `${isFull ? "🈵 [Penuh/Waitlist]" : "🛫"} ${pkg.name} (${formatDateIndo(pkg.departureDate)})`,
+              callback_data: `select_pkg_${pkg.id}`,
+            },
+          ];
+        });
         buttons.push([{ text: "❌ Batalkan", callback_data: "menu_main" }]);
 
         await sendTelegramMessage(
           chatId,
-          "📝 <b>Pendaftaran & Konsultasi Umroh</b>\n\nSilakan pilih program paket yang Anda minati terlebih dahulu:",
+          "📝 <b>Pendaftaran & Konsultasi Umroh</b>\n\nSilakan pilih program paket yang Anda minati:",
           { inline_keyboard: buttons }
         );
         return NextResponse.json({ ok: true });

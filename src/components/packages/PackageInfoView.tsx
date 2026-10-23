@@ -76,6 +76,7 @@ export default function PackageInfoView({
   const [packageInfo, setPackageInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [activeFormat, setActiveFormat] = useState<"PACKAGE_INFO" | "AMR_TASHGHIL">("PACKAGE_INFO");
   const [travelSettings, setTravelSettings] = useState<any>({
     companyName: "PT BAROKAH SULTHAN HARAMAIN",
   });
@@ -271,6 +272,18 @@ export default function PackageInfoView({
   const totalPax =
     (packageInfo?.adultPax !== undefined && packageInfo?.adultPax !== null ? packageInfo.adultPax : formData.adultPax || 0) +
     (packageInfo?.childPax || formData.childPax || 0);
+
+  const packagePilgrims = pilgrims.filter(
+    (p) => p.packageId === selectedPackageId
+  );
+  const menCount =
+    packageInfo?.menCount !== undefined && packageInfo?.menCount !== null
+      ? packageInfo.menCount
+      : packagePilgrims.filter((p) => p.gender === "MALE" || p.gender === "L").length;
+  const womenCount =
+    packageInfo?.womenCount !== undefined && packageInfo?.womenCount !== null
+      ? packageInfo.womenCount
+      : packagePilgrims.filter((p) => p.gender === "FEMALE" || p.gender === "P").length;
 
   // Save handler
   const handleSave = async (e: React.FormEvent) => {
@@ -641,22 +654,356 @@ export default function PackageInfoView({
     }
   };
 
+  // Export Amr Tashghil (أمـر التشغيل) to authentic bilingual Excel (.xls)
+  const handleExportAmrTashghilExcel = () => {
+    try {
+      const depDateStr = currentPackage?.departureDate
+        ? formatDate(currentPackage.departureDate, "yyyy-MM-dd")
+        : "2026-10-27";
+      const retDateStr = currentPackage?.returnDate
+        ? formatDate(currentPackage.returnDate, "yyyy-MM-dd")
+        : "2026-11-07";
+      const groupCode = packageInfo?.groupCode || currentPackage?.code || "-";
+      const subAgentName = packageInfo?.subAgentName || "ALGHIFARI HARAMAIN (AGH)";
+      const tlPhone = packageInfo?.tourLeaderPhone || formData.tourLeaderPhone || "085261083555";
+      const fileName = `AMR_TASHGHIL_${(currentPackage?.name || "PAKET").replace(/\s+/g, "_")}_${totalPax}PAX.xls`;
+
+      const arrFlight = activeFlights[0] || {
+        date: depDateStr,
+        flightNo: currentPackage?.airline ? `${currentPackage.airline} 84` : "JT 84",
+        to: "KUALA NAMU MEDAN",
+        eta: "20.00",
+      };
+      const depFlight = activeFlights[activeFlights.length - 1] || {
+        date: retDateStr,
+        flightNo: currentPackage?.airline ? `${currentPackage.airline} 85` : "JT 85",
+        from: "KING ABDUL AZIZ JEDDAH",
+        etd: "19.10",
+      };
+
+      const hotels = activeHotels.length > 0 ? activeHotels : [
+        { city: "TAIF", hotel: "PLATINUM PARK", checkIn: depDateStr, checkOut: "2026-10-28" },
+        { city: "MEKKAH", hotel: currentPackage?.hotelMakkah || "FUAD TOWER", checkIn: "2026-10-28", checkOut: "2026-11-02" },
+        { city: "MADINAH", hotel: currentPackage?.hotelMadinah || "QASR ANSAR GT", checkIn: "2026-11-02", checkOut: retDateStr },
+      ];
+
+      const buses = activeBuses.length > 0 ? activeBuses : [
+        { date: "2026-10-27", from: "JED", to: "THAIF", time: "20.00" },
+        { date: "2026-10-28", from: "THAIF", to: "HOTEL MAKKAH", time: "08.00" },
+        { date: "2026-10-31", from: "HOTEL MAKKAH", to: "CITY TOUR", time: "08.00" },
+        { date: "2026-11-02", from: "HOTEL MAKKAH", to: "HOTEL MADINAH", time: "13.00" },
+        { date: "2026-11-04", from: "HOTEL MADINAH", to: "CITY TOUR", time: "08.00" },
+        { date: "2026-11-07", from: "HOTEL MADINAH", to: "JEDDAH", time: "08.00" },
+      ];
+
+      const hotelBlocksHtml = hotels.map((h) => `
+        <tr><td colspan="4" class="spacer">&nbsp;</td></tr>
+        <tr>
+          <td colspan="4" class="sec-header">HOTEL CONFIRMATION : معلومات الفندق</td>
+        </tr>
+        <tr>
+          <th class="th-green">CITY <span class="ar">مدينة</span></th>
+          <th class="th-green">HOTEL NAME <span class="ar">اسم فندق</span></th>
+          <th class="th-green">CHECK IN <span class="ar">الدخول</span></th>
+          <th class="th-green">CHCK OUT <span class="ar">الخروج</span></th>
+        </tr>
+        <tr>
+          <td class="td-center font-bold uppercase">${h.city}</td>
+          <td class="td-left font-bold uppercase">${h.hotel}</td>
+          <td class="td-center font-mono">${h.checkIn}</td>
+          <td class="td-center font-mono">${h.checkOut}</td>
+        </tr>
+      `).join("");
+
+      const busRowsHtml = buses.map((b) => `
+        <tr>
+          <td class="td-center font-mono">${b.date}</td>
+          <td class="td-center font-bold uppercase">${b.from}</td>
+          <td class="td-center font-bold uppercase">${b.to}</td>
+          <td class="td-center font-mono">${b.time}</td>
+        </tr>
+      `).join("");
+
+      const excelHtml = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+          <!--[if gte mso 9]>
+          <xml>
+            <x:ExcelWorkbook>
+              <x:ExcelWorksheets>
+                <x:ExcelWorksheet>
+                  <x:Name>AMR TASHGHIL</x:Name>
+                  <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+                </x:ExcelWorksheet>
+              </x:ExcelWorksheets>
+            </x:ExcelWorkbook>
+          </xml>
+          <![endif]-->
+          <style>
+            body { font-family: Calibri, Arial, sans-serif; }
+            table { border-collapse: collapse; width: 100%; }
+            .banner-top { background-color: #2E7D32; color: #FFFFFF; font-weight: bold; font-size: 14pt; text-align: center; height: 38px; border: 1.5pt solid #000000; }
+            .sub-bar { background-color: #E8F5E9; color: #1B5E20; font-weight: bold; font-size: 10pt; padding: 6px 10px; border: 1pt solid #000000; }
+            .sec-header { background-color: #A5D6A7; color: #1B5E20; font-weight: bold; font-size: 10pt; padding: 5px 8px; border: 1pt solid #000000; }
+            .th-green { background-color: #E8F5E9; color: #000000; font-weight: bold; font-size: 9.5pt; text-align: center; border: 1pt solid #000000; padding: 5px 6px; }
+            .td-center { text-align: center; border: 0.5pt solid #000000; padding: 5px 6px; font-size: 9.5pt; mso-number-format: "\\@"; }
+            .td-left { text-align: left; border: 0.5pt solid #000000; padding: 5px 8px; font-size: 9.5pt; mso-number-format: "\\@"; }
+            .td-right { text-align: right; border: 0.5pt solid #000000; padding: 5px 8px; font-size: 9.5pt; mso-number-format: "\\@"; }
+            .ar { font-family: 'Traditional Arabic', 'Segoe UI', Arial; font-size: 10pt; }
+            .spacer { border: none; height: 10px; }
+            .font-bold { font-weight: bold; }
+            .font-mono { font-family: Consolas, monospace; }
+          </style>
+        </head>
+        <body>
+          <table>
+            <tr><td colspan="4" class="sub-bar">VISA + BUS</td></tr>
+            <tr><td colspan="4" class="sub-bar">NOMOR MUTHAWIF / TOUR LEADER : ${tlPhone}</td></tr>
+            <tr><td colspan="4" class="spacer">&nbsp;</td></tr>
+            <tr><td colspan="4" class="banner-top">ARRIVAL INFORMATION : أمـــــــــــــــر الــتــشــغــيــل</td></tr>
+            <tr><td colspan="4" class="spacer">&nbsp;</td></tr>
+            <tr>
+              <td class="td-left font-bold" style="width: 25%;">AGENT NAME</td>
+              <td class="td-left font-bold" style="width: 50%;">${subAgentName}</td>
+              <td colspan="2" class="td-right font-bold ar" style="width: 25%;">اسم الوكيل</td>
+            </tr>
+            <tr>
+              <td class="td-left font-bold">GROUP NUMBER</td>
+              <td class="td-left font-mono font-bold">${groupCode}</td>
+              <td colspan="2" class="td-right font-bold ar">رقم المجموعة</td>
+            </tr>
+            <tr>
+              <td class="td-left font-bold">TOTAL MUTAMERS</td>
+              <td class="td-left font-bold">${totalPax} PAX (MEN: ${menCount}, WOMEN: ${womenCount})</td>
+              <td colspan="2" class="td-right font-bold ar">عدد المعتمرين</td>
+            </tr>
+            <tr><td colspan="4" class="spacer">&nbsp;</td></tr>
+
+            <!-- Arrival Details -->
+            <tr><td colspan="4" class="sec-header">ARRIVAL DETAILS : بيانات الوصول</td></tr>
+            <tr>
+              <th class="th-green">DATE <span class="ar">التاريخ</span></th>
+              <th class="th-green">FLIGHT NO <span class="ar">رقم الرحلة</span></th>
+              <th class="th-green">ARR AIRPORT <span class="ar">مطار الوصول</span></th>
+              <th class="th-green">ARR TIME <span class="ar">وقت الوصول</span></th>
+            </tr>
+            <tr>
+              <td class="td-center font-mono">${arrFlight.date}</td>
+              <td class="td-center font-bold">${arrFlight.flightNo}</td>
+              <td class="td-center font-bold uppercase">${arrFlight.to}</td>
+              <td class="td-center font-mono">${arrFlight.eta}</td>
+            </tr>
+
+            <!-- Departure Details -->
+            <tr><td colspan="4" class="spacer">&nbsp;</td></tr>
+            <tr><td colspan="4" class="sec-header">DEPARTURE DETAILS : بيانات المغادرة</td></tr>
+            <tr>
+              <th class="th-green">DATE <span class="ar">التاريخ</span></th>
+              <th class="th-green">FLIGHT NO <span class="ar">رقم الرحلة</span></th>
+              <th class="th-green">DEP AIRPORT <span class="ar">مطار المغادرة</span></th>
+              <th class="th-green">DEP TIME <span class="ar">وقت المغادرة</span></th>
+            </tr>
+            <tr>
+              <td class="td-center font-mono">${depFlight.date}</td>
+              <td class="td-center font-bold">${depFlight.flightNo}</td>
+              <td class="td-center font-bold uppercase">${depFlight.from}</td>
+              <td class="td-center font-mono">${depFlight.etd}</td>
+            </tr>
+
+            <!-- Hotel Confirmation Blocks -->
+            ${hotelBlocksHtml}
+
+            <!-- Transportation Details -->
+            <tr><td colspan="4" class="spacer">&nbsp;</td></tr>
+            <tr><td colspan="4" class="sec-header">TRANSPORTATION DETAILS : بيانات النقل</td></tr>
+            <tr>
+              <th class="th-green">DATE <span class="ar">التاريخ</span></th>
+              <th class="th-green">FROM <span class="ar">من</span></th>
+              <th class="th-green">TO <span class="ar">إلى</span></th>
+              <th class="th-green">TIME <span class="ar">وقت</span></th>
+            </tr>
+            ${busRowsHtml}
+            <tr><td colspan="4" class="spacer">&nbsp;</td></tr>
+
+            <!-- Gender Breakdown -->
+            <tr>
+              <td colspan="2" class="td-left font-bold">MEN (Laki-laki)</td>
+              <td colspan="2" class="td-center font-bold font-mono">${menCount} Orang</td>
+            </tr>
+            <tr>
+              <td colspan="2" class="td-left font-bold">WOMEN (Perempuan)</td>
+              <td colspan="2" class="td-center font-bold font-mono">${womenCount} Orang</td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob([excelHtml], { type: "application/vnd.ms-excel;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("Gagal mengunduh file Excel Amr Tashghil");
+    }
+  };
+
+  // Export Amr Tashghil to CSV format matching exact template
+  const handleExportAmrTashghilCsv = () => {
+    try {
+      const depDateStr = currentPackage?.departureDate
+        ? formatDate(currentPackage.departureDate, "yyyy-MM-dd")
+        : "2026-10-27";
+      const retDateStr = currentPackage?.returnDate
+        ? formatDate(currentPackage.returnDate, "yyyy-MM-dd")
+        : "2026-11-07";
+      const groupCode = packageInfo?.groupCode || currentPackage?.code || "";
+      const subAgentName = packageInfo?.subAgentName || "ALGHIFARI HARAMAIN (AGH)";
+      const tlPhone = packageInfo?.tourLeaderPhone || formData.tourLeaderPhone || "085261083555";
+      const fileName = `AMR_TASHGHIL_${(currentPackage?.name || "PAKET").replace(/\s+/g, "_")}_${totalPax}PAX.csv`;
+
+      const arrFlight = activeFlights[0] || {
+        date: depDateStr,
+        flightNo: currentPackage?.airline ? `${currentPackage.airline} 84` : "JT 84",
+        to: "KUALA NAMU MEDAN",
+        eta: "20.00",
+      };
+      const depFlight = activeFlights[activeFlights.length - 1] || {
+        date: retDateStr,
+        flightNo: currentPackage?.airline ? `${currentPackage.airline} 85` : "JT 85",
+        from: "KING ABDUL AZIZ JEDDAH",
+        etd: "19.10",
+      };
+
+      const hotels = activeHotels.length > 0 ? activeHotels : [
+        { city: "TAIF ", hotel: "PLATINUM PARK ", checkIn: depDateStr, checkOut: "2026-10-28" },
+        { city: "MEKKAH", hotel: currentPackage?.hotelMakkah || "FUAD TOWER", checkIn: "2026-10-28", checkOut: "2026-11-02" },
+        { city: "MADINAH", hotel: currentPackage?.hotelMadinah || "QASR ANSAR GT ", checkIn: "2026-11-02", checkOut: retDateStr },
+      ];
+
+      const buses = activeBuses.length > 0 ? activeBuses : [
+        { date: "2026-10-27", from: "JED", to: "THAIF ", time: "20.00" },
+        { date: "2026-10-28", from: "THAIF ", to: "HOTEL MAKKAH ", time: "08.00" },
+        { date: "2026-10-31", from: "HOTEL MAKKAH ", to: "CITY TOUR ", time: "08.00" },
+        { date: "2026-11-02", from: "HOTEL MAKKAH ", to: "HOTEL MADINAH ", time: "13.00" },
+        { date: "2026-11-04", from: "HOTEL MADINAH ", to: "CITY TOUR ", time: "08.00" },
+        { date: "2026-11-07", from: "HOTEL MADINAH ", to: "JEDDAH", time: "08.00" },
+      ];
+
+      const lines: string[] = [
+        ",,,,",
+        ",VISA + BUS,,,",
+        `,NOMOR MUTHAWIF / TOUR LEADER : ${tlPhone},,,`,
+        ",,,,",
+        ",ARRIVAL INFORMATION : أمـــــــــــــــر الــتــشــغــيــل ,,,",
+        ",,,,",
+        `,AGENT NAME,${subAgentName},,اسم الوكيل`,
+        `,GROUP NUMBER ,${groupCode},,رقم المجموعة`,
+        `,TOTAL  MUTAMERS,${totalPax},,عدد المعتمرين`,
+        ",,,,",
+        ",ARRIVAL DETAILS : بيانات الوصول,,,",
+        ",DATE          التاريخ,FLIGHT NO        رقم الرحلة,مطار الوصول ARR AIRPORT,ARR TIME  وقت الوصول",
+        `,${arrFlight.date || depDateStr},${arrFlight.flightNo || "JT 84"},${arrFlight.to || "KUALA NAMU MEDAN"},${arrFlight.eta || "20.00"}`,
+        ",,,,",
+        ",DEPARTURE DETAILS : بيانات المغادرة,,,",
+        ",DATE         التاريخ,FLIGHT NO   رقم الرحلة,DEP AIRPORT مطار المغادرة,DEP TIME وقت المغادرة",
+        `,${depFlight.date || retDateStr},${depFlight.flightNo || "JT 85"},${depFlight.from || "KING ABDUL AZIZ JEDDAH"},${depFlight.etd || "19.10"}`,
+        ",,,,",
+      ];
+
+      hotels.forEach((h) => {
+        lines.push(",HOTEL CONFIRMATION : معلومات الفندق,,,");
+        lines.push(",CITY  مدينة,HOTEL NAME  اسم فندق,CHECK IN الدخول,CHCK OUT  الخروج");
+        lines.push(`,${h.city} ,${h.hotel} ,${h.checkIn},${h.checkOut}`);
+        lines.push(",,,,");
+      });
+
+      lines.push(",TRANSPORTATION DETAILS : بيانات النقل,,,");
+      lines.push(",DATE    التاريخ,FROM  من,TO  إلى,TIME  وقت");
+      buses.forEach((b) => {
+        lines.push(`,${b.date},${b.from} ,${b.to} ,${b.time}`);
+      });
+
+      lines.push(",,,,");
+      lines.push(",,,,");
+      lines.push(`,,MEN,${menCount},`);
+      lines.push(`,,WOMEN,${womenCount},`);
+
+      const csvContent = lines.join("\n");
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("Gagal mengunduh CSV Amr Tashghil");
+    }
+  };
+
   // WhatsApp share message
   const handleShareWhatsApp = () => {
-    const text = `*INFORMASI PAKET & MANIFEST OPERASIONAL (PACKAGE INFO)*\n` +
-      `------------------------------------------\n` +
-      `*Paket:* ${currentPackage?.name || "Program Umroh"}\n` +
-      `*Kode Grup:* ${packageInfo?.groupCode || currentPackage?.code || "-"}\n` +
-      `*Sub Agent / Mitra:* ${packageInfo?.subAgentName || travelSettings.companyName}\n` +
-      `*Total Jamaah:* ${totalPax} Pax (Dewasa: ${packageInfo?.adultPax || 0}, Anak: ${packageInfo?.childPax || 0})\n` +
-      `*Tour Leader:* ${packageInfo?.tourLeaderName || "-"} (${packageInfo?.tourLeaderPhone || "-"})\n` +
-      `*Muthawwif:* ${packageInfo?.muthawwifName || "-"} (${packageInfo?.muthawwifPhone || "-"})\n\n` +
-      `*JADWAL PENERBANGAN:*\n` +
-      activeFlights.map((f, i) => `${i + 1}. ${f.from} -> ${f.to} | ${f.date} | ETD ${f.etd} - ETA ${f.eta} | ${f.carrier} (${f.flightNo})`).join("\n") +
-      `\n\n*HOTEL:* \n` +
-      activeHotels.map((h, i) => `${i + 1}. [${h.city}] ${h.hotel} (${h.checkIn} s/d ${h.checkOut})`).join("\n") +
-      `\n\n*HOTLINE HANDLING SAUDI:* ${packageInfo?.handlingSaudi || "-"} (${packageInfo?.handlingPhone || "-"})\n\n` +
-      `_Diterbitkan resmi oleh ${travelSettings.companyName}_`;
+    let text = "";
+    if (activeFormat === "AMR_TASHGHIL") {
+      const depDateStr = currentPackage?.departureDate ? formatDate(currentPackage.departureDate, "yyyy-MM-dd") : "2026-10-27";
+      const retDateStr = currentPackage?.returnDate ? formatDate(currentPackage.returnDate, "yyyy-MM-dd") : "2026-11-07";
+      const arrFlight = activeFlights[0] || { date: depDateStr, flightNo: "JT 84", to: "KNO / JED", eta: "20.00" };
+      const depFlight = activeFlights[activeFlights.length - 1] || { date: retDateStr, flightNo: "JT 85", from: "JEDDAH", etd: "19.10" };
+
+      text = `*VISA + BUS*\n` +
+        `*NOMOR MUTHAWIF / TOUR LEADER :* ${packageInfo?.tourLeaderPhone || formData.tourLeaderPhone || "085261083555"}\n\n` +
+        `*ARRIVAL INFORMATION : أمـــــــــــــــر الــتــشــغــيــل*\n` +
+        `------------------------------------------\n` +
+        `*AGENT NAME:* ${packageInfo?.subAgentName || "ALGHIFARI HARAMAIN (AGH)"} (اسم الوكيل)\n` +
+        `*GROUP NUMBER:* ${packageInfo?.groupCode || currentPackage?.code || "-"} (رقم المجموعة)\n` +
+        `*TOTAL MUTAMERS:* ${totalPax} PAX (MEN: ${menCount}, WOMEN: ${womenCount}) (عدد المعتمرين)\n\n` +
+        `*ARRIVAL DETAILS (بيانات الوصول):*\n` +
+        `• Tgl: ${arrFlight.date} | Flight: ${arrFlight.flightNo} | Bandara: ${arrFlight.to} | Jam: ${arrFlight.eta}\n\n` +
+        `*DEPARTURE DETAILS (بيانات المغادرة):*\n` +
+        `• Tgl: ${depFlight.date} | Flight: ${depFlight.flightNo} | Bandara: ${depFlight.from} | Jam: ${depFlight.etd}\n\n` +
+        `*HOTEL CONFIRMATION (معلومات الفندق):*\n` +
+        (activeHotels.length > 0 ? activeHotels : [
+          { city: "TAIF", hotel: "PLATINUM PARK", checkIn: depDateStr, checkOut: "2026-10-28" },
+          { city: "MEKKAH", hotel: currentPackage?.hotelMakkah || "FUAD TOWER", checkIn: "2026-10-28", checkOut: "2026-11-02" },
+          { city: "MADINAH", hotel: currentPackage?.hotelMadinah || "QASR ANSAR GT", checkIn: "2026-11-02", checkOut: retDateStr },
+        ]).map((h, i) => `${i + 1}. [${h.city}] ${h.hotel} (In: ${h.checkIn} s/d Out: ${h.checkOut})`).join("\n") +
+        `\n\n*TRANSPORTATION DETAILS (بيانات النقل):*\n` +
+        (activeBuses.length > 0 ? activeBuses : [
+          { date: "2026-10-27", from: "JED", to: "THAIF", time: "20.00" },
+          { date: "2026-10-28", from: "THAIF", to: "HOTEL MAKKAH", time: "08.00" },
+          { date: "2026-10-31", from: "HOTEL MAKKAH", to: "CITY TOUR", time: "08.00" },
+          { date: "2026-11-02", from: "HOTEL MAKKAH", to: "HOTEL MADINAH", time: "13.00" },
+          { date: "2026-11-04", from: "HOTEL MADINAH", to: "CITY TOUR", time: "08.00" },
+          { date: "2026-11-07", from: "HOTEL MADINAH", to: "JEDDAH", time: "08.00" },
+        ]).map((b) => `• ${b.date}: ${b.from} -> ${b.to} (${b.time})`).join("\n") +
+        `\n\n_Diterbitkan oleh PT BAROKAH SULTHAN HARAMAIN_`;
+    } else {
+      text = `*INFORMASI PAKET & MANIFEST OPERASIONAL (PACKAGE INFO)*\n` +
+        `------------------------------------------\n` +
+        `*Paket:* ${currentPackage?.name || "Program Umroh"}\n` +
+        `*Kode Grup:* ${packageInfo?.groupCode || currentPackage?.code || "-"}\n` +
+        `*Sub Agent / Mitra:* ${packageInfo?.subAgentName || travelSettings.companyName}\n` +
+        `*Total Jamaah:* ${totalPax} Pax (Dewasa: ${packageInfo?.adultPax || 0}, Anak: ${packageInfo?.childPax || 0})\n` +
+        `*Tour Leader:* ${packageInfo?.tourLeaderName || "-"} (${packageInfo?.tourLeaderPhone || "-"})\n` +
+        `*Muthawwif:* ${packageInfo?.muthawwifName || "-"} (${packageInfo?.muthawwifPhone || "-"})\n\n` +
+        `*JADWAL PENERBANGAN:*\n` +
+        activeFlights.map((f, i) => `${i + 1}. ${f.from} -> ${f.to} | ${f.date} | ETD ${f.etd} - ETA ${f.eta} | ${f.carrier} (${f.flightNo})`).join("\n") +
+        `\n\n*HOTEL:* \n` +
+        activeHotels.map((h, i) => `${i + 1}. [${h.city}] ${h.hotel} (${h.checkIn} s/d ${h.checkOut})`).join("\n") +
+        `\n\n*HOTLINE HANDLING SAUDI:* ${packageInfo?.handlingSaudi || "-"} (${packageInfo?.handlingPhone || "-"})\n\n` +
+        `_Diterbitkan resmi oleh ${travelSettings.companyName}_`;
+    }
 
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
   };
@@ -704,13 +1051,32 @@ export default function PackageInfoView({
             <Edit3 className="w-4 h-4" /> Edit Data Info
           </button>
 
-          <button
-            onClick={handleExportExcel}
-            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-            title="Download file Excel (.xls) berformat lengkap sama persis dengan tampilan PDF"
-          >
-            <Download className="w-4 h-4" /> Excel (.xls)
-          </button>
+          {activeFormat === "AMR_TASHGHIL" ? (
+            <>
+              <button
+                onClick={handleExportAmrTashghilCsv}
+                className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                title="Download file CSV resmi Amr Tashghil"
+              >
+                <Download className="w-4 h-4 text-slate-600" /> CSV
+              </button>
+              <button
+                onClick={handleExportAmrTashghilExcel}
+                className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                title="Download file Excel resmi Amr Tashghil (.xls)"
+              >
+                <Download className="w-4 h-4" /> Excel (.xls)
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleExportExcel}
+              className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+              title="Download file Excel (.xls) berformat lengkap sama persis dengan tampilan PDF"
+            >
+              <Download className="w-4 h-4" /> Excel (.xls)
+            </button>
+          )}
 
           <button
             onClick={() => window.print()}
@@ -730,14 +1096,55 @@ export default function PackageInfoView({
         </div>
       </div>
 
-      {/* Printable Sheet View: 100% Authentic Excel Document Layout Matching Image 1 */}
+      {/* SubTab Format Selector */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs no-print">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+          <button
+            onClick={() => setActiveFormat("PACKAGE_INFO")}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              activeFormat === "PACKAGE_INFO"
+                ? "bg-white text-blue-700 shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            📋 Package Info (Standard Internal)
+          </button>
+
+          <button
+            onClick={() => setActiveFormat("AMR_TASHGHIL")}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              activeFormat === "AMR_TASHGHIL"
+                ? "bg-emerald-700 text-white shadow-xs font-black"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <span>🇸🇦</span>
+            Amr Tashghil (أمـــــر التشغيل / Saudi Operation Order)
+          </button>
+        </div>
+
+        <div className="text-[11px] font-semibold text-slate-500 px-2">
+          {activeFormat === "AMR_TASHGHIL" ? (
+            <span className="text-emerald-700 font-bold flex items-center gap-1">
+              ✓ Format Resmi Muassasah Saudi (Visa + Bus + Mutamers Breakdown)
+            </span>
+          ) : (
+            <span>Format Handover Internal Travel</span>
+          )}
+        </div>
+      </div>
+
+      {/* Printable Sheet View */}
       <div className="bg-white rounded-3xl border border-slate-300 shadow-xl p-6 sm:p-10 text-slate-900 printable-modal-content print-sheet relative overflow-x-auto">
-        <div className="border-2 border-black max-w-[1000px] mx-auto bg-white text-black font-sans text-xs">
-          {/* Header Banner */}
-          <div className="bg-[#6FA8DC] text-black text-center py-2 font-black text-lg sm:text-xl border-b border-black tracking-widest uppercase">
-            PACKAGE INFO
-          </div>
-          <div className="bg-[#6FA8DC] h-4 border-b-2 border-black"></div>
+        {activeFormat === "PACKAGE_INFO" ? (
+          /* VIEW 1: STANDAR PACKAGE INFO (BLUE THEME) */
+          <div className="border-2 border-black max-w-[1000px] mx-auto bg-white text-black font-sans text-xs">
+            {/* Header Banner */}
+            <div className="bg-[#6FA8DC] text-black text-center py-2 font-black text-lg sm:text-xl border-b border-black tracking-widest uppercase">
+              PACKAGE INFO
+            </div>
+            <div className="bg-[#6FA8DC] h-4 border-b-2 border-black"></div>
 
           {/* Section 1: Group & Tour Leader Details */}
           <table className="w-full text-xs text-center border-collapse">
@@ -961,6 +1368,201 @@ export default function PackageInfoView({
             </tbody>
           </table>
         </div>
+        ) : (
+          /* VIEW 2: AMR TASHGHIL (أمـــــــــــــــر الــتــشــغــيــل / SAUDI OPERATION ORDER) */
+          <div className="border-2 border-black max-w-[1000px] mx-auto bg-white text-black font-sans text-xs">
+            {/* Header: VISA + BUS & NOMOR MUTHAWIF */}
+            <div className="p-3 border-b-2 border-black bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 font-bold">
+              <span className="text-sm font-black text-slate-900 tracking-wider">
+                VISA + BUS
+              </span>
+              <span className="text-xs text-slate-800">
+                NOMOR MUTHAWIF / TOUR LEADER :{" "}
+                <span className="font-mono text-emerald-800 font-bold text-sm">
+                  {packageInfo?.tourLeaderPhone || formData.tourLeaderPhone || "085261083555"}
+                </span>
+              </span>
+            </div>
+
+            {/* Title: ARRIVAL INFORMATION : أمـــــــــــــــر الــتــشــغــيــل */}
+            <div className="bg-emerald-800 text-white text-center py-2.5 font-black text-base sm:text-lg border-b-2 border-black tracking-widest uppercase">
+              ARRIVAL INFORMATION : أمـــــــــــــــر الــتــشــغــيــل
+            </div>
+
+            {/* Agent, Group, Total Mutamers */}
+            <table className="w-full text-xs border-collapse">
+              <tbody className="divide-y divide-black font-bold text-slate-900">
+                <tr>
+                  <td className="py-2 px-3 bg-slate-100 border-r border-black w-[25%] uppercase">AGENT NAME</td>
+                  <td className="py-2 px-3 border-r border-black w-[50%] uppercase">
+                    {packageInfo?.subAgentName || formData.subAgentName || "ALGHIFARI HARAMAIN (AGH)"}
+                  </td>
+                  <td className="py-2 px-3 text-right border-black w-[25%] text-sm font-serif">اسم الوكيل</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 bg-slate-100 border-r border-black uppercase">GROUP NUMBER</td>
+                  <td className="py-2 px-3 font-mono border-r border-black">
+                    {packageInfo?.groupCode || currentPackage?.code || "-"}
+                  </td>
+                  <td className="py-2 px-3 text-right border-black text-sm font-serif">رقم المجموعة</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 bg-slate-100 border-r border-black uppercase">TOTAL MUTAMERS</td>
+                  <td className="py-2 px-3 border-r border-black">
+                    <span className="text-sm font-black text-emerald-800">{totalPax}</span> MUTAMERS
+                    <span className="ml-3 text-xs text-slate-600 font-normal">
+                      (👨 MEN: <b>{menCount}</b> | 👩 WOMEN: <b>{womenCount}</b>)
+                    </span>
+                  </td>
+                  <td className="py-2 px-3 text-right border-black text-sm font-serif">عدد المعتمرين</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* ARRIVAL DETAILS : بيانات الوصول */}
+            <div className="bg-emerald-700 text-white px-3 py-1.5 font-bold text-xs flex items-center justify-between border-t-2 border-b border-black">
+              <span>ARRIVAL DETAILS</span>
+              <span className="text-sm font-serif">بيانات الوصول</span>
+            </div>
+            <table className="w-full text-xs text-center border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-800 font-bold border-b border-black text-[11px]">
+                  <th className="py-2 px-2 border-r border-black w-[25%]">DATE <span className="font-serif block text-[10px] font-normal">التاريخ</span></th>
+                  <th className="py-2 px-2 border-r border-black w-[25%]">FLIGHT NO <span className="font-serif block text-[10px] font-normal">رقم الرحلة</span></th>
+                  <th className="py-2 px-2 border-r border-black w-[30%]">ARR AIRPORT <span className="font-serif block text-[10px] font-normal">مطار الوصول</span></th>
+                  <th className="py-2 px-2 w-[20%]">ARR TIME <span className="font-serif block text-[10px] font-normal">وقت الوصول</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="font-bold text-slate-950 border-b border-black">
+                  <td className="py-2 px-2 border-r border-black font-mono">
+                    {activeFlights[0]?.date || (currentPackage?.departureDate ? formatDate(currentPackage.departureDate, "yyyy-MM-dd") : "2026-10-27")}
+                  </td>
+                  <td className="py-2 px-2 border-r border-black font-mono">
+                    {activeFlights[0]?.flightNo || (currentPackage?.airline ? `${currentPackage.airline} 84` : "JT 84")}
+                  </td>
+                  <td className="py-2 px-2 border-r border-black uppercase">
+                    {activeFlights[0]?.to || "KUALA NAMU MEDAN"}
+                  </td>
+                  <td className="py-2 px-2 font-mono">
+                    {activeFlights[0]?.eta || "20.00"}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* DEPARTURE DETAILS : بيانات المغادرة */}
+            <div className="bg-emerald-700 text-white px-3 py-1.5 font-bold text-xs flex items-center justify-between border-t-2 border-b border-black">
+              <span>DEPARTURE DETAILS</span>
+              <span className="text-sm font-serif">بيانات المغادرة</span>
+            </div>
+            <table className="w-full text-xs text-center border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-800 font-bold border-b border-black text-[11px]">
+                  <th className="py-2 px-2 border-r border-black w-[25%]">DATE <span className="font-serif block text-[10px] font-normal">التاريخ</span></th>
+                  <th className="py-2 px-2 border-r border-black w-[25%]">FLIGHT NO <span className="font-serif block text-[10px] font-normal">رقم الرحلة</span></th>
+                  <th className="py-2 px-2 border-r border-black w-[30%]">DEP AIRPORT <span className="font-serif block text-[10px] font-normal">مطار المغادرة</span></th>
+                  <th className="py-2 px-2 w-[20%]">DEP TIME <span className="font-serif block text-[10px] font-normal">وقت المغادرة</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="font-bold text-slate-950 border-b border-black">
+                  <td className="py-2 px-2 border-r border-black font-mono">
+                    {activeFlights[activeFlights.length - 1]?.date || (currentPackage?.returnDate ? formatDate(currentPackage.returnDate, "yyyy-MM-dd") : "2026-11-07")}
+                  </td>
+                  <td className="py-2 px-2 border-r border-black font-mono">
+                    {activeFlights[activeFlights.length - 1]?.flightNo || (currentPackage?.airline ? `${currentPackage.airline} 85` : "JT 85")}
+                  </td>
+                  <td className="py-2 px-2 border-r border-black uppercase">
+                    {activeFlights[activeFlights.length - 1]?.from || "KING ABDUL AZIZ JEDDAH"}
+                  </td>
+                  <td className="py-2 px-2 font-mono">
+                    {activeFlights[activeFlights.length - 1]?.etd || "19.10"}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* HOTEL CONFIRMATION : معلومات الفندق */}
+            {(activeHotels.length > 0 ? activeHotels : [
+              { city: "TAIF", hotel: "PLATINUM PARK", checkIn: currentPackage?.departureDate ? formatDate(currentPackage.departureDate, "yyyy-MM-dd") : "2026-10-27", checkOut: "2026-10-28" },
+              { city: "MEKKAH", hotel: currentPackage?.hotelMakkah || "FUAD TOWER", checkIn: "2026-10-28", checkOut: "2026-11-02" },
+              { city: "MADINAH", hotel: currentPackage?.hotelMadinah || "QASR ANSAR GT", checkIn: "2026-11-02", checkOut: currentPackage?.returnDate ? formatDate(currentPackage.returnDate, "yyyy-MM-dd") : "2026-11-07" },
+            ]).map((h, i) => (
+              <React.Fragment key={i}>
+                <div className="bg-emerald-700 text-white px-3 py-1 font-bold text-xs flex items-center justify-between border-t-2 border-b border-black">
+                  <span>HOTEL CONFIRMATION</span>
+                  <span className="text-sm font-serif">معلومات الفندق</span>
+                </div>
+                <table className="w-full text-xs text-center border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-800 font-bold border-b border-black text-[11px]">
+                      <th className="py-1.5 px-2 border-r border-black w-[20%]">CITY <span className="font-serif block text-[10px] font-normal">مدينة</span></th>
+                      <th className="py-1.5 px-2 border-r border-black w-[40%]">HOTEL NAME <span className="font-serif block text-[10px] font-normal">اسم فندق</span></th>
+                      <th className="py-1.5 px-2 border-r border-black w-[20%]">CHECK IN <span className="font-serif block text-[10px] font-normal">الدخول</span></th>
+                      <th className="py-1.5 px-2 w-[20%]">CHCK OUT <span className="font-serif block text-[10px] font-normal">الخروج</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="font-bold text-slate-950 border-b border-black">
+                      <td className="py-2 px-2 border-r border-black uppercase">{h.city}</td>
+                      <td className="py-2 px-2 border-r border-black uppercase text-left pl-3">{h.hotel}</td>
+                      <td className="py-2 px-2 border-r border-black font-mono">{h.checkIn}</td>
+                      <td className="py-2 px-2 font-mono">{h.checkOut}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </React.Fragment>
+            ))}
+
+            {/* TRANSPORTATION DETAILS : بيانات النقل */}
+            <div className="bg-emerald-700 text-white px-3 py-1.5 font-bold text-xs flex items-center justify-between border-t-2 border-b border-black">
+              <span>TRANSPORTATION DETAILS</span>
+              <span className="text-sm font-serif">بيانات النقل</span>
+            </div>
+            <table className="w-full text-xs text-center border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-800 font-bold border-b border-black text-[11px]">
+                  <th className="py-2 px-2 border-r border-black w-[25%]">DATE <span className="font-serif block text-[10px] font-normal">التاريخ</span></th>
+                  <th className="py-2 px-2 border-r border-black w-[30%]">FROM <span className="font-serif block text-[10px] font-normal">من</span></th>
+                  <th className="py-2 px-2 border-r border-black w-[30%]">TO <span className="font-serif block text-[10px] font-normal">إلى</span></th>
+                  <th className="py-2 px-2 w-[15%]">TIME <span className="font-serif block text-[10px] font-normal">وقت</span></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black font-bold">
+                {(activeBuses.length > 0 ? activeBuses : [
+                  { date: "2026-10-27", from: "JED", to: "THAIF", time: "20.00" },
+                  { date: "2026-10-28", from: "THAIF", to: "HOTEL MAKKAH", time: "08.00" },
+                  { date: "2026-10-31", from: "HOTEL MAKKAH", to: "CITY TOUR", time: "08.00" },
+                  { date: "2026-11-02", from: "HOTEL MAKKAH", to: "HOTEL MADINAH", time: "13.00" },
+                  { date: "2026-11-04", from: "HOTEL MADINAH", to: "CITY TOUR", time: "08.00" },
+                  { date: "2026-11-07", from: "HOTEL MADINAH", to: "JEDDAH", time: "08.00" },
+                ]).map((b, i) => (
+                  <tr key={i} className="hover:bg-slate-50">
+                    <td className="py-2 px-2 border-r border-black font-mono">{b.date}</td>
+                    <td className="py-2 px-2 border-r border-black uppercase">{b.from}</td>
+                    <td className="py-2 px-2 border-r border-black uppercase">{b.to}</td>
+                    <td className="py-2 px-2 font-mono">{b.time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Bottom Gender Breakdown */}
+            <table className="w-full text-xs border-collapse border-t-2 border-black bg-slate-50 font-bold">
+              <tbody>
+                <tr className="border-b border-black">
+                  <td className="py-2.5 px-4 w-[50%] border-r border-black text-slate-800">MEN (Laki-laki)</td>
+                  <td className="py-2.5 px-4 w-[50%] text-emerald-800 font-mono text-sm">{menCount} Orang</td>
+                </tr>
+                <tr>
+                  <td className="py-2.5 px-4 border-r border-black text-slate-800">WOMEN (Perempuan)</td>
+                  <td className="py-2.5 px-4 text-emerald-800 font-mono text-sm">{womenCount} Orang</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Modal Edit & Atur Package Info */}
@@ -1268,8 +1870,10 @@ export default function PackageInfoView({
                             }}
                             className="w-full p-2 rounded-lg border border-slate-200 font-bold text-xs"
                           >
-                            <option value="MADINAH">MADINAH</option>
+                            <option value="THAIF">THAIF</option>
+                            <option value="TAIF">TAIF</option>
                             <option value="MAKKAH">MAKKAH</option>
+                            <option value="MADINAH">MADINAH</option>
                             <option value="JEDDAH">JEDDAH</option>
                           </select>
                         </div>

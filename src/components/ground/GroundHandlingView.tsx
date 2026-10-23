@@ -605,6 +605,8 @@ export default function GroundHandlingView({ packages, pilgrims }: GroundHandlin
                   >
                     <option value="MAKKAH">Makkah</option>
                     <option value="MADINAH">Madinah</option>
+                    <option value="THAIF">Thaif</option>
+                    <option value="JEDDAH">Jeddah</option>
                   </select>
                 </div>
                 <div>

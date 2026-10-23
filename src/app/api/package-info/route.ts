@@ -20,7 +20,15 @@ export async function GET(req: Request) {
       });
 
       if (packageInfo) {
-        return NextResponse.json(packageInfo);
+        const pilgrims = packageInfo.package?.pilgrims || [];
+        const menCount = pilgrims.filter((p: any) => p.gender === "MALE" || p.gender === "L").length;
+        const womenCount = pilgrims.filter((p: any) => p.gender === "FEMALE" || p.gender === "P").length;
+        return NextResponse.json({
+          ...packageInfo,
+          menCount,
+          womenCount,
+          totalMutamers: pilgrims.length,
+        });
       }
 
       // If no PackageInfo record exists yet, fetch package to build initial structure
@@ -35,18 +43,24 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Paket tidak ditemukan" }, { status: 404 });
       }
 
-      // Count registered adults and children
-      const totalPax = pkg.pilgrims.length;
+      // Count registered adults, children, and men/women
+      const pilgrims = pkg.pilgrims || [];
+      const totalPax = pilgrims.length;
+      const menCount = pilgrims.filter((p: any) => p.gender === "MALE" || p.gender === "L").length;
+      const womenCount = pilgrims.filter((p: any) => p.gender === "FEMALE" || p.gender === "P").length;
 
       return NextResponse.json({
         id: "",
         packageId: pkg.id,
         groupCode: pkg.code || "",
-        subAgentName: "",
+        subAgentName: "ALGHIFARI HARAMAIN (AGH)",
         adultPax: totalPax,
         childPax: 0,
-        tourLeaderName: "",
-        tourLeaderPhone: "",
+        menCount,
+        womenCount,
+        totalMutamers: totalPax,
+        tourLeaderName: pkg.muthawwifName || "",
+        tourLeaderPhone: "085261083555",
         flightInfoJson: JSON.stringify([
           {
             from: "KNO",
