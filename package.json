@@ -13,6 +13,7 @@
     "cap:sync": "cap sync android",
     "update:vps": "bash update-to-vps.sh",
     "update:code": "bash update-code-only.sh",
+    "update:all": "bash sync-merge-to-vps.sh",
     "bot:dev": "node scripts/telegram-polling.js"
   },
   "dependencies": {
