@@ -41,6 +41,7 @@ import {
 import { formatCurrency, formatDate, getStatusBadge } from "@/lib/utils";
 import RegistrationsAdminModal from "@/components/registrations/RegistrationsAdminModal";
 import ReEnrollAlumniModal from "@/components/pilgrims/ReEnrollAlumniModal";
+import BatchPassportPrintModal from "@/components/pilgrims/BatchPassportPrintModal";
 import Pagination from "@/components/common/Pagination";
 
 interface PilgrimsViewProps {
@@ -69,6 +70,18 @@ export default function PilgrimsView({
   const [isManifestVisaModalOpen, setIsManifestVisaModalOpen] = useState(false);
   const [manifestVisaCopied, setManifestVisaCopied] = useState(false);
   const [editingPilgrimId, setEditingPilgrimId] = useState<string | null>(null);
+
+  // State untuk Batch Print Dokumen Rombongan (PDF 1 File)
+  const [isBatchDocModalOpen, setIsBatchDocModalOpen] = useState(false);
+  const [batchDocFilter, setBatchDocFilter] = useState<"paspor" | "vaksin" | "all">("paspor");
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+
+  // State upload file paspor & vaksin di form tambah / edit
+  const [addPassportFile, setAddPassportFile] = useState<string | null>(null);
+  const [addVaccineFile, setAddVaccineFile] = useState<string | null>(null);
+  const [editPassportFile, setEditPassportFile] = useState<string | null>(null);
+  const [editVaccineFile, setEditVaccineFile] = useState<string | null>(null);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
   // Column Visibility Filter State
   const [columns, setColumns] = useState({
@@ -728,6 +741,9 @@ export default function PilgrimsView({
     setEditGuardianRelationType(p.mahramRelation || "AYAH");
     setEditMahramInputMode("DB");
 
+    setEditPassportFile(p.passportFileUrl || null);
+    setEditVaccineFile(p.vaccineCardFileUrl || null);
+
     setIsEditModalOpen(true);
   };
 
@@ -762,6 +778,8 @@ export default function PilgrimsView({
         polioVaccineClinic: editFormData.hasPolioVaccine ? editFormData.polioVaccineClinic : null,
         polioVaccineDate: editFormData.hasPolioVaccine && editFormData.polioVaccineDate ? editFormData.polioVaccineDate : null,
         polioVaccineExpiry: editFormData.hasPolioVaccine && editFormData.polioVaccineExpiry ? editFormData.polioVaccineExpiry : null,
+        passportFileUrl: editPassportFile,
+        vaccineCardFileUrl: editVaccineFile,
       };
       const res = await fetch(`/api/pilgrims/${editingPilgrimId}`, {
         method: "PUT",
@@ -918,6 +936,8 @@ export default function PilgrimsView({
         polioVaccineClinic: formData.hasPolioVaccine ? formData.polioVaccineClinic : null,
         polioVaccineDate: formData.hasPolioVaccine && formData.polioVaccineDate ? formData.polioVaccineDate : null,
         polioVaccineExpiry: formData.hasPolioVaccine && formData.polioVaccineExpiry ? formData.polioVaccineExpiry : null,
+        passportFileUrl: addPassportFile,
+        vaccineCardFileUrl: addVaccineFile,
       };
       const res = await fetch("/api/pilgrims", {
         method: "POST",
@@ -926,6 +946,8 @@ export default function PilgrimsView({
       });
       if (res.ok) {
         setIsAddModalOpen(false);
+        setAddPassportFile(null);
+        setAddVaccineFile(null);
         setFormData({
           packageId: packages[0]?.id || "",
           title: "Bpk",
@@ -1305,6 +1327,85 @@ export default function PilgrimsView({
           >
             <Plus className="h-4 w-4" />
             + Tambah Jamaah Baru
+          </button>
+        </div>
+      </div>
+
+      {/* Action Bar Rombongan: Cetak / Unduh Dokumen Visa (1 PDF / 1 ZIP) */}
+      <div className="bg-gradient-to-r from-emerald-900 to-teal-900 p-4 rounded-3xl text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-[10px] font-black uppercase tracking-wider">
+              1 Rombongan 1 File
+            </span>
+            <h3 className="font-black text-sm text-white">
+              Bundle Dokumen Paspor & Vaksin Jamaah
+            </h3>
+          </div>
+          <p className="text-xs text-emerald-100/80">
+            {selectedPackageId !== "ALL" ? (
+              <>
+                Paket terpilih:{" "}
+                <strong className="text-white">
+                  {packages.find((p) => p.id === selectedPackageId)?.name}
+                </strong>{" "}
+                ({filteredPilgrims.length} Jamaah)
+              </>
+            ) : (
+              <>Pilih paket atau cetak seluruh jamaah yang sedang ditampilkan ({filteredPilgrims.length} Jamaah).</>
+            )}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Tombol PDF 1 File */}
+          <button
+            type="button"
+            onClick={() => {
+              setBatchDocFilter("paspor");
+              setIsBatchDocModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-emerald-950 font-black text-xs hover:bg-emerald-50 shadow-sm transition-all cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5 text-emerald-700" />
+            <span>🖨️ Kumpulan Paspor (1 File PDF)</span>
+          </button>
+
+          {/* Tombol ZIP 1 File */}
+          <button
+            type="button"
+            disabled={isDownloadingZip}
+            onClick={async () => {
+              if (selectedPackageId === "ALL") {
+                alert("Silakan pilih salah satu 'Jadwal Paket' pada filter dropdown di bawah terlebih dahulu untuk mengunduh arsip ZIP 1 rombongan.");
+                return;
+              }
+              setIsDownloadingZip(true);
+              try {
+                const res = await fetch(`/api/packages/download-docs?packageId=${selectedPackageId}&type=paspor`);
+                if (!res.ok) {
+                  const err = await res.json();
+                  alert(err.error || "Gagal mengunduh ZIP");
+                  return;
+                }
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `BERKAS_PASPOR_ROMBONGAN_${selectedPackageId}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+              } catch (err: any) {
+                alert(err.message || "Gagal unduh");
+              } finally {
+                setIsDownloadingZip(false);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-700/80 hover:bg-emerald-700 text-white border border-emerald-500/40 font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>{isDownloadingZip ? "Mengemas ZIP..." : "📦 Download ZIP (1 File)"}</span>
           </button>
         </div>
       </div>
@@ -3317,6 +3418,68 @@ export default function PilgrimsView({
                           />
                         </div>
                       </div>
+
+                      {/* Upload Scan Paspor Asli */}
+                      <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <span className="text-xs font-bold text-slate-800">Lampirkan Scan Paspor Asli:</span>
+                          <p className="text-[10px] text-slate-500">Format JPG, PNG, atau PDF (halaman biodata & MRZ jelas).</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {addPassportFile ? (
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={addPassportFile}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-300 hover:bg-emerald-100"
+                              >
+                                👁️ Lihat Scan
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => setAddPassportFile(null)}
+                                className="text-xs font-bold text-rose-600 hover:text-rose-800"
+                              >
+                                Ganti
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-xs transition-all">
+                              <UploadCloud className="w-3.5 h-3.5" />
+                              <span>{isUploadingDoc ? "Mengunggah..." : "Upload Scan Paspor"}</span>
+                              <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                disabled={isUploadingDoc}
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  setIsUploadingDoc(true);
+                                  try {
+                                    const fd = new FormData();
+                                    fd.append("file", file);
+                                    fd.append("type", "paspor");
+                                    fd.append("pilgrimName", formData.name || "JAMAAH");
+                                    const res = await fetch("/api/pilgrims/upload-doc", { method: "POST", body: fd });
+                                    const json = await res.json();
+                                    if (json.success) {
+                                      setAddPassportFile(json.fileUrl);
+                                    } else {
+                                      alert(json.error || "Gagal upload");
+                                    }
+                                  } catch (err: any) {
+                                    alert(err.message || "Error upload");
+                                  } finally {
+                                    setIsUploadingDoc(false);
+                                  }
+                                }}
+                                className="hidden"
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
@@ -3585,6 +3748,68 @@ export default function PilgrimsView({
                               onChange={(e) => setFormData({ ...formData, meningitisVaccineExpiry: e.target.value })}
                               className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold text-xs"
                             />
+                          </div>
+                        </div>
+
+                        {/* Upload Berkas Sertifikat Vaksin */}
+                        <div className="pt-2 border-t border-teal-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <span className="text-xs font-bold text-teal-950">Lampirkan Sertifikat Vaksin Meningitis / ICV:</span>
+                            <p className="text-[10px] text-teal-800/80">Format JPG, PNG, atau PDF (buku kuning / SatuSehat).</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {addVaccineFile ? (
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={addVaccineFile}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-xs font-bold text-teal-800 bg-teal-100 px-2.5 py-1 rounded-lg border border-teal-300 hover:bg-teal-200"
+                                >
+                                  👁️ Lihat Sertifikat
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => setAddVaccineFile(null)}
+                                  className="text-xs font-bold text-rose-600 hover:text-rose-800"
+                                >
+                                  Ganti
+                                </button>
+                              </div>
+                            ) : (
+                              <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-700 text-white text-xs font-bold hover:bg-teal-800 shadow-xs transition-all">
+                                <UploadCloud className="w-3.5 h-3.5" />
+                                <span>{isUploadingDoc ? "Mengunggah..." : "Upload Sertifikat Vaksin"}</span>
+                                <input
+                                  type="file"
+                                  accept="image/*,application/pdf"
+                                  disabled={isUploadingDoc}
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    setIsUploadingDoc(true);
+                                    try {
+                                      const fd = new FormData();
+                                      fd.append("file", file);
+                                      fd.append("type", "vaksin");
+                                      fd.append("pilgrimName", formData.name || "JAMAAH");
+                                      const res = await fetch("/api/pilgrims/upload-doc", { method: "POST", body: fd });
+                                      const json = await res.json();
+                                      if (json.success) {
+                                        setAddVaccineFile(json.fileUrl);
+                                      } else {
+                                        alert(json.error || "Gagal upload");
+                                      }
+                                    } catch (err: any) {
+                                      alert(err.message || "Error upload");
+                                    } finally {
+                                      setIsUploadingDoc(false);
+                                    }
+                                  }}
+                                  className="hidden"
+                                />
+                              </label>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -4833,6 +5058,68 @@ export default function PilgrimsView({
                           />
                         </div>
                       </div>
+
+                      {/* Upload Scan Paspor Edit */}
+                      <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <span className="text-xs font-bold text-slate-800">Lampirkan Scan Paspor Asli:</span>
+                          <p className="text-[10px] text-slate-500">Format JPG, PNG, atau PDF (halaman biodata & MRZ jelas).</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {editPassportFile ? (
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={editPassportFile}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-300 hover:bg-emerald-100"
+                              >
+                                👁️ Lihat Scan
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => setEditPassportFile(null)}
+                                className="text-xs font-bold text-rose-600 hover:text-rose-800"
+                              >
+                                Ganti
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-xs transition-all">
+                              <UploadCloud className="w-3.5 h-3.5" />
+                              <span>{isUploadingDoc ? "Mengunggah..." : "Upload Scan Paspor"}</span>
+                              <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                disabled={isUploadingDoc}
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  setIsUploadingDoc(true);
+                                  try {
+                                    const fd = new FormData();
+                                    fd.append("file", file);
+                                    fd.append("type", "paspor");
+                                    fd.append("pilgrimName", editFormData.name || "JAMAAH");
+                                    const res = await fetch("/api/pilgrims/upload-doc", { method: "POST", body: fd });
+                                    const json = await res.json();
+                                    if (json.success) {
+                                      setEditPassportFile(json.fileUrl);
+                                    } else {
+                                      alert(json.error || "Gagal upload");
+                                    }
+                                  } catch (err: any) {
+                                    alert(err.message || "Error upload");
+                                  } finally {
+                                    setIsUploadingDoc(false);
+                                  }
+                                }}
+                                className="hidden"
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-[11px] flex items-center gap-2">
@@ -5101,6 +5388,68 @@ export default function PilgrimsView({
                               onChange={(e) => setEditFormData({ ...editFormData, meningitisVaccineExpiry: e.target.value })}
                               className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold text-xs"
                             />
+                          </div>
+                        </div>
+
+                        {/* Upload Berkas Sertifikat Vaksin Edit */}
+                        <div className="pt-2 border-t border-teal-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <span className="text-xs font-bold text-teal-950">Lampirkan Sertifikat Vaksin Meningitis / ICV:</span>
+                            <p className="text-[10px] text-teal-800/80">Format JPG, PNG, atau PDF (buku kuning / SatuSehat).</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {editVaccineFile ? (
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={editVaccineFile}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-xs font-bold text-teal-800 bg-teal-100 px-2.5 py-1 rounded-lg border border-teal-300 hover:bg-teal-200"
+                                >
+                                  👁️ Lihat Sertifikat
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditVaccineFile(null)}
+                                  className="text-xs font-bold text-rose-600 hover:text-rose-800"
+                                >
+                                  Ganti
+                                </button>
+                              </div>
+                            ) : (
+                              <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-700 text-white text-xs font-bold hover:bg-teal-800 shadow-xs transition-all">
+                                <UploadCloud className="w-3.5 h-3.5" />
+                                <span>{isUploadingDoc ? "Mengunggah..." : "Upload Sertifikat Vaksin"}</span>
+                                <input
+                                  type="file"
+                                  accept="image/*,application/pdf"
+                                  disabled={isUploadingDoc}
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    setIsUploadingDoc(true);
+                                    try {
+                                      const fd = new FormData();
+                                      fd.append("file", file);
+                                      fd.append("type", "vaksin");
+                                      fd.append("pilgrimName", editFormData.name || "JAMAAH");
+                                      const res = await fetch("/api/pilgrims/upload-doc", { method: "POST", body: fd });
+                                      const json = await res.json();
+                                      if (json.success) {
+                                        setEditVaccineFile(json.fileUrl);
+                                      } else {
+                                        alert(json.error || "Gagal upload");
+                                      }
+                                    } catch (err: any) {
+                                      alert(err.message || "Error upload");
+                                    } finally {
+                                      setIsUploadingDoc(false);
+                                    }
+                                  }}
+                                  className="hidden"
+                                />
+                              </label>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -6053,6 +6402,25 @@ export default function PilgrimsView({
         }}
         packages={packages}
       />
+
+      {/* Modal Cetak / Simpan PDF 1 Rombongan 1 File */}
+      {isBatchDocModalOpen && (
+        <BatchPassportPrintModal
+          packageName={
+            selectedPackageId !== "ALL"
+              ? packages.find((p) => p.id === selectedPackageId)?.name || "Seluruh Paket"
+              : "Seluruh Jamaah Terdata"
+          }
+          departureDate={
+            selectedPackageId !== "ALL"
+              ? packages.find((p) => p.id === selectedPackageId)?.departureDate
+              : null
+          }
+          pilgrims={filteredPilgrims}
+          docFilter={batchDocFilter}
+          onClose={() => setIsBatchDocModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
