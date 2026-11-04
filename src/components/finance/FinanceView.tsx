@@ -282,6 +282,15 @@ export default function FinanceView({ invoices, pilgrims, packages = [], onRefre
   const [printAllIndividual, setPrintAllIndividual] = useState<boolean>(false);
   const [showProofInReceipt, setShowProofInReceipt] = useState<boolean>(true);
   const [includeMeteraiInReceipt, setIncludeMeteraiInReceipt] = useState<boolean>(false);
+  
+  // State untuk Fitur Edit / Kustomisasi Harga Saat Cetak Invoice
+  const [isEditingPrintPrice, setIsEditingPrintPrice] = useState<boolean>(false);
+  const [customPrintAmount, setCustomPrintAmount] = useState<string>("");
+  const [customPrintTitle, setCustomPrintTitle] = useState<string>("");
+  const [customPrintNotes, setCustomPrintNotes] = useState<string>("");
+  const [savePrintPriceToDb, setSavePrintPriceToDb] = useState<boolean>(false);
+  const [isSavingPrintPrice, setIsSavingPrintPrice] = useState<boolean>(false);
+
   const [previewProofModal, setPreviewProofModal] = useState<{ isOpen: boolean; urls: string[]; activeIndex: number; title: string }>({
     isOpen: false,
     urls: [],
@@ -521,6 +530,11 @@ export default function FinanceView({ invoices, pilgrims, packages = [], onRefre
     const idx = group.findIndex((i: any) => i.id === inv.id);
     setSelectedIndividualIndex(idx >= 0 ? idx : 0);
     setPrintAllIndividual(false);
+    setIsEditingPrintPrice(false);
+    setCustomPrintAmount(String(inv.amount || ""));
+    setCustomPrintTitle(inv.title || "");
+    setCustomPrintNotes(inv.notes || "");
+    setSavePrintPriceToDb(false);
   };
 
   // Financial calculations
@@ -3411,6 +3425,28 @@ export default function FinanceView({ invoices, pilgrims, packages = [], onRefre
                       <span>Gunakan Materai (Rp 10.000)</span>
                     </label>
 
+                    {/* Tombol Edit Harga Saat Cetak */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditingPrintPrice(!isEditingPrintPrice);
+                        if (!isEditingPrintPrice) {
+                          setCustomPrintAmount(String(selectedInvoiceForReceipt.amount || ""));
+                          setCustomPrintTitle(selectedInvoiceForReceipt.title || "");
+                          setCustomPrintNotes(selectedInvoiceForReceipt.notes || "");
+                        }
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                        isEditingPrintPrice
+                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                          : "bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-900"
+                      }`}
+                      title="Klik untuk mengubah nominal harga cetak secara fleksibel"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>{isEditingPrintPrice ? "Tutup Form Edit" : "Edit Harga Cetak"}</span>
+                    </button>
+
                     {receiptViewMode === "GROUP" && multiReceiptInvoices && multiReceiptInvoices.length > 1 ? (
                       <button
                         onClick={() => {
@@ -3485,6 +3521,9 @@ export default function FinanceView({ invoices, pilgrims, packages = [], onRefre
                             setSelectedIndividualIndex(idx);
                             setSelectedInvoiceForReceipt(inv);
                             setPrintAllIndividual(false);
+                            setCustomPrintAmount(String(inv.amount || ""));
+                            setCustomPrintTitle(inv.title || "");
+                            setCustomPrintNotes(inv.notes || "");
                           }}
                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                             isActive
@@ -3499,6 +3538,149 @@ export default function FinanceView({ invoices, pilgrims, packages = [], onRefre
                         </button>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* Panel Edit Harga Saat Cetak (no-print) */}
+                {isEditingPrintPrice && (
+                  <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3 no-print">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                        <Pencil className="w-4 h-4 text-amber-700" />
+                        Form Penyesuaian Harga Pada Lembar Cetak
+                      </span>
+                      <span className="text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md font-bold">
+                        Tagihan: {selectedInvoiceForReceipt.invoiceNumber}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div>
+                        <label className="font-bold text-slate-800 block mb-1">
+                          Nominal Tagihan / Cetak (Rp) *
+                        </label>
+                        <input
+                          type="number"
+                          value={customPrintAmount}
+                          onChange={(e) => setCustomPrintAmount(e.target.value)}
+                          placeholder="e.g. 28000000"
+                          className="w-full rounded-xl border border-amber-300 bg-white p-2.5 font-mono font-bold text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-800 block mb-1">
+                          Judul / Peruntukan Cetak
+                        </label>
+                        <input
+                          type="text"
+                          value={customPrintTitle}
+                          onChange={(e) => setCustomPrintTitle(e.target.value)}
+                          placeholder="e.g. Pembayaran Paket Umroh Spesial"
+                          className="w-full rounded-xl border border-amber-300 bg-white p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-800 block mb-1">
+                          Catatan / Keterangan Diskon
+                        </label>
+                        <input
+                          type="text"
+                          value={customPrintNotes}
+                          onChange={(e) => setCustomPrintNotes(e.target.value)}
+                          placeholder="e.g. Penyesuaian Diskon Khusus Kesepakatan"
+                          className="w-full rounded-xl border border-amber-300 bg-white p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-amber-200/60">
+                      <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
+                        <input
+                          type="checkbox"
+                          checked={savePrintPriceToDb}
+                          onChange={(e) => setSavePrintPriceToDb(e.target.checked)}
+                          className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                        />
+                        <span>Simpan perubahan ini secara permanen ke database tagihan</span>
+                      </label>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomPrintAmount(String(selectedInvoiceForReceipt.amount || ""));
+                            setCustomPrintTitle(selectedInvoiceForReceipt.title || "");
+                            setCustomPrintNotes(selectedInvoiceForReceipt.notes || "");
+                            setIsEditingPrintPrice(false);
+                          }}
+                          className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-700 font-bold text-xs hover:bg-slate-100 cursor-pointer"
+                        >
+                          Batal
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isSavingPrintPrice || !customPrintAmount || parseFloat(customPrintAmount) <= 0}
+                          onClick={async () => {
+                            const newAmt = parseFloat(customPrintAmount);
+                            if (isNaN(newAmt) || newAmt <= 0) {
+                              alert("Mohon masukkan nominal angka yang valid.");
+                              return;
+                            }
+
+                            // 1. Update state tampilan cetak lokal
+                            const updatedInv = {
+                              ...selectedInvoiceForReceipt,
+                              amount: newAmt,
+                              title: customPrintTitle || selectedInvoiceForReceipt.title,
+                              notes: customPrintNotes || selectedInvoiceForReceipt.notes,
+                            };
+                            setSelectedInvoiceForReceipt(updatedInv);
+
+                            // Jika dalam multi receipt, perbarui juga array-nya
+                            if (multiReceiptInvoices && multiReceiptInvoices.length > 0) {
+                              setMultiReceiptInvoices(
+                                multiReceiptInvoices.map((i) => (i.id === updatedInv.id ? updatedInv : i))
+                              );
+                            }
+
+                            // 2. Jika dicentang simpan permanen ke database
+                            if (savePrintPriceToDb && updatedInv.id) {
+                              setIsSavingPrintPrice(true);
+                              try {
+                                const res = await fetch(`/api/invoices/${updatedInv.id}`, {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    amount: newAmt,
+                                    title: updatedInv.title,
+                                    notes: updatedInv.notes,
+                                  }),
+                                });
+                                if (res.ok) {
+                                  alert("✅ Nominal harga berhasil diperbarui dan disimpan permanen ke database!");
+                                  onRefresh();
+                                } else {
+                                  const err = await res.json();
+                                  alert(`Gagal menyimpan ke database: ${err.error || "Terjadi kesalahan"}`);
+                                }
+                              } catch (err: any) {
+                                alert(`Error: ${err.message}`);
+                              } finally {
+                                setIsSavingPrintPrice(false);
+                              }
+                            }
+
+                            setIsEditingPrintPrice(false);
+                          }}
+                          className="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-50"
+                        >
+                          {isSavingPrintPrice ? "Menyimpan..." : "✓ Terapkan Harga"}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
