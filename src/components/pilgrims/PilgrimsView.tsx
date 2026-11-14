@@ -1211,7 +1211,9 @@ export default function PilgrimsView({
   // Helper Khusus Manifest Tiket Penerbangan (Format GDS / Maskapai)
   const getTicketData = (p: any, refDate: Date = new Date()) => {
     // 1. Pecah Nama: LAST NAME & FIRST NAME
-    const rawName = (p.passportName || p.name || "").trim().toUpperCase();
+    // Prioritas nama: Gunakan Nama Lengkap (p.name), jika kosong baru passportName
+    // Karena passportName seringkali hanya nama singkat atau 1 kata
+    const rawName = (p.name || p.passportName || "").trim().toUpperCase();
     const parts = rawName.split(/\s+/).filter(Boolean);
     let lastName = "";
     let firstName = "";
@@ -1220,9 +1222,12 @@ export default function PilgrimsView({
       lastName = "-";
       firstName = "-";
     } else if (parts.length === 1) {
+      // Jika nama hanya 1 kata (mononim), standar maskapai: LAST NAME diulang atau nama ayah
       lastName = parts[0];
       firstName = parts[0];
     } else {
+      // Contoh: "MAULIDA SABRAN" -> LAST NAME: SABRAN, FIRST NAME: MAULIDA
+      // Contoh: "SURI NOVITA RAUDA SIREGAR" -> LAST NAME: SIREGAR, FIRST NAME: SURI NOVITA RAUDA
       lastName = parts[parts.length - 1];
       firstName = parts.slice(0, parts.length - 1).join(" ");
     }
