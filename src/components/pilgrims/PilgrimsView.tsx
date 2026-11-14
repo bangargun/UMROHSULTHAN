@@ -69,6 +69,8 @@ export default function PilgrimsView({
   const [isAlumniReEnrollModalOpen, setIsAlumniReEnrollModalOpen] = useState(false);
   const [isManifestVisaModalOpen, setIsManifestVisaModalOpen] = useState(false);
   const [manifestVisaCopied, setManifestVisaCopied] = useState(false);
+  const [isManifestTicketModalOpen, setIsManifestTicketModalOpen] = useState(false);
+  const [manifestTicketCopied, setManifestTicketCopied] = useState(false);
   const [editingPilgrimId, setEditingPilgrimId] = useState<string | null>(null);
 
   // State untuk Batch Print Dokumen Rombongan (PDF 1 File)
@@ -1206,6 +1208,266 @@ export default function PilgrimsView({
     });
   };
 
+  // Helper Khusus Manifest Tiket Penerbangan (Format GDS / Maskapai)
+  const getTicketData = (p: any, refDate: Date = new Date()) => {
+    // 1. Pecah Nama: LAST NAME & FIRST NAME
+    const rawName = (p.passportName || p.name || "").trim().toUpperCase();
+    const parts = rawName.split(/\s+/).filter(Boolean);
+    let lastName = "";
+    let firstName = "";
+
+    if (parts.length === 0) {
+      lastName = "-";
+      firstName = "-";
+    } else if (parts.length === 1) {
+      lastName = parts[0];
+      firstName = parts[0];
+    } else {
+      lastName = parts[parts.length - 1];
+      firstName = parts.slice(0, parts.length - 1).join(" ");
+    }
+
+    // 2. Hitung Usia (Tahun) untuk Passenger Type (Adult/Child/Infant)
+    let age = 30; // default jika tgl lahir kosong
+    if (p.dateOfBirth) {
+      const bDate = new Date(p.dateOfBirth);
+      if (!isNaN(bDate.getTime())) {
+        let diffYears = refDate.getFullYear() - bDate.getFullYear();
+        const m = refDate.getMonth() - bDate.getMonth();
+        if (m < 0 || (m === 0 && refDate.getDate() < bDate.getDate())) {
+          diffYears--;
+        }
+        age = diffYears;
+      }
+    }
+
+    const isFemale = p.gender === "FEMALE" || p.gender === "F";
+    let passengerType = "Adult";
+    let titleGender = isFemale ? "MRS" : "MR";
+
+    if (age < 2) {
+      passengerType = "Infant";
+      titleGender = isFemale ? "MISS" : "MSTR";
+    } else if (age < 12) {
+      passengerType = "Child";
+      titleGender = isFemale ? "MISS" : "MSTR";
+    } else {
+      passengerType = "Adult";
+      titleGender = isFemale ? "MRS" : "MR";
+    }
+
+    const sex = isFemale ? "F" : "M";
+    const countryOfIssuance = (p.citizenship === "WNA" ? (p.countryCode || "ID") : "ID").toUpperCase();
+    const noPaspor = (p.passportNumber || "-").toUpperCase();
+    const national = "ID";
+    const tglLahir = formatDateIndoUpper(p.dateOfBirth);
+    const expiredPaspor = formatDateIndoUpper(p.passportExpiry);
+
+    return {
+      lastName,
+      firstName,
+      passengerType,
+      titleGender,
+      sex,
+      countryOfIssuance,
+      noPaspor,
+      national,
+      tglLahir,
+      expiredPaspor,
+      rawName,
+    };
+  };
+
+  const getManifestTicketTitle = () => {
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    if (selectedPkg?.departureDate) {
+      return `MANIFEST TIKET PENERBANGAN ${formatDateIndoUpper(selectedPkg.departureDate)}`;
+    }
+    if (selectedPkg?.name) {
+      return `MANIFEST TIKET ${selectedPkg.name.toUpperCase()}`;
+    }
+    return "MANIFEST TIKET PENERBANGAN SEMUA KEBERANGKATAN";
+  };
+
+  const getManifestTicketFileName = (ext: "csv" | "xls" | "pdf") => {
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    const dateOrName = selectedPkg?.departureDate
+      ? formatDateIndoUpper(selectedPkg.departureDate)
+      : selectedPkg?.name
+      ? selectedPkg.name.toUpperCase().replace(/[^A-Z0-9]/g, "_")
+      : "SEMUA_KEBERANGKATAN";
+    const paxCount = filteredPilgrims.length;
+    return `(MANIFEST TIKET ${dateOrName})(${paxCount} PAX).${ext}`;
+  };
+
+  const handleCopyManifestTicketToClipboard = () => {
+    if (filteredPilgrims.length === 0) return;
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    const refDate = selectedPkg?.departureDate ? new Date(selectedPkg.departureDate) : new Date();
+
+    const headers = [
+      "NO",
+      "LAST NAME",
+      "FIRST NAME",
+      "Passenger Type (Adult/Child/Infant)",
+      "GENDER",
+      "",
+      "COUNTRY OF ISSUANCE",
+      "NO PASPOR",
+      "NATIONAL",
+      "TGL LAHIR",
+      "EXPIRED PASPOR"
+    ].join("\t");
+
+    const rows = filteredPilgrims.map((p, idx) => {
+      const d = getTicketData(p, refDate);
+      return [
+        idx + 1,
+        d.lastName,
+        d.firstName,
+        d.passengerType,
+        d.titleGender,
+        d.sex,
+        d.countryOfIssuance,
+        d.noPaspor,
+        d.national,
+        d.tglLahir,
+        d.expiredPaspor
+      ].join("\t");
+    }).join("\n");
+
+    const text = `${headers}\n${rows}`;
+    navigator.clipboard.writeText(text).then(() => {
+      setManifestTicketCopied(true);
+      setTimeout(() => setManifestTicketCopied(false), 2500);
+    });
+  };
+
+  const handleExportManifestTicketCSV = () => {
+    if (filteredPilgrims.length === 0) {
+      alert("Tidak ada data jamaah untuk diekspor ke Manifest Tiket.");
+      return;
+    }
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    const refDate = selectedPkg?.departureDate ? new Date(selectedPkg.departureDate) : new Date();
+    const fileName = getManifestTicketFileName("csv");
+
+    const csvRows = [
+      "NO,LAST NAME,FIRST NAME,Passenger Type (Adult/Child/Infant),GENDER,,COUNTRY OF ISSUANCE,NO PASPOR,NATIONAL,TGL LAHIR,EXPIRED PASPOR",
+      ...filteredPilgrims.map((p, idx) => {
+        const d = getTicketData(p, refDate);
+        return [
+          idx + 1,
+          `"${d.lastName.replace(/"/g, '""')}"`,
+          `"${d.firstName.replace(/"/g, '""')}"`,
+          d.passengerType,
+          d.titleGender,
+          d.sex,
+          d.countryOfIssuance,
+          d.noPaspor,
+          d.national,
+          `"${d.tglLahir}"`,
+          `"${d.expiredPaspor}"`
+        ].join(",");
+      })
+    ].join("\n");
+
+    const blob = new Blob([csvRows], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportManifestTicketExcel = () => {
+    if (filteredPilgrims.length === 0) {
+      alert("Tidak ada data jamaah untuk diekspor ke Manifest Tiket.");
+      return;
+    }
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    const refDate = selectedPkg?.departureDate ? new Date(selectedPkg.departureDate) : new Date();
+    const title = getManifestTicketTitle();
+    const fileName = getManifestTicketFileName("xls");
+
+    const tableRows = filteredPilgrims.map((p, idx) => {
+      const d = getTicketData(p, refDate);
+      return `<tr>
+        <td class="td-center">${idx + 1}</td>
+        <td class="td-left" style="font-weight: bold;">${d.lastName}</td>
+        <td class="td-left">${d.firstName}</td>
+        <td class="td-center">${d.passengerType}</td>
+        <td class="td-center" style="font-weight: bold;">${d.titleGender}</td>
+        <td class="td-center" style="font-weight: bold; color: ${d.sex === 'M' ? '#1d4ed8' : '#be185d'};">${d.sex}</td>
+        <td class="td-center">${d.countryOfIssuance}</td>
+        <td class="td-center" style="font-family: monospace; font-weight: bold;">${d.noPaspor}</td>
+        <td class="td-center">${d.national}</td>
+        <td class="td-center">${d.tglLahir}</td>
+        <td class="td-center">${d.expiredPaspor}</td>
+      </tr>`;
+    }).join("\n");
+
+    const excelHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>MANIFEST TIKET</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><style>body { font-family: Calibri, Arial, sans-serif; } table { border-collapse: collapse; width: 100%; } .banner { background-color: #0284c7; color: #ffffff; font-weight: bold; font-size: 13pt; text-align: center; height: 38px; border: 1.5pt solid #0369a1; } .th-header { background-color: #f1f5f9; font-weight: bold; font-size: 9.5pt; text-align: center; border: 1pt solid #cbd5e1; padding: 6px 8px; } .td-center { text-align: center; border: 0.5pt solid #cbd5e1; padding: 4px 6px; font-size: 9.5pt; mso-number-format: "\\@"; } .td-left { text-align: left; border: 0.5pt solid #cbd5e1; padding: 4px 6px; font-size: 9.5pt; mso-number-format: "\\@"; }</style></head><body><table><tr><td colspan="11" class="banner">${title}</td></tr><tr><th class="th-header" style="width: 45px;">NO</th><th class="th-header" style="width: 140px;">LAST NAME</th><th class="th-header" style="width: 180px;">FIRST NAME</th><th class="th-header" style="width: 130px;">Passenger Type (Adult/Child/Infant)</th><th class="th-header" style="width: 80px;">GENDER</th><th class="th-header" style="width: 50px;">SEX</th><th class="th-header" style="width: 90px;">COUNTRY OF ISSUANCE</th><th class="th-header" style="width: 130px;">NO PASPOR</th><th class="th-header" style="width: 80px;">NATIONAL</th><th class="th-header" style="width: 130px;">TGL LAHIR</th><th class="th-header" style="width: 130px;">EXPIRED PASPOR</th></tr>${tableRows}</table></body></html>`;
+
+    const blob = new Blob([excelHtml], { type: "application/vnd.ms-excel;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportManifestTicketPDF = () => {
+    if (filteredPilgrims.length === 0) {
+      alert("Tidak ada data jamaah untuk diekspor ke Manifest Tiket.");
+      return;
+    }
+    const selectedPkg = packages.find((p) => p.id === selectedPackageId);
+    const refDate = selectedPkg?.departureDate ? new Date(selectedPkg.departureDate) : new Date();
+    const title = getManifestTicketTitle();
+    const fileName = getManifestTicketFileName("pdf");
+
+    const totalPax = filteredPilgrims.length;
+    const adults = filteredPilgrims.filter((p) => getTicketData(p, refDate).passengerType === "Adult").length;
+    const children = filteredPilgrims.filter((p) => getTicketData(p, refDate).passengerType === "Child").length;
+    const infants = filteredPilgrims.filter((p) => getTicketData(p, refDate).passengerType === "Infant").length;
+
+    const tableRows = filteredPilgrims.map((p, idx) => {
+      const d = getTicketData(p, refDate);
+      return `<tr>
+        <td style="text-align: center; font-weight: bold;">${idx + 1}</td>
+        <td style="text-align: left; font-weight: bold;">${d.lastName}</td>
+        <td style="text-align: left;">${d.firstName}</td>
+        <td style="text-align: center;">${d.passengerType}</td>
+        <td style="text-align: center; font-weight: bold;">${d.titleGender}</td>
+        <td style="text-align: center; font-weight: bold; color: ${d.sex === 'M' ? '#1d4ed8' : '#be185d'};">${d.sex}</td>
+        <td style="text-align: center;">${d.countryOfIssuance}</td>
+        <td style="text-align: center; font-family: monospace; font-weight: bold;">${d.noPaspor}</td>
+        <td style="text-align: center;">${d.national}</td>
+        <td style="text-align: center;">${d.tglLahir}</td>
+        <td style="text-align: center;">${d.expiredPaspor}</td>
+      </tr>`;
+    }).join("\n");
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Gagal membuka jendela cetak. Pastikan izin pop-up browser Anda aktif.");
+      return;
+    }
+
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8" /><title>${fileName}</title><style>@page { size: A4 landscape; margin: 8mm 10mm; } * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body { font-family: Calibri, Arial, Helvetica, sans-serif; margin: 0; padding: 12px; color: #000; font-size: 9pt; } .no-print-bar { background: #0f172a; color: #ffffff; padding: 10px 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; font-family: system-ui, -apple-system, sans-serif; box-shadow: 0 4px 10px rgba(0,0,0,0.15); } .btn-print { background: #0284c7; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; } .btn-print:hover { background: #0369a1; } .btn-close { background: #334155; color: #ffffff; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; } .btn-close:hover { background: #475569; } .banner { background-color: #0284c7 !important; color: #ffffff; font-weight: 900; text-align: center; padding: 8px 12px; font-size: 13pt; letter-spacing: 0.5px; border: 1.5px solid #0369a1; text-transform: uppercase; } .sub-banner { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-left: 1.5px solid #0369a1; border-right: 1.5px solid #0369a1; border-bottom: 1.5px solid #cbd5e1; padding: 5px 8px; font-size: 9pt; font-weight: bold; } table { width: 100%; border-collapse: collapse; margin-top: 0; font-size: 8.5pt; } th { background-color: #f1f5f9 !important; color: #0f172a; font-weight: 900; text-align: center; border: 1px solid #cbd5e1; padding: 5px 4px; font-size: 8pt; } td { border: 1px solid #cbd5e1; padding: 4.5px 5px; font-size: 8pt; } tr:nth-child(even) td { background-color: #f8fafc !important; } .footer-note { margin-top: 8px; display: flex; justify-content: space-between; font-size: 8pt; color: #64748b; } @media print { .no-print-bar { display: none !important; } body { padding: 0; } @page { size: A4 landscape; margin: 8mm 10mm; } }</style></head><body><div class="no-print-bar"><div><strong style="font-size: 13px;">🎫 Download / Cetak PDF Manifest Tiket Maskapai</strong><span style="font-size: 11px; opacity: 0.85; margin-left: 8px;">(Pilih Destination: <b>Save as PDF</b> / <b>Simpan sebagai PDF</b>)</span></div><div style="display: flex; gap: 8px;"><button class="btn-print" onclick="window.print()">🖨️ Cetak / Simpan PDF</button><button class="btn-close" onclick="window.close()">✕ Tutup</button></div></div><div class="banner">${title}</div><div class="sub-banner"><span>Program: ${selectedPkg?.name || "Semua Paket Keberangkatan"}</span><span>Total: ${totalPax} Pax (Adult: ${adults}, Child: ${children}, Infant: ${infants})</span></div><table><thead><tr><th style="width: 30px;">NO</th><th style="width: 120px; text-align: left;">LAST NAME</th><th style="width: 150px; text-align: left;">FIRST NAME</th><th style="width: 110px;">Passenger Type</th><th style="width: 60px;">GENDER</th><th style="width: 35px;">SEX</th><th style="width: 65px;">ISSUANCE</th><th style="width: 95px;">NO PASPOR</th><th style="width: 65px;">NATIONAL</th><th style="width: 100px;">TGL LAHIR</th><th style="width: 100px;">EXPIRED PASPOR</th></tr></thead><tbody>${tableRows}</tbody></table><div class="footer-note"><span>Dicetak melalui Sistem Manajemen Travel Umroh • Format Standar Reservasi Tiket Maskapai (GDS)</span><span>${fileName}</span></div><script>window.onload = function() { setTimeout(function() { window.print(); }, 350); };</script></body></html>`;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   const handleExportCSV = () => {
     if (filteredPilgrims.length === 0) {
       alert("Tidak ada data jamaah untuk diekspor.");
@@ -1298,6 +1560,14 @@ export default function PilgrimsView({
           >
             <Sparkles className="h-4 w-4 text-amber-600" />
             📥 Antrean Pendaftaran Online
+          </button>
+          <button
+            onClick={() => setIsManifestTicketModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-sky-400 bg-sky-500 hover:bg-sky-600 text-white px-3.5 py-2.5 text-xs font-black shadow-xs transition-all cursor-pointer"
+            title="Export Manifest Tiket Pesawat (Format GDS / Maskapai: Last Name, First Name, Passenger Type, Gender, dll)"
+          >
+            <Plane className="h-4 w-4 text-white" />
+            🎫 Manifest Tiket (Maskapai)
           </button>
           <button
             onClick={() => setIsManifestVisaModalOpen(true)}
@@ -6158,6 +6428,203 @@ export default function PilgrimsView({
         onClose={() => setIsRegistrationsModalOpen(false)}
         onRefreshPilgrims={onRefresh}
       />
+
+      {/* Manifest Tiket Penerbangan (Airlines / GDS Format) */}
+      {isManifestTicketModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-6xl w-full p-6 sm:p-8 shadow-2xl space-y-4 max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-200">
+                  <Plane className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    Manifest Tiket Penerbangan (Format Maskapai / GDS)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Format resmi penerbitan tiket grup maskapai: Last Name, First Name, Passenger Type, Title, Sex, No Paspor, Tgl Lahir & Expired.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsManifestTicketModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Quick Action Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+              <div className="text-xs text-slate-600">
+                <span>Filter Aktif: </span>
+                <span className="font-bold text-slate-900">
+                  {selectedPackageId === "ALL"
+                    ? "Semua Jadwal Paket"
+                    : packages.find((p) => p.id === selectedPackageId)?.name}
+                </span>{" "}
+                • Total Penumpang:{" "}
+                <span className="font-bold text-sky-700">{filteredPilgrims.length} Pax</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyManifestTicketToClipboard}
+                  disabled={filteredPilgrims.length === 0}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 ${
+                    manifestTicketCopied
+                      ? "bg-emerald-600 border-emerald-600 text-white"
+                      : "bg-white border-slate-200 text-slate-700 hover:bg-slate-100"
+                  }`}
+                  title="Salin seluruh tabel manifest tiket ke clipboard untuk langsung ditempel (paste) di Excel atau chat ticketing"
+                >
+                  {manifestTicketCopied ? (
+                    <>
+                      <CheckCheck className="h-3.5 w-3.5 text-white" />
+                      Tersalin!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5 text-slate-500" />
+                      Salin ke Excel / Chat
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportManifestTicketCSV}
+                  disabled={filteredPilgrims.length === 0}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 text-xs font-bold transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+                  title="Download file CSV manifest tiket maskapai"
+                >
+                  <Download className="h-3.5 w-3.5 text-slate-500" />
+                  Format CSV
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportManifestTicketPDF}
+                  disabled={filteredPilgrims.length === 0}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+                  title="Cetak atau simpan Manifest Tiket dalam format PDF resmi (A4 Landscape)"
+                >
+                  <Printer className="h-3.5 w-3.5 text-white" />
+                  Cetak / PDF
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportManifestTicketExcel}
+                  disabled={filteredPilgrims.length === 0}
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-colors shadow-xs cursor-pointer disabled:opacity-50 border border-emerald-700/40"
+                  title="Download file Excel (.xls) manifest tiket maskapai dengan warna tajam"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-white" />
+                  Download Excel (.xls)
+                </button>
+              </div>
+            </div>
+
+            {/* Table Preview */}
+            <div className="flex-1 overflow-auto border border-slate-200 rounded-2xl bg-white shadow-inner">
+              <div className="bg-sky-600 text-white font-black text-center py-2 text-sm uppercase tracking-wide border-b border-sky-700">
+                {getManifestTicketTitle()}
+              </div>
+
+              {filteredPilgrims.length === 0 ? (
+                <div className="p-12 text-center text-slate-400 text-xs font-medium">
+                  Belum ada data jamaah yang terdaftar untuk paket ini.
+                </div>
+              ) : (
+                <table className="w-full text-[11px] border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
+                      <th className="p-2 border-r border-slate-200 text-center w-10">NO</th>
+                      <th className="p-2 border-r border-slate-200 text-left">LAST NAME</th>
+                      <th className="p-2 border-r border-slate-200 text-left">FIRST NAME</th>
+                      <th className="p-2 border-r border-slate-200 text-center">Passenger Type (Adult/Child/Infant)</th>
+                      <th className="p-2 border-r border-slate-200 text-center">GENDER</th>
+                      <th className="p-2 border-r border-slate-200 text-center w-12">SEX</th>
+                      <th className="p-2 border-r border-slate-200 text-center">COUNTRY OF ISSUANCE</th>
+                      <th className="p-2 border-r border-slate-200 text-center">NO PASPOR</th>
+                      <th className="p-2 border-r border-slate-200 text-center">NATIONAL</th>
+                      <th className="p-2 border-r border-slate-200 text-center">TGL LAHIR</th>
+                      <th className="p-2 text-center">EXPIRED PASPOR</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPilgrims.map((p, idx) => {
+                      const selectedPkg = packages.find((pkg) => pkg.id === selectedPackageId);
+                      const refDate = selectedPkg?.departureDate ? new Date(selectedPkg.departureDate) : new Date();
+                      const d = getTicketData(p, refDate);
+                      return (
+                        <tr key={p.id || idx} className="border-b border-slate-100 hover:bg-sky-50/40 transition-colors">
+                          <td className="p-2 border-r border-slate-100 text-center font-bold text-slate-500">{idx + 1}</td>
+                          <td className="p-2 border-r border-slate-100 font-black text-slate-900 uppercase">{d.lastName}</td>
+                          <td className="p-2 border-r border-slate-100 font-semibold text-slate-800 uppercase">{d.firstName}</td>
+                          <td className="p-2 border-r border-slate-100 text-center font-bold">
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[10px] ${
+                                d.passengerType === "Adult"
+                                  ? "bg-slate-100 text-slate-700"
+                                  : d.passengerType === "Child"
+                                  ? "bg-amber-100 text-amber-900 border border-amber-300 font-black"
+                                  : "bg-purple-100 text-purple-900 border border-purple-300 font-black"
+                              }`}
+                            >
+                              {d.passengerType}
+                            </span>
+                          </td>
+                          <td className="p-2 border-r border-slate-100 text-center font-mono font-bold text-slate-700">{d.titleGender}</td>
+                          <td className="p-2 border-r border-slate-100 text-center font-mono font-black">
+                            <span className={d.sex === "M" ? "text-blue-600" : "text-pink-600"}>{d.sex}</span>
+                          </td>
+                          <td className="p-2 border-r border-slate-100 text-center font-mono text-slate-600">{d.countryOfIssuance}</td>
+                          <td className="p-2 border-r border-slate-100 text-center font-mono font-black text-slate-900 bg-slate-50/50">
+                            {d.noPaspor}
+                          </td>
+                          <td className="p-2 border-r border-slate-100 text-center font-mono text-slate-600">{d.national}</td>
+                          <td className="p-2 border-r border-slate-100 text-center font-medium text-slate-700">{d.tglLahir}</td>
+                          <td className="p-2 text-center font-medium text-slate-700">{d.expiredPaspor}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between border-t border-slate-200 bg-white pt-3">
+              <div className="text-xs text-slate-500 font-medium">
+                Nama File: <span className="font-mono font-bold text-slate-700">{getManifestTicketFileName("xls")}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsManifestTicketModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                >
+                  Tutup
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportManifestTicketExcel}
+                  disabled={filteredPilgrims.length === 0}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  Download Format Excel (.xls)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Manifest Visa Simple Modal (Format Provider & Kedutaan) */}
       {isManifestVisaModalOpen && (
